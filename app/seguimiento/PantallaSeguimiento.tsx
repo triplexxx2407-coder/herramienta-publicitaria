@@ -1,14 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { Aviso } from "@/components/Aviso";
-import { BotonProximamente } from "@/components/BotonProximamente";
-import { Cargando } from "@/components/Cargando";
-import { EncabezadoPantalla } from "@/components/EncabezadoPantalla";
-import { Etiqueta } from "@/components/Etiqueta";
-import { SiguientePaso } from "@/components/SiguientePaso";
-import { useEnNavegador, useEstado } from "@/lib/almacen";
+import { ArrowRight, ChartColumn, Check, CircleCheck, FlaskConical, MailOpen, Minus, PenLine, Reply, Send, Sparkles, type LucideIcon } from "lucide-react";
+import { Avatar } from "@/components/Avatar";
+import { avisar } from "@/components/avisos";
+import { Boton, BotonEnlace, BotonProximamente, Cargando, Encabezado, EstadoVacio, Insignia, Tarjeta, cx } from "@/components/ui";
+import { reiniciarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
 import { contactosParaRedactar } from "@/lib/contactos";
+import { estadoDeRecorrido } from "@/lib/estado";
 import { DIAS_PARA_SEGUNDO_MENSAJE, simularSeguimiento } from "@/lib/seguimiento";
 
 export function PantallaSeguimiento() {
@@ -23,122 +21,166 @@ export function PantallaSeguimiento() {
 
   return (
     <div>
-      <EncabezadoPantalla
+      <Encabezado
         paso={5}
         titulo="Seguimiento"
+        subtitulo="Quién abrió, quién respondió y a quién volver a escribirle."
         ayuda={
           <>
+            <p>Aquí verías qué pasó con cada correo: si lo abrieron, si te respondieron y a quién conviene escribirle otra vez.</p>
             <p>
-              Aquí verías qué pasó con cada correo: si lo abrieron, si te respondieron y a quién conviene escribirle
-              un segundo mensaje.
-            </p>
-            <p>
-              Como la demo no envía nada, todo lo que dice «Simulado» es inventado sólo para mostrar cómo se vería. No
-              es un resultado ni una predicción.
+              Como la demo no envía nada, todo lo que dice «Simulado» es inventado sólo para mostrar cómo se vería. No es
+              un resultado ni una predicción.
             </p>
           </>
         }
       />
 
-      <div className="mb-6">
-        <Aviso tipo="simulado">
-          Tablero simulado. Ningún correo se envió; los estados «enviado», «abrió» y «respondió» son inventados.
-        </Aviso>
-      </div>
+      <p className="rayas-simulado entrada mb-5 flex items-start gap-2.5 rounded-2xl border border-violeta-200 bg-violeta-50 px-4 py-3 font-semibold text-violeta-700">
+        <FlaskConical size={19} aria-hidden className="mt-0.5 shrink-0" />
+        Tablero simulado. Ningún correo se envió; «enviado», «abrió» y «respondió» son inventados.
+      </p>
 
       {aprobados.length === 0 ? (
-        <Aviso tipo="info">
-          Aún no hay correos aprobados. Apruébalos en{" "}
-          <Link href="/redactar" className="font-semibold text-teal-800 underline">
-            Redactar
-          </Link>{" "}
-          o carga el recorrido de ejemplo desde el{" "}
-          <Link href="/" className="font-semibold text-teal-800 underline">
-            inicio
-          </Link>
-          .
-        </Aviso>
+        <EstadoVacio
+          icono={<ChartColumn size={30} aria-hidden />}
+          titulo="Aún no hay correos aprobados"
+          texto="Apruébalos en «Redactar» o carga el recorrido de ejemplo para ver el tablero."
+        >
+          <BotonEnlace href="/redactar" icono={<PenLine size={18} aria-hidden />}>
+            Ir a Redactar
+          </BotonEnlace>
+          <Boton
+            variante="secundario"
+            icono={<Sparkles size={18} aria-hidden />}
+            onClick={() => {
+              reiniciarEstado(estadoDeRecorrido());
+              avisar("Recorrido de ejemplo cargado");
+            }}
+          >
+            Cargar ejemplo
+          </Boton>
+        </EstadoVacio>
       ) : (
         <>
-          <dl className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-5">
-            <Cifra titulo="Aprobados" valor={aprobados.length} />
-            <Cifra titulo="«Enviados»" valor={cuenta((f) => f.enviado)} simulado />
-            <Cifra titulo="«Abrieron»" valor={cuenta((f) => f.abrio)} simulado />
-            <Cifra titulo="«Respondieron»" valor={cuenta((f) => f.respondio)} simulado />
-            <Cifra titulo="Segundo mensaje" valor={segundo.length} simulado />
-          </dl>
+          <ul className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Cifra icono={CircleCheck} titulo="Aprobados" valor={aprobados.length} />
+            <Cifra icono={Send} titulo="Enviados" valor={cuenta((f) => f.enviado)} simulado />
+            <Cifra icono={MailOpen} titulo="Abrieron" valor={cuenta((f) => f.abrio)} simulado />
+            <Cifra icono={Reply} titulo="Respondieron" valor={cuenta((f) => f.respondio)} simulado />
+          </ul>
 
-          <section className="mb-8">
-            <h2 className="mb-1 flex items-center gap-2 text-xl font-bold">
-              Necesitan segundo mensaje <Etiqueta tipo="simulado" />
-            </h2>
-            <p className="mb-3 text-slate-600">
-              No respondieron después de {DIAS_PARA_SEGUNDO_MENSAJE} días o más. Un segundo mensaje corto y amable
-              suele ser la regla en prospección.
+          <section className="mb-6">
+            <div className="mb-1 flex flex-wrap items-center gap-2">
+              <h2 className="font-display text-xl font-bold">Necesitan segundo mensaje</h2>
+              <Insignia tipo="simulado" />
+            </div>
+            <p className="mb-3 text-sm text-suave">
+              No han respondido en {DIAS_PARA_SEGUNDO_MENSAJE} días o más. Un segundo mensaje corto y amable es lo normal.
             </p>
             {segundo.length ? (
-              <ul className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white">
-                {segundo.map((f) => (
-                  <li key={f.contacto.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                    <span>
-                      <span className="font-medium">{f.contacto.nombre}</span>
-                      <span className="block text-sm text-slate-500">Hace {f.diasDesdeEnvio} días (simulado)</span>
-                    </span>
-                    <BotonProximamente texto="Preparar segundo mensaje" />
-                  </li>
-                ))}
-              </ul>
+              <Tarjeta className="overflow-hidden">
+                <ul className="divide-y divide-linea">
+                  {segundo.map((f) => (
+                    <li key={f.contacto.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+                      <Avatar nombre={f.contacto.nombre} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold text-tinta">{f.contacto.nombre}</span>
+                        <span className="block text-sm text-suave">Hace {f.diasDesdeEnvio} días · simulado</span>
+                      </span>
+                      <BotonProximamente texto="Preparar segundo mensaje" className="w-full justify-center sm:w-auto" />
+                    </li>
+                  ))}
+                </ul>
+              </Tarjeta>
             ) : (
-              <p className="text-slate-600">Nadie por ahora.</p>
+              <p className="rounded-tarjeta bg-white px-5 py-6 text-center text-suave">Nadie por ahora.</p>
             )}
           </section>
 
           <section>
-            <h2 className="mb-3 flex items-center gap-2 text-xl font-bold">
-              Por contacto <Etiqueta tipo="simulado" />
-            </h2>
-            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-              <table className="w-full min-w-[34rem] text-left">
-                <thead className="bg-slate-50 text-sm text-slate-600">
-                  <tr>
-                    <th className="px-4 py-2">Contacto</th>
-                    <th className="px-4 py-2">«Enviado»</th>
-                    <th className="px-4 py-2">«Abrió»</th>
-                    <th className="px-4 py-2">«Respondió»</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {filas.map((f) => (
-                    <tr key={f.contacto.id}>
-                      <td className="px-4 py-2 font-medium">{f.contacto.nombre}</td>
-                      <td className="px-4 py-2">{f.enviado ? `Hace ${f.diasDesdeEnvio} d` : "—"}</td>
-                      <td className="px-4 py-2">{f.abrio ? "Sí" : "No"}</td>
-                      <td className="px-4 py-2">{f.respondio ? "Sí" : "No"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <h2 className="font-display text-xl font-bold">Por contacto</h2>
+              <Insignia tipo="simulado" />
             </div>
-            <p className="mt-2 text-sm text-slate-500">Todos los valores de esta tabla son simulados.</p>
+            <Tarjeta className="overflow-hidden">
+              <ul className="divide-y divide-linea">
+                {filas.map((f) => (
+                  <li key={f.contacto.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-5">
+                    <Avatar nombre={f.contacto.nombre} tamano={36} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-tinta">{f.contacto.nombre}</span>
+                      <span className="block text-xs text-tenue">Hace {f.diasDesdeEnvio} días</span>
+                    </span>
+                    <span className="flex w-full gap-1.5 pl-12 sm:w-auto sm:pl-0">
+                      <Paso si={f.enviado} texto="Enviado" />
+                      <Paso si={f.abrio} texto="Abrió" />
+                      <Paso si={f.respondio} texto="Respondió" />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Tarjeta>
+            <p className="mt-2 text-sm text-tenue">Todos los valores de esta lista son simulados.</p>
           </section>
         </>
       )}
 
-      <SiguientePaso ruta="/expediente" texto="Ver el expediente" />
+      <div className="mt-8 flex justify-end">
+        <BotonEnlace href="/expediente" tamano="lg" icono={<ArrowRight size={19} aria-hidden />}>
+          Siguiente: expediente
+        </BotonEnlace>
+      </div>
     </div>
   );
 }
 
-function Cifra({ titulo, valor, simulado = false }: { titulo: string; valor: number; simulado?: boolean }) {
+function Cifra({
+  icono: Icono,
+  titulo,
+  valor,
+  simulado = false,
+}: {
+  icono: LucideIcon;
+  titulo: string;
+  valor: number;
+  simulado?: boolean;
+}) {
   return (
-    <div
-      className={`rounded-xl border-2 p-4 ${
-        simulado ? "border-dashed border-violet-300 bg-violet-50/60" : "border-slate-200 bg-white"
-      }`}
+    <li
+      className={cx(
+        "entrada rounded-tarjeta p-4",
+        simulado ? "rayas-simulado border-2 border-dashed border-violeta-200 bg-violeta-50/60" : "border border-linea/80 bg-superficie shadow-tarjeta",
+      )}
     >
-      <dt className="text-sm font-semibold text-slate-600">{titulo}</dt>
-      <dd className="text-3xl font-bold">{valor}</dd>
-      <dd className="mt-1">{simulado ? <Etiqueta tipo="simulado" /> : <span className="text-xs text-slate-500">Tus datos</span>}</dd>
-    </div>
+      <div className="flex items-start justify-between gap-2">
+        <span
+          className={cx(
+            "flex h-10 w-10 items-center justify-center rounded-2xl",
+            simulado ? "bg-white text-violeta-700" : "bg-marca-50 text-marca-600",
+          )}
+        >
+          <Icono size={19} aria-hidden />
+        </span>
+        <Insignia tipo={simulado ? "simulado" : "tusdatos"} />
+      </div>
+      <p className="mt-3 text-sm font-semibold text-suave">{titulo}</p>
+      <p className="text-3xl leading-tight font-bold text-tinta">{valor}</p>
+    </li>
+  );
+}
+
+function Paso({ si, texto }: { si: boolean; texto: string }) {
+  return (
+    <span
+      className={cx(
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+        si ? "bg-violeta-50 text-violeta-700" : "bg-fondo text-tenue",
+      )}
+    >
+      {si ? <Check size={13} strokeWidth={3} aria-hidden /> : <Minus size={13} aria-hidden />}
+      {texto}
+      <span className="sr-only">{si ? ": sí" : ": no"}</span>
+    </span>
   );
 }

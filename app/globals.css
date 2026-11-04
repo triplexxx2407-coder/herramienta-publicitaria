@@ -1,20 +1,168 @@
 @import "tailwindcss";
 
-:root {
-  --fondo: #f8fafc;
-  --texto: #0f172a;
+/*
+ * Dónde buscar las clases de estilo. Hace falta decirlo para la versión de un solo archivo:
+ * esa se arma desde la carpeta artefacto/ y, sin esto, sólo veía las clases de esa carpeta
+ * (la página salía casi sin diseño).
+ */
+@source "../app";
+@source "../components";
+@source "../artefacto";
+
+/*
+ * Diseño de la demo: app clara para presentar en celular o en videollamada.
+ * Un solo tema (claro) por decisión: se ve igual al compartir pantalla.
+ * Concepto: barra lateral oscura en computadora, barra de pestañas abajo en celular,
+ * tarjetas blancas sobre un fondo gris azulado y un azul "pacífico" como color de acción.
+ */
+@theme {
+  --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Sora", "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+  --color-tinta: #0b1324;
+  --color-tinta-2: #26324a;
+  --color-suave: #5a6478;
+  --color-tenue: #8b93a5;
+  --color-linea: #e3e7ef;
+  --color-fondo: #f1f3f8;
+  --color-superficie: #ffffff;
+
+  --color-marca-50: #eef3ff;
+  --color-marca-100: #dde6ff;
+  --color-marca-200: #bfd0ff;
+  --color-marca-400: #5f86ff;
+  --color-marca-500: #3b66f5;
+  --color-marca-600: #2451e6;
+  --color-marca-700: #1c40ba;
+  --color-marca-800: #172f86;
+  --color-marca-900: #101f57;
+
+  --color-verde-50: #e8f7ee;
+  --color-verde-500: #16a34a;
+  --color-verde-700: #147a3a;
+  --color-ambar-50: #fff3df;
+  --color-ambar-500: #e08700;
+  --color-ambar-700: #a85a00;
+  --color-rojo-50: #fdecec;
+  --color-rojo-500: #dc2626;
+  --color-rojo-700: #b11d1d;
+  --color-violeta-50: #f3efff;
+  --color-violeta-200: #ddd0ff;
+  --color-violeta-500: #7c3aed;
+  --color-violeta-700: #5b21b6;
+
+  --radius-tarjeta: 1.25rem;
+  --shadow-tarjeta: 0 1px 2px rgb(16 24 40 / 0.04), 0 8px 24px -12px rgb(16 24 40 / 0.14);
+  --shadow-flotante: 0 18px 40px -12px rgb(11 19 36 / 0.35);
 }
 
 html {
   color-scheme: light;
+  -webkit-text-size-adjust: 100%;
+  /* Deja libre la zona de la hora y la batería del teléfono, y la barrita de abajo. */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 body {
-  background: var(--fondo);
-  color: var(--texto);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--color-fondo);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Franja fija bajo la barra de estado del teléfono: tapa lo que pasa por detrás al bajar. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: var(--color-fondo);
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+.cifras {
+  font-variant-numeric: tabular-nums;
+}
+
+summary {
+  list-style: none;
+}
 summary::-webkit-details-marker {
   display: none;
+}
+
+.sin-barra {
+  scrollbar-width: none;
+}
+.sin-barra::-webkit-scrollbar {
+  display: none;
+}
+
+/* Rayas para marcar lo que es simulado. */
+.rayas-simulado {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(124 58 237 / 0.07) 0 10px,
+    transparent 10px 20px
+  );
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0.001;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes subir {
+  from {
+    transform: translateY(24px);
+    opacity: 0.001;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes velo {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.entrada {
+  animation: aparecer 0.32s ease-out both;
+}
+.hoja-entrada {
+  animation: subir 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.velo-entrada {
+  animation: velo 0.2s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entrada,
+  .hoja-entrada,
+  .velo-entrada {
+    animation: none;
+  }
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-marca-400);
+  outline-offset: 2px;
 }

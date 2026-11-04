@@ -16,8 +16,9 @@ Además guarda la prueba de dónde salió cada contacto.
    - rojo: no se sabe de dónde salió, y no se puede usar
 
    Los marcados «No contactar» ya no se pueden volver a elegir.
-3. **Redactar.** Llenas los datos de tu desarrollo, revisas el borrador de cada negocio y lo apruebas.
-   El pie legal se agrega solo y no se puede borrar. Los asuntos engañosos, como «Re:» o «Factura», se rechazan.
+3. **Redactar.** Revisas el correo de cada negocio y lo apruebas. Los datos de tu desarrollo (nombre, precio,
+   fotos y datos del pie legal) se cambian en **«Mi desarrollo»**. El pie legal se agrega solo y no se puede
+   borrar. Los asuntos engañosos, como «Re:» o «Factura», se rechazan.
 4. **Envío.** Aquí está el botón «Enviar», apagado. Debajo hay una simulación de cómo se repartirían los correos:
    pocos por hora, con pausas al azar y subiendo poco a poco cada día.
 5. **Seguimiento.** Un tablero de ejemplo con quién «abrió», quién «respondió» y a quién mandarle un segundo
@@ -26,6 +27,9 @@ Además guarda la prueba de dónde salió cada contacto.
    Se descarga en un archivo CSV que abre en Excel.
 
 Para presentarla rápido, en la página de inicio está el botón **«Cargar recorrido de ejemplo»**.
+
+Se ve como una app: en el celular las pantallas van en pestañas abajo y en la computadora en una barra a la
+izquierda.
 
 ## Qué es simulado
 
@@ -42,6 +46,21 @@ Para presentarla rápido, en la página de inicio está el botón **«Cargar rec
 
 Lo que escribes se guarda **sólo en tu navegador**, en `localStorage`. Si abres la demo en otra computadora,
 la verás vacía.
+
+## Cómo verla sin instalar nada
+
+Hay una versión de un solo archivo, sin servidor. Se arma con:
+
+```bash
+npm run build:archivo
+```
+
+Eso deja dos archivos en `salida-archivo/` (esa carpeta no se sube a GitHub):
+
+- `demo-prospeccion.html`: se abre con doble clic en cualquier navegador.
+- `demo-prospeccion-pagina.html`: la misma demo, lista para publicarse como página de claude.ai.
+
+En esta versión los datos de ejemplo vienen dentro del archivo y lo que hagas se guarda sólo en ese navegador.
 
 ## Cómo correrla en tu computadora
 
@@ -62,7 +81,7 @@ npm run lint      # revisión de estilo del código
 npm run build     # versión final, como la usaría Vercel
 ```
 
-## Cómo publicarla en Vercel (plan gratuito)
+## Cómo publicarla en Vercel (opcional, plan gratuito)
 
 1. Entra a <https://vercel.com> con tu cuenta de GitHub.
 2. Da clic en **Add New → Project** y elige el repositorio `herramienta-publicitaria`.
@@ -126,9 +145,11 @@ negocios.
 ```
 app/                 una carpeta por pantalla (buscar, contactos, redactar, envio, seguimiento, expediente)
 app/api/empresas/    consulta de empresas del lado del servidor (aquí se lee el token)
-components/          piezas de pantalla compartidas (semáforo, etiquetas, «¿Qué hace esto?»)
+components/          piezas compartidas: marco con pestañas, botones, tarjetas, ventanas y etiquetas
 lib/                 las reglas: semáforo, plantilla, pie legal, plan de envío, expediente
 lib/datos/           capa de acceso a datos: BuscadorDeEmpresas, DatosDeEjemplo y DenueInegi
 datos/               archivos JSON de ejemplo
+public/fotos/        ilustraciones de ejemplo del desarrollo
+artefacto/           versión de un solo archivo (npm run build:archivo)
 pruebas/             pruebas automáticas
 ```

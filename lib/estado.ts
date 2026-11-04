@@ -9,13 +9,18 @@ export const AJUSTES_EJEMPLO: AjustesProyecto = {
   puntosFuertes: proyectoJson.puntosFuertes as [string, string, string],
 };
 
+/** Copia nueva de los ajustes de ejemplo (sin structuredClone, para teléfonos viejos). */
+export function copiaAjustesEjemplo(): AjustesProyecto {
+  return JSON.parse(JSON.stringify(AJUSTES_EJEMPLO)) as AjustesProyecto;
+}
+
 export function estadoInicial(): EstadoDemo {
   return {
     version: 1,
     contactos: [],
     seleccionados: [],
     supresion: [],
-    ajustes: structuredClone(AJUSTES_EJEMPLO),
+    ajustes: copiaAjustesEjemplo(),
     borradores: {},
   };
 }

@@ -15,8 +15,12 @@ console.log("Listo:", path.join(dir, "demo-prospeccion.html"), Math.round(html.l
 
 // Variante para publicar como página de claude.ai: sólo el contenido (la plataforma pone <html>, <head> y <body>).
 const titulo = html.match(/<title>[\s\S]*?<\/title>/)[0];
+// Promesa de márgenes laterales (la página ya los respeta con max(1rem, env(safe-area-inset-*))).
+const metaLados = html.match(/<meta name="claude:viewport-fit-sides"[^>]*>/)?.[0] ?? "";
+// Tipografías de Google Fonts (lo único externo que se permite cargar).
+const fuentes = [...html.matchAll(/<link\b[^>]*href="https:\/\/fonts\.(?:googleapis|gstatic)\.com[^"]*"[^>]*>/g)].map((m) => m[0]).join("\n");
 const estilos = [...html.matchAll(/<style>[\s\S]*?<\/style>/g)].map((m) => m[0]).join("\n");
 const guiones = [...html.matchAll(/<script type="module">[\s\S]*?<\/script>/g)].map((m) => m[0]).join("\n");
-const pagina = `${titulo}\n${estilos}\n<div id="app"></div>\n${guiones}\n`;
+const pagina = [titulo, metaLados, fuentes, estilos, '<div id="app"></div>', guiones].filter(Boolean).join("\n") + "\n";
 fs.writeFileSync(path.join(dir, "demo-prospeccion-pagina.html"), pagina);
 console.log("Listo:", path.join(dir, "demo-prospeccion-pagina.html"));

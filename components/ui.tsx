@@ -1,0 +1,337 @@
+import Link from "next/link";
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
+import { ChevronDown, CircleHelp, Lock } from "lucide-react";
+import type { Semaforo } from "@/lib/tipos";
+
+/** Une clases, ignorando las vacías. */
+export function cx(...clases: (string | false | null | undefined)[]): string {
+  return clases.filter(Boolean).join(" ");
+}
+
+export function Tarjeta({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={cx("rounded-tarjeta border border-linea/80 bg-superficie shadow-tarjeta", className)}>{children}</div>;
+}
+
+type Variante = "primario" | "secundario" | "fantasma" | "exito" | "peligro" | "claro";
+type Tamano = "sm" | "md" | "lg";
+
+const VARIANTES: Record<Variante, string> = {
+  primario: "bg-marca-600 text-white shadow-sm shadow-marca-600/30 hover:bg-marca-700",
+  secundario: "border border-linea bg-white text-tinta hover:border-tenue/60 hover:bg-fondo",
+  fantasma: "text-tinta-2 hover:bg-tinta/5",
+  exito: "bg-verde-500 text-white shadow-sm shadow-verde-500/30 hover:bg-verde-700",
+  peligro: "border border-rojo-500/25 bg-white text-rojo-700 hover:bg-rojo-50",
+  claro: "border border-white/30 bg-white/15 text-white backdrop-blur hover:bg-white/25",
+};
+
+const TAMANOS: Record<Tamano, string> = {
+  sm: "h-9 gap-1.5 rounded-xl px-3 text-sm",
+  md: "h-11 gap-2 rounded-xl px-4 text-[15px]",
+  lg: "h-13 gap-2 rounded-2xl px-6 text-base",
+};
+
+const BASE_BOTON =
+  "inline-flex items-center justify-center whitespace-nowrap font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45";
+
+export function Boton({
+  variante = "primario",
+  tamano = "md",
+  icono,
+  className,
+  children,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variante?: Variante; tamano?: Tamano; icono?: ReactNode }) {
+  return (
+    <button type="button" {...props} className={cx(BASE_BOTON, VARIANTES[variante], TAMANOS[tamano], className)}>
+      {icono}
+      {children}
+    </button>
+  );
+}
+
+/** Un enlace que se ve como botón. */
+export function BotonEnlace({
+  href,
+  variante = "primario",
+  tamano = "md",
+  icono,
+  className,
+  children,
+}: {
+  href: string;
+  variante?: Variante;
+  tamano?: Tamano;
+  icono?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Link href={href} className={cx(BASE_BOTON, VARIANTES[variante], TAMANOS[tamano], className)}>
+      {icono}
+      {children}
+    </Link>
+  );
+}
+
+/** Botón apagado a propósito, con la leyenda "Próximamente". */
+export function BotonProximamente({ texto, icono, className }: { texto: string; icono?: ReactNode; className?: string }) {
+  return (
+    <button
+      type="button"
+      disabled
+      aria-disabled="true"
+      className={cx(
+        "inline-flex h-11 cursor-not-allowed items-center gap-2 rounded-xl border border-dashed border-tenue/50 bg-white/60 px-3.5 text-[15px] font-semibold text-tenue",
+        className,
+      )}
+    >
+      {icono}
+      {texto}
+      <span className="inline-flex items-center gap-1 rounded-full bg-fondo px-2 py-0.5 text-[11px] font-bold tracking-wide text-suave uppercase">
+        <Lock size={11} aria-hidden /> Próximamente
+      </span>
+    </button>
+  );
+}
+
+const INSIGNIAS = {
+  ejemplo: "border border-dashed border-tenue/70 bg-white/80 text-suave",
+  simulado: "border border-violeta-200 bg-violeta-50 text-violeta-700",
+  proximamente: "border border-linea bg-fondo text-suave",
+  tusdatos: "bg-marca-50 text-marca-700",
+} as const;
+const TEXTO_INSIGNIA = { ejemplo: "Ejemplo", simulado: "Simulado", proximamente: "Próximamente", tusdatos: "Tus datos" } as const;
+
+export function Insignia({
+  tipo,
+  children,
+  claro = false,
+}: {
+  tipo: keyof typeof INSIGNIAS;
+  children?: ReactNode;
+  claro?: boolean;
+}) {
+  return (
+    <span
+      className={cx(
+        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] leading-4 font-bold tracking-wide uppercase",
+        claro ? "border border-dashed border-white/70 bg-white/15 text-white backdrop-blur" : INSIGNIAS[tipo],
+      )}
+    >
+      {tipo === "proximamente" ? <Lock size={11} aria-hidden /> : null}
+      {children ?? TEXTO_INSIGNIA[tipo]}
+    </span>
+  );
+}
+
+const SEMAFORO: Record<Semaforo, { texto: string; pildora: string; punto: string }> = {
+  verde: { texto: "Verde", pildora: "bg-verde-50 text-verde-700", punto: "bg-verde-500" },
+  ambar: { texto: "Ámbar", pildora: "bg-ambar-50 text-ambar-700", punto: "bg-ambar-500" },
+  rojo: { texto: "Rojo", pildora: "bg-rojo-50 text-rojo-700", punto: "bg-rojo-500" },
+};
+
+export function PildoraSemaforo({ valor, texto }: { valor: Semaforo; texto?: string }) {
+  const s = SEMAFORO[valor];
+  return (
+    <span className={cx("inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold", s.pildora)}>
+      <span aria-hidden className={cx("h-2 w-2 rounded-full", s.punto)} />
+      {texto ?? s.texto}
+    </span>
+  );
+}
+
+export function Segmentado<T extends string>({
+  opciones,
+  valor,
+  onChange,
+  etiqueta,
+  className,
+}: {
+  opciones: { valor: T; texto: string; cuenta?: number; desactivado?: boolean }[];
+  valor: T;
+  onChange: (v: T) => void;
+  etiqueta: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={etiqueta}
+      className={cx("sin-barra flex max-w-full overflow-x-auto rounded-2xl bg-tinta/[0.06] p-1", className)}
+    >
+      {opciones.map((o) => {
+        const activa = o.valor === valor;
+        return (
+          <button
+            key={o.valor}
+            type="button"
+            aria-pressed={activa}
+            disabled={o.desactivado}
+            onClick={() => onChange(o.valor)}
+            className={cx(
+              "flex flex-1 shrink-0 items-center justify-center gap-1 rounded-xl px-2.5 py-2 text-[13px] font-semibold whitespace-nowrap transition disabled:opacity-40 sm:gap-1.5 sm:px-3.5 sm:text-sm",
+              activa ? "bg-white text-tinta shadow-sm" : "text-suave hover:text-tinta",
+            )}
+          >
+            {o.texto}
+            {o.cuenta !== undefined ? (
+              <span
+                className={cx(
+                  "cifras rounded-full px-1.5 text-xs",
+                  activa ? "bg-marca-100 text-marca-700" : "bg-tinta/[0.07] text-suave",
+                )}
+              >
+                {o.cuenta}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function BarraProgreso({ valor, max, color = "bg-marca-600" }: { valor: number; max: number; color?: string }) {
+  const pct = max > 0 ? Math.min(100, (valor / max) * 100) : 0;
+  return (
+    <div className="h-2.5 overflow-hidden rounded-full bg-tinta/[0.07]" role="progressbar" aria-valuemin={0} aria-valuemax={max} aria-valuenow={valor}>
+      <div className={cx("h-full rounded-full transition-all", color)} style={{ width: `${pct}%` }} />
+    </div>
+  );
+}
+
+export function EstadoVacio({
+  icono,
+  titulo,
+  texto,
+  children,
+}: {
+  icono: ReactNode;
+  titulo: string;
+  texto: string;
+  children?: ReactNode;
+}) {
+  return (
+    <Tarjeta className="entrada flex flex-col items-center px-6 py-12 text-center">
+      <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-marca-50 text-marca-600">{icono}</span>
+      <h2 className="mt-4 font-display text-xl font-bold text-tinta">{titulo}</h2>
+      <p className="mt-1 max-w-sm text-suave">{texto}</p>
+      {children ? <div className="mt-6 flex flex-wrap justify-center gap-2">{children}</div> : null}
+    </Tarjeta>
+  );
+}
+
+/** Recuadro plegable "¿Qué hace esto?". */
+export function AyudaPlegable({ children }: { children: ReactNode }) {
+  return (
+    <details className="group">
+      <summary className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-marca-100 bg-white px-3 py-1.5 text-sm font-semibold text-marca-700 select-none hover:border-marca-200">
+        <CircleHelp size={16} aria-hidden />
+        ¿Qué hace esto?
+        <ChevronDown size={16} aria-hidden className="transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="entrada mt-3 max-w-3xl space-y-2 rounded-2xl border border-marca-100 bg-marca-50/80 px-4 py-3.5 text-[15px] leading-relaxed text-tinta-2">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+export function Encabezado({
+  paso,
+  titulo,
+  subtitulo,
+  ayuda,
+  acciones,
+}: {
+  paso?: number;
+  titulo: string;
+  subtitulo?: string;
+  ayuda: ReactNode;
+  acciones?: ReactNode;
+}) {
+  return (
+    <header className="entrada mb-5 space-y-3 lg:mb-7">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          {paso ? (
+            <p className="text-xs font-bold tracking-[0.14em] text-marca-600 uppercase">Paso {paso} de 6</p>
+          ) : null}
+          <h1 className="mt-0.5 font-display text-[1.7rem] leading-tight font-bold tracking-tight text-tinta sm:text-[2.1rem]">
+            {titulo}
+          </h1>
+          {subtitulo ? <p className="mt-1 max-w-2xl text-[15px] text-suave sm:text-base">{subtitulo}</p> : null}
+        </div>
+        {acciones ? <div className="flex flex-wrap items-center gap-2">{acciones}</div> : null}
+      </div>
+      <AyudaPlegable>{ayuda}</AyudaPlegable>
+    </header>
+  );
+}
+
+const CLASE_CAMPO =
+  "w-full rounded-xl border border-linea bg-white px-3.5 text-[15px] text-tinta outline-none transition placeholder:text-tenue focus:border-marca-500 focus:ring-4 focus:ring-marca-100";
+
+export function Campo({
+  etiqueta,
+  ayuda,
+  className,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & { etiqueta: string; ayuda?: string }) {
+  return (
+    <label className={cx("block space-y-1.5", className)}>
+      <span className="text-sm font-semibold text-tinta-2">{etiqueta}</span>
+      <input {...props} className={cx(CLASE_CAMPO, "h-11")} />
+      {ayuda ? <span className="block text-xs text-tenue">{ayuda}</span> : null}
+    </label>
+  );
+}
+
+export function CampoArea({
+  etiqueta,
+  className,
+  ...props
+}: TextareaHTMLAttributes<HTMLTextAreaElement> & { etiqueta: string }) {
+  return (
+    <label className={cx("block space-y-1.5", className)}>
+      <span className="text-sm font-semibold text-tinta-2">{etiqueta}</span>
+      <textarea {...props} className={cx(CLASE_CAMPO, "py-2.5 leading-relaxed")} />
+    </label>
+  );
+}
+
+/** Lo que se ve mientras la página carga lo guardado en el navegador. */
+export function Cargando() {
+  return (
+    <div className="animate-pulse space-y-4" aria-label="Cargando">
+      <div className="h-4 w-24 rounded-full bg-linea" />
+      <div className="h-9 w-64 rounded-xl bg-linea" />
+      <div className="h-40 rounded-tarjeta bg-linea/70" />
+      <div className="h-24 rounded-tarjeta bg-linea/60" />
+    </div>
+  );
+}
+
+/** Ficha pequeña con ícono. */
+export function Ficha({
+  icono,
+  children,
+  tono = "gris",
+}: {
+  icono?: ReactNode;
+  children: ReactNode;
+  tono?: "gris" | "marca" | "verde" | "rojo";
+}) {
+  const tonos = {
+    gris: "bg-fondo text-tinta-2",
+    marca: "bg-marca-50 text-marca-700",
+    verde: "bg-verde-50 text-verde-700",
+    rojo: "bg-rojo-50 text-rojo-700",
+  };
+  return (
+    <span className={cx("inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold", tonos[tono])}>
+      {icono}
+      {children}
+    </span>
+  );
+}
