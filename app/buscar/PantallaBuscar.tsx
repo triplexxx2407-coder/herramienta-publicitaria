@@ -8,21 +8,12 @@ import { SiguientePaso } from "@/components/SiguientePaso";
 import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
 import { CIUDADES, GIROS, NOMBRE_ESTRATO, TAMANOS, nombreCiudad, nombreGiro } from "@/lib/catalogos";
 import { agregarContactos, contactoDesdeEmpresa } from "@/lib/contactos";
+import { consultarEmpresas, type FiltrosPantalla } from "@/lib/datos/consultar-empresas";
 import type { ResultadoBusqueda } from "@/lib/datos/obtener-buscador";
 import type { Empresa } from "@/lib/tipos";
 
-interface Filtros {
-  giro: string;
-  ciudad: string;
-  tamano: string;
-}
-
-async function consultar(f: Filtros): Promise<ResultadoBusqueda> {
-  const p = new URLSearchParams(f as unknown as Record<string, string>);
-  const r = await fetch(`/api/empresas?${p.toString()}`);
-  if (!r.ok) throw new Error(String(r.status));
-  return r.json();
-}
+type Filtros = FiltrosPantalla;
+const consultar = consultarEmpresas;
 
 export function PantallaBuscar() {
   const estado = useEstado();

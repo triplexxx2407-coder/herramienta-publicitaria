@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Aviso } from "@/components/Aviso";
 import { Cargando } from "@/components/Cargando";
 import { EncabezadoPantalla } from "@/components/EncabezadoPantalla";
@@ -20,15 +21,34 @@ function formatoFecha(iso: string): string {
 export function PantallaExpediente() {
   const estado = useEstado();
   const enNavegador = useEnNavegador();
+  const [avisoDescarga, setAvisoDescarga] = useState("");
   if (!enNavegador) return <Cargando />;
   const filas = filasExpediente(estado);
 
-  function descargar() {
-    const blob = new Blob([expedienteCsv(estado)], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
+  async function descargar() {
+    const csv = expedienteCsv(estado);
+    const nombre = `expediente-contactos-${new Date().toISOString().slice(0, 10)}.csv`;
+    setAvisoDescarga("");
+    // Dentro de claude.ai la descarga pasa por el permiso "downloads" del visor.
+    const visor = (window as unknown as { claude?: { use(n: string): Promise<unknown> } }).claude;
+    if (visor) {
+      const descargas = (await visor.use("downloads").catch(() => null)) as {
+        save(r: { filename: string; data: string }): Promise<unknown>;
+      } | null;
+      if (descargas) {
+        try {
+          await descargas.save({ filename: nombre, data: csv });
+        } catch (e) {
+          const codigo = (e as { code?: string })?.code;
+          if (codigo !== "declined") setAvisoDescarga("No se pudo descargar el archivo aquí. Intenta de nuevo en un momento.");
+        }
+        return;
+      }
+    }
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `expediente-contactos-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = nombre;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -67,6 +87,11 @@ export function PantallaExpediente() {
           Descargar en CSV (Excel)
         </button>
       </div>
+      {avisoDescarga ? (
+        <div className="mb-4">
+          <Aviso tipo="error">{avisoDescarga}</Aviso>
+        </div>
+      ) : null}
 
       {filas.some((f) => f.esEjemplo) ? (
         <div className="mb-4">
