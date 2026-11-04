@@ -1,37 +1,31 @@
 # Prospección por correo (demo)
 
 Es una demo de una herramienta para conseguir clientes por correo: encuentras negocios en un directorio
-público, escoges a quién escribirle, preparas un correo personal para cada uno y llevas el seguimiento.
-Además guarda la prueba de dónde salió cada contacto.
+público, eliges a quién escribirle, preparas un correo personal para cada uno, lo envías y platicas con los que
+te contestan.
 
-**Esta versión no envía ningún correo.** Todos los negocios son inventados y sus correos terminan en
-`@example.com`, un dominio que existe sólo para ejemplos.
+**Esta versión no envía ningún correo de verdad.** El botón «Enviar» funciona, pero es una simulación: sólo anota
+en tu navegador que se envió. Todos los negocios son inventados y sus correos terminan en `@example.com`, un
+dominio que existe sólo para ejemplos.
 
-## Las 6 pantallas
+## Las 5 pantallas
 
-1. **Buscar empresas.** Filtras por ciudad, tamaño y tipo de negocio, y tocas «Agregar» en los que te interesen.
-   Lo que agregas ya queda elegido para escribirle.
-2. **Elegir contactos.** Ves a quién le vas a escribir y le quitas la palomita a quien no quieras. Cada contacto
-   tiene un color según de dónde salió:
-   - verde: viene de un directorio público, de tu formulario o de tus clientes
-   - ámbar: lo agregaste tú y anotaste de dónde salió
-   - rojo: no se sabe de dónde salió, y no se puede usar
-
-   Abajo aparecen, aparte, los que no se pueden usar y por qué (no tienen correo, no se sabe de dónde salieron o
-   están en «No contactar»). Si tocas «No contactar» por error, el aviso trae «Deshacer».
-3. **Redactar.** Lees el correo de cada negocio, lo corriges si quieres y tocas «Aprobar este correo»; pasa solo
+1. **Buscar empresas.** Una lista de negocios con correo, por ciudad y tipo. «Actualizar» la vuelve a cargar.
+   Marcas a quién escribirle (o «Elegir todos») y tocas «Redactar». Los que ya recibieron tu correo o pidieron
+   «BAJA» salen apagados y no se pueden volver a elegir.
+2. **Redactar.** Lees el correo de cada negocio, lo corriges si quieres y tocas «Aprobar este correo»; pasa solo
    al siguiente. Los datos de tu desarrollo (nombre, precio, fotos y datos del pie legal) se cambian en
    **«Mi desarrollo»** (botón «Editar» del inicio). El pie legal se agrega solo y no se puede borrar. Los asuntos
    engañosos, como «Re:» o «Factura», se rechazan.
-4. **Envío.** Aquí está el botón «Enviar», apagado. Debajo se ve cuándo saldría cada correo aprobado y un ejemplo
-   con 150: pocos por hora, con pausas al azar y subiendo poco a poco cada día.
-5. **Seguimiento.** Un tablero de ejemplo con quién «abrió», quién «respondió» y a quién volver a escribirle.
-   Todo ahí es simulado.
-6. **Expediente.** De cada contacto dice de dónde salió, cuándo se agregó y qué correo se aprobó. Se descarga en
-   un archivo CSV que abre en Excel.
+3. **Envío.** Tocas «Enviar» y ves cuántos se enviaron, a quién y a qué hora. Al tocar uno ves lo que le
+   escribiste, con el pie legal.
+4. **Seguimiento.** Dos listas que se abren: «Te contestaron» y «No te contestaron». Desde ahí también ves lo que
+   le escribiste a cada uno y lo que te contestó.
+5. **Chat.** Los negocios que te contestaron, ordenados por fecha del último mensaje o por nombre (A a Z, Z a A).
+   Abres la plática y respondes. Si alguien contestó «BAJA», queda en «No contactar» y ya no se le puede escribir.
 
 En cada pantalla hay un solo botón grande abajo que dice qué sigue. Para presentarla rápido, en el inicio está
-**«O mira un ejemplo ya lleno»**, y «Borrar todo» la deja vacía otra vez.
+**«O mira un ejemplo ya lleno»** (deja 9 correos listos para enviar), y «Borrar todo» la deja vacía otra vez.
 
 Se ve como una app: en el celular las pantallas van en pestañas abajo y en la computadora en una barra a la
 izquierda.
@@ -43,14 +37,17 @@ izquierda.
 | Negocios, correos y teléfonos | Inventados (archivos en `datos/`) |
 | Textos del desarrollo (nombre, precio, puntos fuertes, fotos) | De ejemplo, y los puedes editar |
 | Pie legal | Texto de ejemplo. Antes de usarlo de verdad, que lo revise un abogado |
-| Botón «Enviar» | Apagado |
-| Plan de envío | Simulación |
-| Seguimiento (enviados, abrieron, respondieron) | Inventado. No es un resultado ni una predicción |
-| «Mejorar con IA» | Apagado. El código ya tiene dónde conectarlo (`lib/ia.ts`) |
+| Botón «Enviar» | Simulación: no hay ninguna conexión a un servicio de correo (`lib/envio.ts`) |
+| Respuestas y chat | De ejemplo: contestan 4 de cada 10 (en la vida real son muchos menos) y una es «BAJA» |
+| Lo que escribes en el chat | Se queda en tu navegador; no se envía |
 | Directorio DENUE de INEGI | Preparado pero sin activar (`lib/datos/denue-inegi.ts`) |
 
 Lo que escribes se guarda **sólo en tu navegador**, en `localStorage`. Si abres la demo en otra computadora,
 la verás vacía.
+
+Quedaron en el código, pero ya no en pantalla, para usarse después: el expediente de contactos para Excel
+(`lib/expediente.ts`), el plan de envío poco a poco (`lib/plan-envio.ts`) y los contactos agregados a mano con
+su semáforo de origen (`lib/contactos.ts`).
 
 ## Cómo verla sin instalar nada
 
@@ -139,7 +136,8 @@ negocios.
    tu cuenta. Los servicios de envío masivo, como Amazon SES o Resend, prohíben el correo en frío.
 2. **Un correo con dominio propio** y su configuración (SPF, DKIM y DMARC), para no caer en spam.
 3. **Una base de datos con usuarios**, para que la información no viva sólo en el navegador.
-4. **Leer las respuestas**, para que una «BAJA» marque al contacto como «No contactar» automáticamente.
+4. **Leer las respuestas de verdad** de tu buzón. En la demo, una «BAJA» de ejemplo ya marca al contacto como
+   «No contactar».
 5. **Activar el DENUE** con tu token y revisar los datos reales.
 6. **Revisión legal** del pie del correo y del aviso de privacidad, conforme a la ley de protección de datos
    personales.
@@ -148,10 +146,10 @@ negocios.
 ## Cómo está organizado el código
 
 ```
-app/                 una carpeta por pantalla (buscar, contactos, redactar, envio, seguimiento, expediente)
+app/                 una carpeta por pantalla (buscar, redactar, envio, seguimiento, chat)
 app/api/empresas/    consulta de empresas del lado del servidor (aquí se lee el token)
 components/          piezas compartidas: marco con pestañas, botones, tarjetas, ventanas y etiquetas
-lib/                 las reglas: semáforo, plantilla, pie legal, plan de envío, expediente
+lib/                 las reglas: selección, plantilla, pie legal, envío simulado y chat, expediente
 lib/datos/           capa de acceso a datos: BuscadorDeEmpresas, DatosDeEjemplo y DenueInegi
 datos/               archivos JSON de ejemplo
 public/fotos/        ilustraciones de ejemplo del desarrollo

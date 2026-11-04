@@ -1,166 +1,189 @@
 "use client";
 
-import { ArrowRight, ChartColumn, FlaskConical, MailOpen, PenLine, Reply, Send, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowRight, Ban, ChartColumn, ChevronDown, ChevronRight, Clock, MessageCircle, Reply, Send, type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useId, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
-import { avisar } from "@/components/avisos";
-import {
-  BOTON_BARRA,
-  BarraAccion,
-  Boton,
-  BotonEnlace,
-  BotonProximamente,
-  Cargando,
-  Encabezado,
-  EstadoVacio,
-  Insignia,
-  Tarjeta,
-  cx,
-} from "@/components/ui";
-import { reiniciarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
-import { contactosParaRedactar, nombreVisible } from "@/lib/contactos";
-import { estadoDeRecorrido } from "@/lib/estado";
-import { DIAS_PARA_SEGUNDO_MENSAJE, simularSeguimiento, type EstadoSimulado } from "@/lib/seguimiento";
-
-/** Lo más lejos que llegó cada correo, en una palabra. */
-function situacion(f: EstadoSimulado): { texto: string; clase: string; orden: number } {
-  if (f.respondio) return { texto: "Respondió", clase: "bg-violeta-500 text-white", orden: 0 };
-  if (f.abrio) return { texto: "Lo abrió", clase: "bg-violeta-50 text-violeta-700", orden: 1 };
-  return { texto: "No lo ha abierto", clase: "bg-fondo text-suave", orden: 2 };
-}
+import { Hoja } from "@/components/Hoja";
+import { VistaCorreo } from "@/components/VistaCorreo";
+import { pedirChatCon } from "@/components/ventanas";
+import { BOTON_BARRA, BarraAccion, Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, Tarjeta, cx } from "@/components/ui";
+import { useEnNavegador, useEstado } from "@/lib/almacen";
+import { nombreVisible } from "@/lib/contactos";
+import { enviosHechos, pideBaja, type Envio } from "@/lib/envio";
+import { cuandoCorto } from "@/lib/fechas";
 
 export function PantallaSeguimiento() {
   const estado = useEstado();
   const enNavegador = useEnNavegador();
+  const router = useRouter();
+  const [abierto, setAbierto] = useState<string | null>(null);
   if (!enNavegador) return <Cargando />;
 
-  const aprobados = contactosParaRedactar(estado).filter((c) => estado.borradores[c.id]?.estado === "aprobado");
-  const filas = simularSeguimiento(aprobados);
-  const cuenta = (f: (x: EstadoSimulado) => boolean) => filas.filter(f).length;
-  const segundo = filas.filter((f) => f.necesitaSegundoMensaje);
-  const ordenadas = [...filas].sort((a, b) => situacion(a).orden - situacion(b).orden);
+  const envios = enviosHechos(estado);
+  const contestaron = envios.filter((e) => e.respuesta).sort((a, b) => b.respuesta!.fecha.localeCompare(a.respuesta!.fecha));
+  const noContestaron = envios.filter((e) => !e.respuesta);
+  const viendo = envios.find((e) => e.contacto.id === abierto);
+
+  function abrirChat(id: string) {
+    pedirChatCon(id);
+    router.push("/chat");
+  }
 
   return (
     <div>
       <Encabezado
-        paso={5}
+        paso={4}
         titulo="Seguimiento"
-        subtitulo="Quién abrió, quién respondió y a quién volver a escribirle."
+        subtitulo="Quién te contestó y quién no."
         ayuda={
           <>
-            <p>Aquí verías qué pasó con cada correo y a quién conviene escribirle otra vez.</p>
-            <p>Como la demo no envía nada, estos números son inventados sólo para mostrar cómo se vería. No son resultados.</p>
+            <p>Abre una lista para ver quién te contestó y quién no. Toca un negocio para ver lo que le escribiste.</p>
+            <p>Como la demo no envía nada, las respuestas son de ejemplo: las inventa la demo para que veas cómo se vería.</p>
           </>
         }
       />
 
-      <p className="rayas-simulado entrada mb-5 flex items-start gap-2.5 rounded-2xl border border-violeta-200 bg-violeta-50 px-4 py-3 font-semibold text-violeta-700">
-        <FlaskConical size={19} aria-hidden className="mt-0.5 shrink-0" />
-        Tablero simulado. Ningún correo se envió; «enviado», «abrió» y «respondió» son inventados.
-      </p>
-
-      {aprobados.length === 0 ? (
+      {envios.length === 0 ? (
         <EstadoVacio
           icono={<ChartColumn size={30} aria-hidden />}
-          titulo="Aún no hay correos aprobados"
-          texto="Aprueba tus correos en «Redactar» y aquí verás cómo irían."
+          titulo="Todavía no envías ningún correo"
+          texto="Cuando envíes tus correos, aquí verás quién te contestó."
         >
-          <BotonEnlace href="/redactar" icono={<PenLine size={18} aria-hidden />}>
-            Ir a redactar
+          <BotonEnlace href="/envio" icono={<Send size={18} aria-hidden />}>
+            Ir a Envío
           </BotonEnlace>
-          <Boton
-            variante="secundario"
-            icono={<Sparkles size={18} aria-hidden />}
-            onClick={() => {
-              const nuevo = estadoDeRecorrido();
-              reiniciarEstado(nuevo);
-              avisar(`Listo: ${nuevo.contactos.length} negocios de ejemplo`);
-            }}
-          >
-            Llenar con un ejemplo
-          </Boton>
         </EstadoVacio>
       ) : (
         <>
-          <ul className="mb-7 grid grid-cols-3 gap-2 sm:gap-3">
-            <Cifra icono={Send} titulo="Enviados" valor={cuenta((f) => f.enviado)} />
-            <Cifra icono={MailOpen} titulo="Abrieron" valor={cuenta((f) => f.abrio)} />
-            <Cifra icono={Reply} titulo="Respondieron" valor={cuenta((f) => f.respondio)} />
-          </ul>
+          <p className="entrada mb-4 flex items-center gap-2 px-1 text-sm font-semibold text-violeta-700">
+            <Insignia tipo="ejemplo" /> Las respuestas las inventa la demo.
+          </p>
 
-          {segundo.length ? (
-            <section aria-labelledby="titulo-otra-vez" className="mb-7">
-              <h2 id="titulo-otra-vez" className="flex flex-wrap items-center gap-2 font-display text-xl font-bold">
-                Volver a escribirles <span className="font-sans text-lg font-semibold text-suave">({segundo.length})</span>
-                <Insignia tipo="ejemplo" />
-              </h2>
-              <p className="mt-1 mb-3 text-suave">No han respondido en {DIAS_PARA_SEGUNDO_MENSAJE} días o más.</p>
-              <Tarjeta className="overflow-hidden">
-                <ul className="divide-y divide-linea">
-                  {segundo.map((f) => (
-                    <li key={f.contacto.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
-                      <Avatar nombre={f.contacto.nombre} tamano={36} />
-                      <span className="min-w-0 flex-1 truncate font-semibold text-tinta">{nombreVisible(f.contacto.nombre, f.contacto.esEjemplo)}</span>
-                      <span className="shrink-0 text-sm text-suave">Hace {f.diasDesdeEnvio} días</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="border-t border-linea bg-fondo/60 px-4 py-3 sm:px-5">
-                  <BotonProximamente texto="Escribirles otra vez" className="w-full justify-center sm:w-auto" />
-                </div>
-              </Tarjeta>
-            </section>
-          ) : null}
-
-          <section aria-labelledby="titulo-cada-uno">
-            <h2 id="titulo-cada-uno" className="mb-3 flex flex-wrap items-center gap-2 font-display text-xl font-bold">
-              Cómo va cada uno <Insignia tipo="ejemplo" />
-            </h2>
-            <Tarjeta className="overflow-hidden">
-              <ul className="divide-y divide-linea">
-                {ordenadas.map((f) => {
-                  const s = situacion(f);
-                  return (
-                    <li key={f.contacto.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
-                      <Avatar nombre={f.contacto.nombre} tamano={36} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold text-tinta">{nombreVisible(f.contacto.nombre, f.contacto.esEjemplo)}</span>
-                        <span className="block text-xs text-tenue">Enviado hace {f.diasDesdeEnvio} días</span>
+          <div className="space-y-3">
+            <Lista icono={Reply} titulo="Te contestaron" cuenta={contestaron.length} tono="verde">
+              {contestaron.map((e) => (
+                <Fila
+                  key={e.contacto.id}
+                  envio={e}
+                  detalle={
+                    pideBaja(e.respuesta!.texto) ? (
+                      <span className="inline-flex items-center gap-1 font-semibold text-rojo-700">
+                        <Ban size={13} aria-hidden /> Pidió no recibir correos
                       </span>
-                      <span className={cx("shrink-0 rounded-full px-2.5 py-1 text-xs font-bold", s.clase)}>{s.texto}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Tarjeta>
-          </section>
+                    ) : (
+                      `«${e.respuesta!.texto}»`
+                    )
+                  }
+                  cuando={cuandoCorto(e.respuesta!.fecha)}
+                  onAbrir={() => setAbierto(e.contacto.id)}
+                />
+              ))}
+            </Lista>
+            <Lista icono={Clock} titulo="No te contestaron" cuenta={noContestaron.length} tono="gris">
+              {noContestaron.map((e) => (
+                <Fila
+                  key={e.contacto.id}
+                  envio={e}
+                  detalle={e.correo.para}
+                  cuando={cuandoCorto(e.correo.fecha)}
+                  onAbrir={() => setAbierto(e.contacto.id)}
+                />
+              ))}
+            </Lista>
+          </div>
 
-          <BarraAccion notaComputadora="Números de ejemplo: nada se envió">
-            <BotonEnlace href="/expediente" className={BOTON_BARRA} icono={<ArrowRight size={19} aria-hidden />}>
-              Siguiente: el expediente
-            </BotonEnlace>
-          </BarraAccion>
+          {contestaron.length ? (
+            <BarraAccion>
+              <BotonEnlace href="/chat" className={BOTON_BARRA} icono={<ArrowRight size={19} aria-hidden />}>
+                Siguiente: el chat
+              </BotonEnlace>
+            </BarraAccion>
+          ) : null}
         </>
       )}
+
+      <Hoja
+        abierta={!!viendo}
+        onCerrar={() => setAbierto(null)}
+        titulo={viendo?.respuesta ? "Te contestó" : "Correo enviado"}
+        pie={
+          viendo?.respuesta ? (
+            <Boton className="w-full" icono={<MessageCircle size={18} aria-hidden />} onClick={() => abrirChat(viendo.contacto.id)}>
+              Abrir el chat
+            </Boton>
+          ) : undefined
+        }
+      >
+        {viendo ? <VistaCorreo envio={viendo} ajustes={estado.ajustes} /> : null}
+      </Hoja>
     </div>
   );
 }
 
-function Cifra({ icono: Icono, titulo, valor }: { icono: LucideIcon; titulo: string; valor: number }) {
+/** Una lista que se abre y se cierra, con cuántos hay a la vista. */
+function Lista({
+  icono: Icono,
+  titulo,
+  cuenta,
+  tono,
+  children,
+}: {
+  icono: LucideIcon;
+  titulo: string;
+  cuenta: number;
+  tono: "verde" | "gris";
+  children: ReactNode;
+}) {
+  const [abierta, setAbierta] = useState(false);
+  const id = useId();
   return (
-    <li className="entrada rayas-simulado rounded-tarjeta border-2 border-dashed border-violeta-200 bg-violeta-50/60 p-3 sm:p-4">
-      <div className="flex items-start justify-between gap-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-violeta-700 sm:h-10 sm:w-10 sm:rounded-2xl">
-          <Icono size={18} aria-hidden />
+    <Tarjeta className="entrada overflow-hidden">
+      <button
+        type="button"
+        aria-expanded={abierta}
+        aria-controls={id}
+        onClick={() => setAbierta((a) => !a)}
+        className="flex w-full items-center gap-3.5 px-4 py-4 text-left transition-colors hover:bg-fondo/70 sm:px-5"
+      >
+        <span
+          className={cx(
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl",
+            tono === "verde" ? "bg-verde-50 text-verde-700" : "bg-fondo text-suave",
+          )}
+        >
+          <Icono size={22} aria-hidden />
         </span>
-        <span className="hidden sm:block">
-          <Insignia tipo="ejemplo" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-lg leading-tight font-bold text-tinta">{titulo}</span>
+          <span className="block text-sm text-suave">{abierta ? "Toca para cerrar" : "Toca para ver la lista"}</span>
         </span>
+        <span className="cifras text-3xl font-bold text-tinta">{cuenta}</span>
+        <ChevronDown size={20} aria-hidden className={cx("shrink-0 text-tenue transition-transform", abierta && "rotate-180")} />
+      </button>
+      <div id={id} hidden={!abierta} className="border-t border-linea">
+        {cuenta ? <ul className="divide-y divide-linea">{children}</ul> : <p className="px-5 py-4 text-sm text-suave">Nadie por ahora.</p>}
       </div>
-      <p className="mt-2.5 text-3xl leading-tight font-bold text-tinta">{valor}</p>
-      <p className="text-sm font-semibold text-suave">{titulo}</p>
-      <span className="mt-1.5 block sm:hidden">
-        <Insignia tipo="ejemplo" />
-      </span>
+    </Tarjeta>
+  );
+}
+
+function Fila({ envio: e, detalle, cuando, onAbrir }: { envio: Envio; detalle: ReactNode; cuando: string; onAbrir: () => void }) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onAbrir}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-fondo sm:px-5"
+      >
+        <Avatar nombre={e.contacto.nombre} tamano={40} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-semibold text-tinta">{nombreVisible(e.contacto.nombre, e.contacto.esEjemplo)}</span>
+          <span className="block truncate text-sm text-suave">{detalle}</span>
+        </span>
+        <span className="cifras shrink-0 text-sm text-suave">{cuando}</span>
+        <ChevronRight size={18} aria-hidden className="shrink-0 text-tenue" />
+      </button>
     </li>
   );
 }

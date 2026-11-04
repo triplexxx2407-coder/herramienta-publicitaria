@@ -22,7 +22,14 @@ export function estadoInicial(): EstadoDemo {
     supresion: [],
     ajustes: copiaAjustesEjemplo(),
     borradores: {},
+    enviados: {},
+    chats: {},
+    leidos: {},
   };
+}
+
+function esObjeto(v: unknown): v is object {
+  return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
 /** Revisa que lo leído del navegador tenga la forma esperada; si no, empieza de cero. */
@@ -38,7 +45,11 @@ export function leerEstadoGuardado(texto: string | null): EstadoDemo {
       seleccionados: Array.isArray(e.seleccionados) ? e.seleccionados : [],
       supresion: Array.isArray(e.supresion) ? e.supresion : [],
       ajustes: { ...base.ajustes, ...(e.ajustes ?? {}) },
-      borradores: e.borradores && typeof e.borradores === "object" ? e.borradores : {},
+      borradores: esObjeto(e.borradores) ? e.borradores : {},
+      // Lo guardado por versiones anteriores de la demo no traía envíos ni pláticas.
+      enviados: esObjeto(e.enviados) ? e.enviados : {},
+      chats: esObjeto(e.chats) ? e.chats : {},
+      leidos: esObjeto(e.leidos) ? e.leidos : {},
     };
   } catch {
     return estadoInicial();

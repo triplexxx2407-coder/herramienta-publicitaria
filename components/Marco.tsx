@@ -3,19 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import {
-  ChartColumn,
-  House,
-  Lock,
-  PenLine,
-  Search,
-  Send,
-  ShieldCheck,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { ChartColumn, House, Lock, MessageCircle, PenLine, Search, Send, type LucideIcon } from "lucide-react";
 import { useEnNavegador, useEstado } from "@/lib/almacen";
-import { contactosParaRedactar } from "@/lib/contactos";
+import { listosParaEnviar, porEscribir } from "@/lib/contactos";
+import { platicas } from "@/lib/envio";
 import { AJUSTES_EJEMPLO } from "@/lib/estado";
 import { PANTALLAS } from "@/lib/pantallas";
 import { ContenedorAvisos } from "./avisos";
@@ -27,11 +18,10 @@ import { abrirMiDesarrollo, cerrarMiDesarrollo, useMiDesarrolloAbierto } from ".
 const ICONOS: Record<string, LucideIcon> = {
   "/": House,
   "/buscar": Search,
-  "/contactos": Users,
   "/redactar": PenLine,
   "/envio": Send,
   "/seguimiento": ChartColumn,
-  "/expediente": ShieldCheck,
+  "/chat": MessageCircle,
 };
 
 const MENU = [{ ruta: "/", nombre: "Inicio", corto: "Inicio" }, ...PANTALLAS];
@@ -55,15 +45,11 @@ export function Marco({ children }: { children: ReactNode }) {
   const enNavegador = useEnNavegador();
   const miDesarrolloAbierto = useMiDesarrolloAbierto();
 
-  const elegidos = enNavegador ? contactosParaRedactar(estado) : [];
-  const aprobados = elegidos.filter((c) => estado.borradores[c.id]?.estado === "aprobado").length;
-  const cuentas: Record<string, string | undefined> = enNavegador
-    ? {
-        "/buscar": estado.contactos.length ? String(estado.contactos.length) : undefined,
-        "/contactos": elegidos.length ? String(elegidos.length) : undefined,
-        "/redactar": elegidos.length ? `${aprobados}/${elegidos.length}` : undefined,
-      }
-    : {};
+  // Números junto a cada sección: correos por aprobar, listos para enviar y pláticas sin leer.
+  const porAprobar = enNavegador ? porEscribir(estado).length - listosParaEnviar(estado).length : 0;
+  const listos = enNavegador ? listosParaEnviar(estado).length : 0;
+  const sinLeer = enNavegador ? platicas(estado).filter((p) => p.noLeida).length : 0;
+  const cuentas: Record<string, number> = { "/redactar": porAprobar, "/envio": listos, "/chat": sinLeer };
   const portada = (enNavegador ? estado.ajustes.fotos[0]?.url : undefined) ?? AJUSTES_EJEMPLO.fotos[0]?.url;
   const nombreDesarrollo = enNavegador ? estado.ajustes.nombreDesarrollo : AJUSTES_EJEMPLO.nombreDesarrollo;
 
@@ -84,7 +70,7 @@ export function Marco({ children }: { children: ReactNode }) {
             {MENU.map((p) => {
               const Icono = ICONOS[p.ruta];
               const activa = ruta === p.ruta;
-              const cuenta = cuentas[p.ruta];
+              const cuenta = cuentas[p.ruta] || null;
               return (
                 <li key={p.ruta}>
                   <Link
@@ -101,7 +87,11 @@ export function Marco({ children }: { children: ReactNode }) {
                       <span
                         className={cx(
                           "cifras rounded-full px-2 py-0.5 text-xs font-bold",
-                          activa ? "bg-marca-50 text-marca-700" : "bg-white/12 text-white/85",
+                          activa
+                            ? "bg-marca-50 text-marca-700"
+                            : p.ruta === "/chat"
+                              ? "bg-rojo-500 text-white"
+                              : "bg-white/12 text-white/85",
                         )}
                       >
                         {cuenta}
@@ -164,25 +154,37 @@ export function Marco({ children }: { children: ReactNode }) {
           {PANTALLAS.map((p) => {
             const Icono = ICONOS[p.ruta];
             const activa = ruta === p.ruta;
+            const cuenta = cuentas[p.ruta] || null;
             return (
-              <li key={p.ruta} className="min-w-0 flex-auto">
+              <li key={p.ruta} className="min-w-0 flex-1">
                 <Link
                   href={p.ruta}
                   aria-current={activa ? "page" : undefined}
-                  aria-label={p.nombre}
+                  aria-label={cuenta ? `${p.nombre} (${cuenta})` : p.nombre}
                   className="flex flex-col items-center gap-1 pt-2 pb-1.5"
                 >
                   <span
                     className={cx(
-                      "flex h-8 w-12 items-center justify-center rounded-full transition-colors",
+                      "relative flex h-8 w-12 items-center justify-center rounded-full transition-colors",
                       activa ? "bg-marca-100 text-marca-700" : "text-suave",
                     )}
                   >
                     <Icono size={21} aria-hidden strokeWidth={activa ? 2.4 : 2} />
+                    {cuenta ? (
+                      <span
+                        aria-hidden
+                        className={cx(
+                          "cifras absolute -top-1 right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10.5px] leading-none font-bold text-white ring-2 ring-white",
+                          p.ruta === "/chat" ? "bg-rojo-500" : "bg-marca-600",
+                        )}
+                      >
+                        {cuenta}
+                      </span>
+                    ) : null}
                   </span>
                   <span
                     className={cx(
-                      "max-w-full truncate text-[10.5px] leading-tight font-semibold",
+                      "max-w-full truncate text-[11px] leading-tight font-semibold",
                       activa ? "text-marca-700" : "text-suave",
                     )}
                   >

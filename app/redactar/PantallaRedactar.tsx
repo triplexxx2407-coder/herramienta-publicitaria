@@ -1,28 +1,13 @@
 "use client";
 
-import { ArrowRight, Check, CircleAlert, Lock, Paperclip, Pencil, PenLine, RotateCcw, Sparkles, Undo2, Users } from "lucide-react";
+import { Check, CircleAlert, Lock, Paperclip, PenLine, RotateCcw, Search, Send } from "lucide-react";
 import { useRef, useState, type RefObject } from "react";
 import { Avatar } from "@/components/Avatar";
 import { avisar } from "@/components/avisos";
-import {
-  BOTON_BARRA,
-  BarraAccion,
-  BarraProgreso,
-  Boton,
-  BotonEnlace,
-  BotonProximamente,
-  Cargando,
-  Encabezado,
-  EstadoVacio,
-  Insignia,
-  Tarjeta,
-  cx,
-} from "@/components/ui";
+import { BOTON_BARRA, BarraAccion, Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, Tarjeta, cx } from "@/components/ui";
 import { abrirMiDesarrollo } from "@/components/ventanas";
-import { actualizarEstado, reiniciarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
-import { contactosParaRedactar, nombreVisible } from "@/lib/contactos";
-import { AJUSTES_EJEMPLO, estadoDeRecorrido } from "@/lib/estado";
-import { obtenerAsistente } from "@/lib/ia";
+import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
+import { nombreVisible, porEscribir } from "@/lib/contactos";
 import { aprobar, armarCorreo, generarBorrador, validarAjustes, validarAsunto } from "@/lib/redaccion";
 import type { AjustesProyecto, Borrador, Contacto } from "@/lib/tipos";
 
@@ -39,7 +24,8 @@ export function PantallaRedactar() {
   const erroresRef = useRef<HTMLDivElement>(null);
   if (!enNavegador) return <Cargando />;
 
-  const contactos = contactosParaRedactar(estado);
+  const contactos = porEscribir(estado);
+  const yaEnviaste = Object.keys(estado.enviados).length > 0;
   const esAprobado = (c: Contacto) => estado.borradores[c.id]?.estado === "aprobado";
   const aprobados = contactos.filter(esAprobado).length;
   const todos = contactos.length > 0 && aprobados === contactos.length;
@@ -91,13 +77,13 @@ export function PantallaRedactar() {
   return (
     <div>
       <Encabezado
-        paso={3}
+        paso={2}
         titulo="Redactar"
         subtitulo="Lee cada correo, cámbiale lo que quieras y apruébalo."
         ayuda={
           <>
             <p>Cada negocio que elegiste ya tiene un correo armado con su nombre y los datos de tu desarrollo.</p>
-            <p>Sólo los que apruebes pasan a «Envío». El pie legal se agrega solo y no se puede borrar.</p>
+            <p>Sólo los que apruebes se pueden enviar. El pie legal se agrega solo y no se puede borrar.</p>
           </>
         }
       />
@@ -105,29 +91,16 @@ export function PantallaRedactar() {
       {!actual ? (
         <EstadoVacio
           icono={<PenLine size={30} aria-hidden />}
-          titulo="Aún no eliges a quién escribirle"
-          texto="Elige contactos y aquí aparecerá un correo listo para cada uno."
+          titulo={yaEnviaste ? "No tienes correos pendientes" : "Aún no eliges a quién escribirle"}
+          texto={yaEnviaste ? "Marca más negocios en «Buscar» para escribirles." : "Marca negocios en «Buscar» y aquí aparece un correo listo para cada uno."}
         >
-          <BotonEnlace href="/contactos" icono={<Users size={18} aria-hidden />}>
-            Elegir contactos
+          <BotonEnlace href="/buscar" icono={<Search size={18} aria-hidden />}>
+            Ir a Buscar
           </BotonEnlace>
-          <Boton
-            variante="secundario"
-            icono={<Sparkles size={18} aria-hidden />}
-            onClick={() => {
-              const nuevo = estadoDeRecorrido();
-              reiniciarEstado(nuevo);
-              avisar(`Listo: ${nuevo.contactos.length} negocios de ejemplo`);
-            }}
-          >
-            Llenar con un ejemplo
-          </Boton>
         </EstadoVacio>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-6">
-          <aside className="hidden space-y-4 lg:sticky lg:top-6 lg:block">
-            <TarjetaResumen ajustes={estado.ajustes} aprobados={aprobados} total={contactos.length} />
-
+          <aside className="hidden lg:sticky lg:top-6 lg:block">
             <Tarjeta className="entrada overflow-hidden">
               <p className="px-4 pt-3.5 pb-2 text-xs font-bold tracking-[0.12em] text-tenue uppercase">
                 Correos ({contactos.length})
@@ -205,7 +178,6 @@ export function PantallaRedactar() {
               key={actual.id}
               contacto={actual}
               borrador={estado.borradores[actual.id] ?? generarBorrador(actual, estado.ajustes)}
-              guardado={!!estado.borradores[actual.id]}
               ajustes={estado.ajustes}
               errores={errores[actual.id] ?? []}
               erroresRef={erroresRef}
@@ -224,11 +196,11 @@ export function PantallaRedactar() {
               }
             >
               {todos ? (
-                <BotonEnlace href="/envio" className={BOTON_BARRA} icono={<ArrowRight size={19} aria-hidden />}>
-                  Siguiente: ver el envío
+                <BotonEnlace href="/envio" className={BOTON_BARRA} icono={<Send size={19} aria-hidden />}>
+                  Siguiente: enviar
                 </BotonEnlace>
               ) : esAprobado(actual) && pendienteSiguiente ? (
-                <Boton className={BOTON_BARRA} icono={<ArrowRight size={19} aria-hidden />} onClick={() => irA(pendienteSiguiente.id)}>
+                <Boton className={BOTON_BARRA} icono={<PenLine size={19} aria-hidden />} onClick={() => irA(pendienteSiguiente.id)}>
                   Siguiente correo
                 </Boton>
               ) : (
@@ -257,48 +229,11 @@ function MarcaAprobado() {
   );
 }
 
-function TarjetaResumen({ ajustes, aprobados, total }: { ajustes: AjustesProyecto; aprobados: number; total: number }) {
-  const portada = ajustes.fotos[0]?.url ?? AJUSTES_EJEMPLO.fotos[0]?.url;
-  return (
-    <Tarjeta className="entrada overflow-hidden">
-      <button
-        type="button"
-        onClick={abrirMiDesarrollo}
-        aria-label={`Editar mi desarrollo: ${ajustes.nombreDesarrollo}`}
-        className="flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-fondo"
-      >
-        {portada ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={portada} alt="" className="h-14 w-20 shrink-0 rounded-xl object-cover" />
-        ) : null}
-        <span className="min-w-0 flex-1">
-          <span className="block text-xs font-semibold text-suave">Mi desarrollo</span>
-          <span className="block truncate font-semibold text-tinta">{ajustes.nombreDesarrollo}</span>
-          <span className="block truncate text-sm text-suave">Desde {ajustes.precioDesde}</span>
-        </span>
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-fondo text-tinta-2">
-          <Pencil size={16} aria-hidden />
-        </span>
-      </button>
-      <div className="border-t border-linea px-4 py-3">
-        <div className="mb-2 flex items-baseline justify-between gap-2">
-          <span className="text-sm font-semibold text-tinta-2">Aprobados</span>
-          <span className="text-sm font-bold text-tinta">
-            {aprobados} de {total}
-          </span>
-        </div>
-        <BarraProgreso valor={aprobados} max={total} color="bg-verde-500" />
-      </div>
-    </Tarjeta>
-  );
-}
-
 const ETIQUETA = "text-xs font-bold tracking-[0.12em] text-tenue uppercase";
 
 function Redactor({
   contacto,
   borrador,
-  guardado,
   ajustes,
   errores,
   erroresRef,
@@ -306,7 +241,6 @@ function Redactor({
 }: {
   contacto: Contacto;
   borrador: Borrador;
-  guardado: boolean;
   ajustes: AjustesProyecto;
   errores: string[];
   erroresRef: RefObject<HTMLDivElement | null>;
@@ -315,7 +249,8 @@ function Redactor({
   const erroresAsunto = validarAsunto(borrador.asunto);
   const { pie } = armarCorreo(borrador, contacto, ajustes);
   const aprobado = borrador.estado === "aprobado";
-  const asistente = obtenerAsistente();
+  const plantilla = generarBorrador(contacto, ajustes);
+  const cambiado = borrador.asunto !== plantilla.asunto || borrador.cuerpo !== plantilla.cuerpo;
 
   // Cualquier cambio regresa el borrador a "pendiente": hay que volver a aprobarlo.
   function editar(cambios: Partial<Borrador>) {
@@ -408,29 +343,21 @@ function Redactor({
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-linea bg-fondo/60 px-4 py-3 sm:px-5">
-        {aprobado ? (
-          <Boton variante="secundario" tamano="sm" icono={<Undo2 size={16} aria-hidden />} onClick={() => editar({})}>
-            Quitar aprobación
-          </Boton>
-        ) : null}
-        {guardado ? (
+      {cambiado ? (
+        <div className="border-t border-linea bg-fondo/60 px-4 py-2.5 sm:px-5">
           <Boton
             variante="fantasma"
             tamano="sm"
             icono={<RotateCcw size={16} aria-hidden />}
             onClick={() => {
               onCambio();
-              guardar(generarBorrador(contacto, ajustes));
+              guardar(plantilla);
             }}
           >
             Volver a la plantilla
           </Boton>
-        ) : null}
-        {asistente.disponible ? null : (
-          <BotonProximamente texto="Mejorar con IA" icono={<Sparkles size={17} aria-hidden />} className="sm:ml-auto" />
-        )}
-      </div>
+        </div>
+      ) : null}
     </Tarjeta>
   );
 }

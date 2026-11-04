@@ -28,3 +28,18 @@ export function useMiDesarrolloAbierto(): boolean {
     () => false,
   );
 }
+
+/** Qué plática abrir al llegar a «Chat» (por ejemplo, desde «Seguimiento»). */
+let chatPendiente: string | null = null;
+
+export function pedirChatCon(id: string) {
+  chatPendiente = id;
+}
+
+export function chatPedido(): string | null {
+  return chatPendiente;
+}
+
+export function olvidarChatPedido() {
+  chatPendiente = null;
+}

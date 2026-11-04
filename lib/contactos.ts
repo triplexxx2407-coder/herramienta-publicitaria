@@ -1,4 +1,4 @@
-import type { Contacto, Empresa, EstadoDemo, Origen, Semaforo, TipoOrigen } from "@/lib/tipos";
+import type { Contacto, Empresa, EstadoDemo, Origen, Semaforo } from "@/lib/tipos";
 
 export const FUENTE_EJEMPLO = "Datos de ejemplo (simula el DENUE de INEGI)";
 
@@ -15,15 +15,6 @@ export function semaforoDe(origen: Origen): Semaforo {
       return "rojo";
   }
 }
-
-/** De dónde salió, en dos o tres palabras (para la pantalla; el expediente en Excel usa nombres más formales). */
-export const ORIGEN_CORTO: Record<TipoOrigen, string> = {
-  directorio_publico: "Directorio público",
-  formulario_propio: "Tu formulario",
-  cliente_actual: "Tu cliente",
-  declarado: "Lo agregaste tú",
-  desconocido: "Sin origen",
-};
 
 export function normalizarCorreo(correo: string | null | undefined): string {
   return (correo ?? "").trim().toLowerCase();
@@ -48,13 +39,6 @@ export function motivoBloqueo(contacto: Contacto, estado: Pick<EstadoDemo, "supr
   return null;
 }
 
-/** Por qué no se le puede escribir, en palabras sencillas. */
-export const TEXTO_BLOQUEO: Record<MotivoBloqueo, string> = {
-  sin_correo: "No tiene correo",
-  rojo: "No sabemos de dónde salió",
-  no_contactar: "Marcado «No contactar»",
-};
-
 export function puedeRedactar(contacto: Contacto, estado: Pick<EstadoDemo, "supresion">): boolean {
   return motivoBloqueo(contacto, estado) === null;
 }
@@ -66,6 +50,61 @@ export function puedeRedactar(contacto: Contacto, estado: Pick<EstadoDemo, "supr
 export function contactosParaRedactar(estado: EstadoDemo): Contacto[] {
   const elegidos = new Set(estado.seleccionados);
   return estado.contactos.filter((c) => elegidos.has(c.id) && puedeRedactar(c, estado));
+}
+
+/** Los elegidos a los que todavía no se les envía: son los que aparecen en «Redactar». */
+export function porEscribir(estado: EstadoDemo): Contacto[] {
+  return contactosParaRedactar(estado).filter((c) => !estado.enviados[c.id]);
+}
+
+/** Aprobados y sin enviar: los que salen al tocar «Enviar». */
+export function listosParaEnviar(estado: EstadoDemo): Contacto[] {
+  return porEscribir(estado).filter((c) => estado.borradores[c.id]?.estado === "aprobado");
+}
+
+/**
+ * Elige empresas de la lista de «Buscar»: las guarda como contactos si hace falta y las deja elegidas.
+ * Nunca elige a las que no se pueden usar (sin correo, rojo o «No contactar») ni a las que ya les escribiste.
+ */
+export function elegirEmpresas(
+  estado: EstadoDemo,
+  empresas: Empresa[],
+  fuente: string,
+  esEjemplo: boolean,
+  ahora = new Date(),
+): EstadoDemo {
+  const conTodas = agregarContactos(
+    estado,
+    empresas.map((e) => contactoDesdeEmpresa(e, fuente, esEjemplo, ahora)),
+  );
+  const ids = new Set(empresas.map((e) => e.id));
+  const yaElegidos = new Set(conTodas.seleccionados);
+  const nuevos = conTodas.contactos
+    .filter((c) => ids.has(c.id) && !yaElegidos.has(c.id) && !conTodas.enviados[c.id] && puedeRedactar(c, conTodas))
+    .map((c) => c.id);
+  if (!nuevos.length) return conTodas;
+  return { ...conTodas, seleccionados: [...conTodas.seleccionados, ...nuevos] };
+}
+
+/** Quita de la selección (el contacto y su borrador se quedan guardados por si lo vuelves a elegir). */
+export function quitarDeSeleccion(estado: EstadoDemo, ids: string[]): EstadoDemo {
+  const quitar = new Set(ids);
+  if (!estado.seleccionados.some((s) => quitar.has(s))) return estado;
+  return { ...estado, seleccionados: estado.seleccionados.filter((s) => !quitar.has(s)) };
+}
+
+/**
+ * Alguien contestó «BAJA»: su correo entra a «No contactar» y sale de la selección.
+ * A diferencia de marcarNoContactar, no borra nada: el correo enviado y la plática se quedan como prueba.
+ */
+export function registrarBaja(estado: EstadoDemo, id: string, ahora = new Date()): EstadoDemo {
+  const correo = normalizarCorreo(estado.contactos.find((c) => c.id === id)?.correo);
+  if (!correo || estado.supresion.some((s) => s.correo === correo)) return estado;
+  return {
+    ...estado,
+    supresion: [...estado.supresion, { correo, fecha: ahora.toISOString() }],
+    seleccionados: estado.seleccionados.filter((s) => s !== id),
+  };
 }
 
 /** Elige o quita un contacto. Si no está permitido, no se elige. */

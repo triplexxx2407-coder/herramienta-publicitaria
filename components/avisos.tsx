@@ -31,7 +31,8 @@ function quitar(id: number) {
 
 export function avisar(texto: string, accion?: Accion) {
   const id = siguiente++;
-  mensajes = [...mensajes.slice(-2), { id, texto, accion }];
+  // Uno a la vez: el nuevo reemplaza al anterior para no amontonar mensajes.
+  mensajes = [{ id, texto, accion }];
   avisarCambio();
   // Con botón se queda más tiempo, para alcanzar a tocarlo.
   setTimeout(() => quitar(id), accion ? 6000 : 2600);

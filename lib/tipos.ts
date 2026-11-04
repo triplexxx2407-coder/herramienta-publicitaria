@@ -80,6 +80,28 @@ export interface Borrador {
   fechaAprobado?: string;
 }
 
+/**
+ * Un correo "enviado" en la SIMULACIÓN (en la demo no sale nada).
+ * Guarda el texto tal como habría salido, con el pie legal, para poder verlo después.
+ */
+export interface CorreoEnviado {
+  contactoId: string;
+  para: string;
+  asunto: string;
+  /** Mensaje + pie legal. */
+  texto: string;
+  /** Fecha y hora del envío simulado (ISO 8601). */
+  fecha: string;
+}
+
+/** Un mensaje del chat con un negocio. "ellos" son respuestas de ejemplo que inventa la demo. */
+export interface MensajeChat {
+  id: string;
+  de: "yo" | "ellos";
+  texto: string;
+  fecha: string;
+}
+
 /** Todo lo que la demo guarda en el navegador. */
 export interface EstadoDemo {
   version: 1;
@@ -90,4 +112,10 @@ export interface EstadoDemo {
   supresion: { correo: string; fecha: string }[];
   ajustes: AjustesProyecto;
   borradores: Record<string, Borrador>;
+  /** Correos ya enviados (simulación), por id de contacto. */
+  enviados: Record<string, CorreoEnviado>;
+  /** Plática con cada negocio después del correo, por id de contacto. */
+  chats: Record<string, MensajeChat[]>;
+  /** Hasta qué fecha leíste cada plática (para marcar las nuevas). */
+  leidos: Record<string, string>;
 }

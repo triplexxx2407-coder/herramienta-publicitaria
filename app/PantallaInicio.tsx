@@ -1,54 +1,50 @@
 "use client";
 
-import {
-  ArrowRight,
-  ChartColumn,
-  Check,
-  ChevronRight,
-  Lock,
-  MapPin,
-  Pencil,
-  PenLine,
-  RotateCcw,
-  Search,
-  Send,
-  ShieldCheck,
-  Sparkles,
-  Tag,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
-import Link from "next/link";
+import { ArrowRight, Lock, MapPin, Pencil, RotateCcw, Search, Sparkles, Tag } from "lucide-react";
 import { useState } from "react";
 import { avisar } from "@/components/avisos";
-import { AyudaPlegable, Boton, BotonEnlace, Cargando, Insignia, Tarjeta, cx } from "@/components/ui";
+import { AyudaPlegable, Boton, BotonEnlace, Cargando, Insignia, Tarjeta } from "@/components/ui";
 import { abrirMiDesarrollo } from "@/components/ventanas";
 import { reiniciarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
-import { contactosParaRedactar } from "@/lib/contactos";
+import { listosParaEnviar, porEscribir } from "@/lib/contactos";
+import { enviosHechos, platicas } from "@/lib/envio";
 import { AJUSTES_EJEMPLO, estadoDeRecorrido, estadoInicial } from "@/lib/estado";
-
-interface Paso {
-  ruta: string;
-  icono: LucideIcon;
-  titulo: string;
-  detalle: string;
-  hecho?: boolean;
-  etiqueta?: string;
-}
+import type { EstadoDemo } from "@/lib/tipos";
 
 /** Lo que conviene hacer ahora, según lo que ya hiciste. */
-function loQueSigue(elegidos: number, aprobados: number) {
-  if (elegidos === 0) return { numero: 2, titulo: "Elegir contactos", texto: "Marca a quién quieres escribirle.", ruta: "/contactos" };
-  if (aprobados < elegidos) {
-    const faltan = elegidos - aprobados;
+function loQueSigue(estado: EstadoDemo) {
+  const pendientes = porEscribir(estado).length;
+  const listos = listosParaEnviar(estado).length;
+  const sinLeer = platicas(estado).filter((p) => p.noLeida).length;
+  if (pendientes > listos) {
+    const faltan = pendientes - listos;
     return {
-      numero: 3,
+      numero: 2,
       titulo: "Redactar",
       texto: faltan === 1 ? "Te falta aprobar 1 correo." : `Te faltan ${faltan} correos por aprobar.`,
       ruta: "/redactar",
     };
   }
-  return { numero: 4, titulo: "Envío", texto: "Tus correos están listos. Mira cómo saldrían.", ruta: "/envio" };
+  if (listos) {
+    return {
+      numero: 3,
+      titulo: "Envío",
+      texto: listos === 1 ? "Tienes 1 correo listo para enviar." : `Tienes ${listos} correos listos para enviar.`,
+      ruta: "/envio",
+    };
+  }
+  if (sinLeer) {
+    return {
+      numero: 5,
+      titulo: "Chat",
+      texto: sinLeer === 1 ? "1 negocio te contestó." : `${sinLeer} negocios te contestaron.`,
+      ruta: "/chat",
+    };
+  }
+  if (enviosHechos(estado).length) {
+    return { numero: 4, titulo: "Seguimiento", texto: "Mira quién te contestó y quién no.", ruta: "/seguimiento" };
+  }
+  return { numero: 1, titulo: "Buscar empresas", texto: "Marca a quién quieres escribirle.", ruta: "/buscar" };
 }
 
 export function PantallaInicio() {
@@ -58,51 +54,20 @@ export function PantallaInicio() {
   if (!enNavegador) return <Cargando />;
 
   const { ajustes } = estado;
-  const elegidos = contactosParaRedactar(estado);
-  const aprobados = elegidos.filter((c) => estado.borradores[c.id]?.estado === "aprobado").length;
-  const enLista = estado.contactos.length;
+  const porEnviar = porEscribir(estado).length;
+  const enviados = enviosHechos(estado).length;
+  const contestaron = platicas(estado).length;
+  const hayAlgo = estado.contactos.length > 0;
   const portada = ajustes.fotos[0]?.url ?? AJUSTES_EJEMPLO.fotos[0]?.url;
-  const sigue = loQueSigue(elegidos.length, aprobados);
+  const sigue = loQueSigue(estado);
 
   function llenarConEjemplo() {
     const nuevo = estadoDeRecorrido();
     reiniciarEstado(nuevo);
     setConfirmar(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
-    avisar(`Listo: ${nuevo.contactos.length} negocios de ejemplo`);
+    avisar(`Listo: ${porEscribir(nuevo).length} correos de ejemplo`);
   }
-
-  const pasos: Paso[] = [
-    {
-      ruta: "/buscar",
-      icono: Search,
-      titulo: "Buscar empresas",
-      detalle: enLista ? `${enLista} en tu lista` : "Negocios por tipo y ciudad",
-      hecho: enLista > 0,
-    },
-    {
-      ruta: "/contactos",
-      icono: Users,
-      titulo: "Elegir contactos",
-      detalle: elegidos.length ? `${elegidos.length} elegidos` : "A quién escribirle",
-      hecho: elegidos.length > 0,
-    },
-    {
-      ruta: "/redactar",
-      icono: PenLine,
-      titulo: "Redactar",
-      detalle: elegidos.length ? `${aprobados} de ${elegidos.length} aprobados` : "Un correo para cada uno",
-      hecho: elegidos.length > 0 && aprobados === elegidos.length,
-    },
-    { ruta: "/envio", icono: Send, titulo: "Envío", detalle: "Así saldrían, poco a poco", etiqueta: "Simulación" },
-    { ruta: "/seguimiento", icono: ChartColumn, titulo: "Seguimiento", detalle: "Quién abrió y respondió", etiqueta: "Simulado" },
-    {
-      ruta: "/expediente",
-      icono: ShieldCheck,
-      titulo: "Expediente",
-      detalle: enLista ? `${enLista} documentados` : "De dónde salió cada uno",
-    },
-  ];
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-6">
@@ -139,13 +104,13 @@ export function PantallaInicio() {
                   </span>
                 </p>
               </div>
-              {enLista > 0 ? (
+              {hayAlgo ? (
                 <dl className="grid grid-cols-3 gap-2 sm:gap-3">
                   {(
                     [
-                      ["En tu lista", enLista],
-                      ["Elegidos", elegidos.length],
-                      ["Aprobados", aprobados],
+                      ["Por enviar", porEnviar],
+                      ["Enviados", enviados],
+                      ["Contestaron", contestaron],
                     ] as const
                   ).map(([titulo, valor]) => (
                     <div key={titulo} className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 backdrop-blur-md">
@@ -161,10 +126,10 @@ export function PantallaInicio() {
 
         {/* Qué hacer ahora: un solo botón grande */}
         <Tarjeta className="entrada p-5 sm:p-6">
-          {enLista === 0 ? (
+          {!hayAlgo ? (
             <>
               <h2 className="font-display text-xl font-bold">¿Cómo empiezo?</h2>
-              <p className="mt-1 text-suave">Busca negocios, elige a quién escribirle y revisa los correos. Nada se envía.</p>
+              <p className="mt-1 text-suave">Marca negocios, revisa su correo y envíalo. Es de prueba: nada sale de aquí.</p>
               <BotonEnlace href="/buscar" tamano="lg" className="mt-5 w-full sm:w-auto" icono={<Search size={19} aria-hidden />}>
                 Empezar
               </BotonEnlace>
@@ -188,37 +153,6 @@ export function PantallaInicio() {
           )}
         </Tarjeta>
 
-        {/* Los pasos */}
-        <Tarjeta className="entrada overflow-hidden">
-          <h2 className="px-4 pt-4 pb-2 font-display text-lg font-bold sm:px-5">Los 6 pasos</h2>
-          <ol className="divide-y divide-linea">
-            {pasos.map((p, i) => {
-              const Icono = p.hecho ? Check : p.icono;
-              return (
-                <li key={p.ruta}>
-                  <Link href={p.ruta} className="flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-fondo sm:px-5">
-                    <span
-                      className={cx(
-                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl",
-                        p.hecho ? "bg-verde-50 text-verde-700" : "bg-marca-50 text-marca-600",
-                      )}
-                    >
-                      <Icono size={20} aria-hidden strokeWidth={p.hecho ? 2.6 : 2} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-semibold text-tinta">
-                        {i + 1}. {p.titulo}
-                      </span>
-                      <span className="block truncate text-sm text-suave">{p.detalle}</span>
-                    </span>
-                    {p.etiqueta ? <Insignia tipo="simulado">{p.etiqueta}</Insignia> : null}
-                    <ChevronRight size={18} aria-hidden className="shrink-0 text-tenue" />
-                  </Link>
-                </li>
-              );
-            })}
-          </ol>
-        </Tarjeta>
       </div>
 
       <div className="space-y-5">
@@ -232,7 +166,7 @@ export function PantallaInicio() {
               <p className="text-sm text-suave">Nada se envía y los negocios son inventados.</p>
             </div>
           </div>
-          {enLista > 0 ? (
+          {hayAlgo ? (
             <div className="mt-4 flex flex-col gap-2">
               {confirmar ? (
                 <div className="rounded-2xl bg-rojo-50 p-3">
@@ -255,21 +189,16 @@ export function PantallaInicio() {
                   </div>
                 </div>
               ) : (
-                <>
-                  <Boton variante="secundario" onClick={llenarConEjemplo} icono={<Sparkles size={17} aria-hidden />}>
-                    Volver a llenar con el ejemplo
-                  </Boton>
-                  <Boton variante="fantasma" onClick={() => setConfirmar(true)} icono={<RotateCcw size={17} aria-hidden />}>
-                    Borrar todo
-                  </Boton>
-                </>
+                <Boton variante="fantasma" onClick={() => setConfirmar(true)} icono={<RotateCcw size={17} aria-hidden />}>
+                  Borrar todo y empezar de nuevo
+                </Boton>
               )}
             </div>
           ) : null}
         </Tarjeta>
 
         <AyudaPlegable>
-          <p>Esta app te ayuda a encontrar negocios, escribirle un correo personal a cada uno y ver quién responde.</p>
+          <p>Esta app te ayuda a encontrar negocios, escribirle un correo personal a cada uno y platicar con los que te contestan.</p>
           <p>Es una demostración: ningún correo sale de aquí y lo que hagas se queda sólo en este navegador.</p>
         </AyudaPlegable>
       </div>
