@@ -300,6 +300,39 @@ export function CampoArea({
   );
 }
 
+/**
+ * El paso que sigue, siempre a la vista: en el celular queda fijo abajo (arriba de las pestañas)
+ * y en la computadora flota al pie de la pantalla. Lleva un solo botón grande.
+ * `nota` se ve siempre; `notaComputadora` sólo en pantallas grandes (en el celular estorbaría).
+ */
+export function BarraAccion({
+  nota,
+  notaComputadora,
+  children,
+}: {
+  nota?: ReactNode;
+  notaComputadora?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      <div aria-hidden className={cx("lg:hidden", nota ? "h-20" : "h-14")} />
+      <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] z-30 border-t border-linea/80 bg-white/95 pt-2.5 pr-[max(1rem,env(safe-area-inset-right,0px))] pb-2.5 pl-[max(1rem,env(safe-area-inset-left,0px))] backdrop-blur-md sm:pr-[max(1.5rem,env(safe-area-inset-right,0px))] sm:pl-[max(1.5rem,env(safe-area-inset-left,0px))] lg:sticky lg:bottom-5 lg:mt-8 lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+        <div className="mx-auto flex max-w-xl flex-col gap-1.5 lg:max-w-none lg:flex-row lg:items-center lg:justify-end lg:gap-4 lg:rounded-2xl lg:border lg:border-linea lg:bg-white/90 lg:py-3 lg:pr-3 lg:pl-5 lg:shadow-flotante lg:backdrop-blur">
+          {nota ? <div className="text-center text-sm font-semibold text-tinta-2 lg:mr-auto lg:text-left">{nota}</div> : null}
+          {!nota && notaComputadora ? (
+            <div className="mr-auto hidden text-sm font-semibold text-tinta-2 lg:block">{notaComputadora}</div>
+          ) : null}
+          {children}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Clases del botón grande de la barra de abajo. */
+export const BOTON_BARRA = "h-12 w-full rounded-2xl text-base lg:w-auto lg:min-w-[16rem]";
+
 /** Lo que se ve mientras la página carga lo guardado en el navegador. */
 export function Cargando() {
   return (

@@ -20,6 +20,8 @@ export interface FilaExpediente {
   ciudad: string;
   fuente: string;
   tipoOrigen: string;
+  /** El tipo de origen tal cual (para la pantalla). */
+  tipo: TipoOrigen;
   nota: string;
   fechaAlta: string;
   semaforo: Semaforo;
@@ -43,6 +45,7 @@ export function filasExpediente(estado: EstadoDemo): FilaExpediente[] {
       ciudad: nombreCiudad(c.ciudad),
       fuente: c.origen.fuente,
       tipoOrigen: NOMBRE_TIPO_ORIGEN[c.origen.tipo],
+      tipo: c.origen.tipo,
       nota: c.origen.nota ?? "",
       fechaAlta: c.origen.fecha,
       semaforo: semaforoDe(c.origen),

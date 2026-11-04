@@ -3,10 +3,16 @@
 import { CircleCheck } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
-/** Mensajitos que aparecen abajo unos segundos ("Agregado a tu lista"). */
+/** Mensajitos que aparecen arriba unos segundos ("Agregado a tu lista"), a veces con un botón «Deshacer». */
+interface Accion {
+  texto: string;
+  alHacer: () => void;
+}
+
 interface Mensaje {
   id: number;
   texto: string;
+  accion?: Accion;
 }
 
 let mensajes: Mensaje[] = [];
@@ -18,14 +24,17 @@ function avisarCambio() {
   for (const o of oyentes) o();
 }
 
-export function avisar(texto: string) {
-  const id = siguiente++;
-  mensajes = [...mensajes.slice(-2), { id, texto }];
+function quitar(id: number) {
+  mensajes = mensajes.filter((m) => m.id !== id);
   avisarCambio();
-  setTimeout(() => {
-    mensajes = mensajes.filter((m) => m.id !== id);
-    avisarCambio();
-  }, 2600);
+}
+
+export function avisar(texto: string, accion?: Accion) {
+  const id = siguiente++;
+  mensajes = [...mensajes.slice(-2), { id, texto, accion }];
+  avisarCambio();
+  // Con botón se queda más tiempo, para alcanzar a tocarlo.
+  setTimeout(() => quitar(id), accion ? 6000 : 2600);
 }
 
 function suscribir(o: () => void) {
@@ -40,7 +49,7 @@ export function ContenedorAvisos() {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-[60] flex flex-col items-center gap-2 pr-[max(1rem,env(safe-area-inset-right,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))] lg:bottom-8"
+      className="pointer-events-none fixed inset-x-0 top-[calc(4.25rem+env(safe-area-inset-top,0px))] z-[60] flex flex-col items-center gap-2 pr-[max(1rem,env(safe-area-inset-right,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))] lg:top-6"
     >
       {lista.map((m) => (
         <div
@@ -50,6 +59,18 @@ export function ContenedorAvisos() {
         >
           <CircleCheck size={18} aria-hidden className="text-verde-500" />
           {m.texto}
+          {m.accion ? (
+            <button
+              type="button"
+              onClick={() => {
+                m.accion?.alHacer();
+                quitar(m.id);
+              }}
+              className="pointer-events-auto -my-1 -mr-2 ml-1 rounded-full px-2.5 py-1 font-bold text-marca-200 underline-offset-2 hover:bg-white/10 hover:underline"
+            >
+              {m.accion.texto}
+            </button>
+          ) : null}
         </div>
       ))}
     </div>

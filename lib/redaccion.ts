@@ -6,7 +6,7 @@ export const PLANTILLA_ASUNTO = "{desarrollo}: condominios en {ciudadProyecto} d
 
 export const PLANTILLA_CUERPO = `Hola, equipo de {negocio}:
 
-Les escribo porque vi que su negocio de {giro} está en {ciudad}, y quizá les interese una opción de inversión o de vivienda cerca.
+Les escribo porque vi que {suNegocio} está en {ciudad}, y quizá les interese una opción de inversión o de vivienda cerca.
 
 Estamos en preventa de {desarrollo}, en {ciudadProyecto}, con precios desde {precio}:
 
@@ -20,9 +20,12 @@ Saludos,
 {asesor}`;
 
 export function variablesDe(contacto: Contacto, ajustes: AjustesProyecto): Record<string, string> {
+  const giro = contacto.giro ? nombreGiro(contacto.giro).toLowerCase() : "";
   return {
     negocio: contacto.nombre,
-    giro: nombreGiro(contacto.giro).toLowerCase(),
+    giro,
+    // Si no se sabe el giro (contacto agregado a mano), la frase queda «su negocio» y no «su negocio de ».
+    suNegocio: giro ? `su negocio de ${giro}` : "su negocio",
     ciudad: nombreCiudad(contacto.ciudad),
     desarrollo: ajustes.nombreDesarrollo,
     ciudadProyecto: ajustes.ciudad,

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {
-  Building2,
   ChartColumn,
   House,
   Lock,
@@ -145,19 +144,9 @@ export function Marco({ children }: { children: ReactNode }) {
               <Logo tamano={32} />
               <span className="truncate font-display text-[17px] font-bold">Prospección</span>
             </Link>
-            <div className="flex items-center gap-1.5">
-              <span className="rounded-full bg-tinta px-2.5 py-1 text-[11px] font-bold tracking-wider text-white uppercase">
-                Demo
-              </span>
-              <button
-                type="button"
-                onClick={abrirMiDesarrollo}
-                aria-label="Mi desarrollo"
-                className="flex h-10 w-10 items-center justify-center rounded-full text-tinta-2 hover:bg-tinta/5"
-              >
-                <Building2 size={21} aria-hidden />
-              </button>
-            </div>
+            <span className="rounded-full bg-tinta px-2.5 py-1 text-[11px] font-bold tracking-wider text-white uppercase">
+              Demo
+            </span>
           </div>
         </header>
 

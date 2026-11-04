@@ -4,12 +4,23 @@ import { Ban, CalendarDays, ChevronDown, Database, Download, Mail, Search, Shiel
 import { useState, type ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
 import { avisar } from "@/components/avisos";
-import { Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, PildoraSemaforo, Segmentado, Tarjeta, cx } from "@/components/ui";
+import {
+  BOTON_BARRA,
+  BarraAccion,
+  Boton,
+  BotonEnlace,
+  Cargando,
+  Encabezado,
+  EstadoVacio,
+  Insignia,
+  PildoraSemaforo,
+  Tarjeta,
+  cx,
+} from "@/components/ui";
 import { useEnNavegador, useEstado } from "@/lib/almacen";
+import { nombreVisible, ORIGEN_CORTO } from "@/lib/contactos";
 import { expedienteCsv, filasExpediente, type FilaExpediente } from "@/lib/expediente";
 import type { EstadoDemo } from "@/lib/tipos";
-
-type Filtro = "todos" | "verde" | "ambar" | "rojo" | "no";
 
 function formatoFecha(iso: string): string {
   if (!iso) return "—";
@@ -54,12 +65,9 @@ export function PantallaExpediente() {
   const estado = useEstado();
   const enNavegador = useEnNavegador();
   const [avisoDescarga, setAvisoDescarga] = useState("");
-  const [filtro, setFiltro] = useState<Filtro>("todos");
   if (!enNavegador) return <Cargando />;
 
   const filas = filasExpediente(estado);
-  const cuenta = (f: Filtro) => filas.filter((x) => coincide(x, f)).length;
-  const visibles = filas.filter((x) => coincide(x, filtro));
 
   return (
     <div>
@@ -69,11 +77,8 @@ export function PantallaExpediente() {
         subtitulo="La prueba de dónde salió cada contacto, lista para abrir en Excel."
         ayuda={
           <>
-            <p>
-              Aquí queda la prueba de cada contacto: de dónde salió, cuándo lo agregaste, qué semáforo tiene y qué mensaje
-              aprobaste.
-            </p>
-            <p>Si alguien pregunta «¿de dónde sacaste mi correo?», o si lo pide la autoridad, lo descargas en un archivo para Excel.</p>
+            <p>Aquí queda la prueba de cada contacto: de dónde salió, cuándo lo agregaste y qué correo aprobaste.</p>
+            <p>Si alguien pregunta «¿de dónde sacaste mi correo?», o si lo pide la autoridad, lo descargas para Excel.</p>
           </>
         }
       />
@@ -90,9 +95,9 @@ export function PantallaExpediente() {
         </EstadoVacio>
       ) : (
         <>
-          <section className="entrada relative mb-4 overflow-hidden rounded-[28px] bg-tinta p-5 text-white shadow-tarjeta sm:p-6">
+          <section className="entrada relative mb-5 overflow-hidden rounded-[28px] bg-tinta p-5 text-white shadow-tarjeta sm:p-6">
             <div aria-hidden className="absolute -top-20 -right-12 h-56 w-56 rounded-full bg-verde-500/25 blur-3xl" />
-            <div className="relative flex flex-wrap items-center gap-4">
+            <div className="relative flex items-center gap-4">
               <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10">
                 <ShieldCheck size={28} aria-hidden />
               </span>
@@ -100,14 +105,6 @@ export function PantallaExpediente() {
                 <p className="text-4xl leading-none font-bold">{filas.length}</p>
                 <p className="mt-1 text-white/75">{filas.length === 1 ? "contacto documentado" : "contactos documentados"}</p>
               </div>
-              <Boton
-                tamano="lg"
-                className="w-full sm:w-auto"
-                icono={<Download size={19} aria-hidden />}
-                onClick={async () => setAvisoDescarga(await descargar(estado))}
-              >
-                Descargar para Excel
-              </Boton>
             </div>
           </section>
 
@@ -117,48 +114,34 @@ export function PantallaExpediente() {
             </p>
           ) : null}
 
-          {filas.some((f) => f.esEjemplo) ? (
-            <p className="mb-4 flex items-center gap-2 text-sm text-suave">
-              <Insignia tipo="ejemplo" /> Los contactos marcados así son inventados.
-            </p>
-          ) : null}
+          <ul className="space-y-3">
+            {filas.map((f, i) => (
+              <li key={`${f.correo}-${f.fechaAlta}-${i}`}>
+                <TarjetaContacto f={f} />
+              </li>
+            ))}
+          </ul>
 
-          <Segmentado
-            etiqueta="Qué contactos ver"
-            className="mb-3 w-full sm:w-fit"
-            valor={filtro}
-            onChange={setFiltro}
-            opciones={[
-              { valor: "todos", texto: "Todos", cuenta: filas.length },
-              { valor: "verde", texto: "Verde", cuenta: cuenta("verde") },
-              { valor: "ambar", texto: "Ámbar", cuenta: cuenta("ambar") },
-              { valor: "rojo", texto: "Rojo", cuenta: cuenta("rojo") },
-              { valor: "no", texto: "No contactar", cuenta: cuenta("no") },
-            ]}
-          />
-
-          {visibles.length ? (
-            <ul className="space-y-3">
-              {visibles.map((f, i) => (
-                <li key={`${f.correo}-${f.fechaAlta}-${i}`}>
-                  <TarjetaContacto f={f} />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="rounded-tarjeta bg-white px-5 py-8 text-center text-suave">No hay contactos en este grupo.</p>
-          )}
+          <BarraAccion notaComputadora={`Un archivo para Excel con los ${filas.length} contactos`}>
+            <Boton
+              className={BOTON_BARRA}
+              icono={<Download size={19} aria-hidden />}
+              onClick={async () => setAvisoDescarga(await descargar(estado))}
+            >
+              Descargar para Excel
+            </Boton>
+          </BarraAccion>
         </>
       )}
     </div>
   );
 }
 
-function coincide(f: FilaExpediente, filtro: Filtro): boolean {
-  if (filtro === "todos") return true;
-  if (filtro === "no") return f.noContactar;
-  return f.semaforo === filtro;
-}
+const TEXTO_MENSAJE: Record<string, string> = {
+  Aprobado: "Aprobado",
+  "Borrador sin aprobar": "Sin aprobar",
+  "Sin mensaje": "Todavía no",
+};
 
 function TarjetaContacto({ f }: { f: FilaExpediente }) {
   return (
@@ -167,29 +150,33 @@ function TarjetaContacto({ f }: { f: FilaExpediente }) {
         <Avatar nombre={f.contacto} apagado={f.noContactar} />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-semibold text-tinta">{f.contacto}</span>
+            <span className="font-semibold text-tinta">{nombreVisible(f.contacto, f.esEjemplo)}</span>
             {f.esEjemplo ? <Insignia tipo="ejemplo" /> : null}
+          </p>
+          <p className="truncate text-sm text-suave">{f.correo || "No tiene correo"}</p>
+          <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <PildoraSemaforo valor={f.semaforo} texto={ORIGEN_CORTO[f.tipo]} />
             {f.noContactar ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rojo-50 px-2 py-0.5 text-xs font-bold text-rojo-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-rojo-50 px-2.5 py-1 text-xs font-bold text-rojo-700">
                 <Ban size={12} aria-hidden /> No contactar
               </span>
             ) : null}
           </p>
-          <p className="truncate text-sm text-suave">{f.correo || "No tiene correo"}</p>
         </div>
-        <PildoraSemaforo valor={f.semaforo} />
       </div>
 
       <ul className="mt-4 grid grid-cols-1 gap-3 border-t border-linea pt-4 sm:grid-cols-3">
         <Dato icono={Database} titulo="De dónde salió">
-          {f.tipoOrigen} · {f.fuente}
-          {f.nota ? <span className="block text-suave">Nota: «{f.nota}»</span> : null}
+          {f.fuente}
+          {f.nota ? <span className="block text-suave">«{f.nota}»</span> : null}
         </Dato>
-        <Dato icono={CalendarDays} titulo="Cuándo se agregó">
+        <Dato icono={CalendarDays} titulo="Cuándo lo agregaste">
           {formatoFecha(f.fechaAlta)}
         </Dato>
-        <Dato icono={Mail} titulo="Mensaje">
-          <span className={cx(f.estadoMensaje === "Aprobado" && "font-semibold text-verde-700")}>{f.estadoMensaje}</span>
+        <Dato icono={Mail} titulo="Correo">
+          <span className={cx(f.estadoMensaje === "Aprobado" && "font-semibold text-verde-700")}>
+            {TEXTO_MENSAJE[f.estadoMensaje] ?? f.estadoMensaje}
+          </span>
           {f.fechaAprobado ? <span className="block text-suave">{formatoFecha(f.fechaAprobado)}</span> : null}
         </Dato>
       </ul>
@@ -197,7 +184,7 @@ function TarjetaContacto({ f }: { f: FilaExpediente }) {
       {f.mensajeAprobado ? (
         <details className="group mt-4">
           <summary className="inline-flex cursor-pointer items-center gap-1 text-sm font-semibold text-marca-700">
-            Ver mensaje aprobado <ChevronDown size={15} aria-hidden className="transition-transform group-open:rotate-180" />
+            Ver el correo aprobado <ChevronDown size={15} aria-hidden className="transition-transform group-open:rotate-180" />
           </summary>
           <div className="mt-2 rounded-2xl border border-linea bg-fondo p-4">
             <p className="text-xs font-bold tracking-[0.12em] text-tenue uppercase">Asunto</p>

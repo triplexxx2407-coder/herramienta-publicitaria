@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   alternarSeleccion,
   agregarContactos,
+  agregarYElegir,
   contactoDesdeEmpresa,
   contactoManual,
   contactosParaRedactar,
+  deshacerNoContactar,
   marcarNoContactar,
+  nombreVisible,
   puedeRedactar,
   semaforoDe,
 } from "@/lib/contactos";
@@ -98,5 +101,66 @@ describe("recorrido de ejemplo", () => {
       expect(c.correo).toMatch(/@example\.com$/);
       expect(e.borradores[c.id]?.estado).toBe("aprobado");
     }
+  });
+});
+
+describe("agregar y elegir en un solo paso", () => {
+  it("elige sólo a los nuevos que se pueden usar", () => {
+    const sinCorreo = contactoDesdeEmpresa(
+      { id: "s1", nombre: "Sin correo (ejemplo)", giro: "hoteles", ciudad: "tijuana", estrato: 2, telefono: "664", correo: null, sitioWeb: null },
+      "Datos de ejemplo",
+      true,
+    );
+    const e = agregarYElegir(estadoInicial(), [verde, ambar, rojo, sinCorreo]);
+    expect(e.contactos).toHaveLength(4);
+    expect(e.seleccionados.sort()).toEqual([ambar.id, verde.id].sort());
+    expect(contactosParaRedactar(e).map((c) => c.id)).not.toContain(rojo.id);
+  });
+
+  it("no vuelve a elegir a alguien que ya estaba en la lista y se quitó", () => {
+    let e = agregarYElegir(estadoInicial(), [verde]);
+    e = alternarSeleccion(e, verde.id);
+    expect(e.seleccionados).toEqual([]);
+    e = agregarYElegir(e, [verde, ambar]);
+    expect(e.seleccionados).toEqual([ambar.id]);
+  });
+
+  it("un correo en «No contactar» se agrega pero no se elige", () => {
+    let e = agregarYElegir(estadoInicial(), [verde]);
+    e = marcarNoContactar(e, verde.id);
+    const otraVez = { ...verde, id: "v1-bis" };
+    e = agregarYElegir(e, [otraVez]);
+    expect(e.seleccionados).not.toContain("v1-bis");
+    expect(contactosParaRedactar(e)).toHaveLength(0);
+  });
+
+  it("quita el «(ejemplo)» del nombre sólo al final", () => {
+    expect(nombreVisible("Hotel Sol (ejemplo)")).toBe("Hotel Sol");
+    expect(nombreVisible("Hotel (ejemplo) Sol")).toBe("Hotel (ejemplo) Sol");
+  });
+
+  it("no toca el nombre de un contacto que no es de ejemplo", () => {
+    expect(nombreVisible("Hotel Sol (ejemplo)", false)).toBe("Hotel Sol (ejemplo)");
+  });
+});
+
+describe("deshacer «No contactar» tocado por error", () => {
+  it("lo devuelve elegido y con su borrador", () => {
+    const antes: EstadoDemo = {
+      ...agregarYElegir(estadoInicial(), [verde]),
+      borradores: { [verde.id]: { contactoId: verde.id, asunto: "A", cuerpo: "B", estado: "aprobado" } },
+    };
+    const marcado = marcarNoContactar(antes, verde.id);
+    expect(contactosParaRedactar(marcado)).toHaveLength(0);
+    const vuelto = deshacerNoContactar(marcado, antes, verde.id);
+    expect(vuelto.supresion).toHaveLength(0);
+    expect(vuelto.seleccionados).toEqual([verde.id]);
+    expect(vuelto.borradores[verde.id]?.estado).toBe("aprobado");
+    expect(contactosParaRedactar(vuelto).map((c) => c.id)).toEqual([verde.id]);
+  });
+
+  it("no quita a quien ya estaba en «No contactar» desde antes", () => {
+    const antes = marcarNoContactar(agregarYElegir(estadoInicial(), [verde]), verde.id);
+    expect(deshacerNoContactar(antes, antes, verde.id)).toBe(antes);
   });
 });

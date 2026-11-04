@@ -4,12 +4,15 @@ import { ChevronDown, UserPlus } from "lucide-react";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { avisar } from "@/components/avisos";
 import { Hoja } from "@/components/Hoja";
-import { Boton, Campo, PildoraSemaforo, cx } from "@/components/ui";
+import { Boton, Campo, cx } from "@/components/ui";
 import { actualizarEstado, useEstado } from "@/lib/almacen";
 import { CIUDADES, GIROS } from "@/lib/catalogos";
-import { agregarContactos, contactoManual, correoValido, normalizarCorreo } from "@/lib/contactos";
+import { agregarYElegir, contactoManual, correoValido, normalizarCorreo } from "@/lib/contactos";
 
-/** Ventana para agregar un contacto a mano (queda en ámbar si dices de dónde salió, o en rojo si no). */
+/**
+ * Ventana para agregar un contacto a mano. Si dices de dónde salió queda en ámbar y ya elegido;
+ * si no, queda en rojo y no se le puede escribir.
+ */
 export function HojaContactoManual({ abierta, onCerrar }: { abierta: boolean; onCerrar: () => void }) {
   const idFormulario = useId();
   return (
@@ -59,8 +62,8 @@ function Formulario({ id, onListo }: { id: string; onListo: () => void }) {
     setErrores(nuevos);
     if (nuevos.nombre || nuevos.correo) return;
     const contacto = contactoManual(datos);
-    actualizarEstado((e) => agregarContactos(e, [contacto]));
-    avisar(ambar ? "Agregado en ámbar" : "Agregado en rojo: no se podrá usar");
+    actualizarEstado((e) => agregarYElegir(e, [contacto]));
+    avisar(ambar ? "Agregado y elegido" : "Agregado, pero no se le podrá escribir");
     onListo();
   }
 
@@ -89,8 +92,30 @@ function Formulario({ id, onListo }: { id: string; onListo: () => void }) {
         />
         <MensajeError texto={errores.correo} />
       </div>
+      <label className="block space-y-1.5">
+        <span className="text-sm font-semibold text-tinta-2">¿De dónde sacaste este contacto?</span>
+        <textarea
+          value={datos.nota}
+          onChange={(e) => cambiar("nota", e.target.value)}
+          rows={2}
+          placeholder="Ej.: me dio su tarjeta en una expo"
+          className="w-full rounded-xl border border-linea bg-white px-3.5 py-2.5 text-[15px] leading-relaxed outline-none placeholder:text-tenue focus:border-marca-500 focus:ring-4 focus:ring-marca-100"
+        />
+      </label>
+
+      <p
+        role="status"
+        className={cx(
+          "flex items-center gap-2.5 rounded-2xl px-4 py-3 text-sm font-semibold",
+          ambar ? "bg-ambar-50 text-ambar-700" : "bg-fondo text-suave",
+        )}
+      >
+        <span aria-hidden className={cx("h-2.5 w-2.5 shrink-0 rounded-full", ambar ? "bg-ambar-500" : "bg-rojo-500")} />
+        {ambar ? "Listo: se le podrá escribir." : "Si no dices de dónde salió, no se le podrá escribir."}
+      </p>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Seleccion etiqueta="Giro" valor={datos.giro} onChange={(v) => cambiar("giro", v)}>
+        <Seleccion etiqueta="Tipo de negocio" valor={datos.giro} onChange={(v) => cambiar("giro", v)}>
           <option value="">Otro o no sé</option>
           {GIROS.map((g) => (
             <option key={g.id} value={g.id}>
@@ -114,29 +139,6 @@ function Formulario({ id, onListo }: { id: string; onListo: () => void }) {
         onChange={(e) => cambiar("telefono", e.target.value)}
         autoComplete="off"
       />
-      <label className="block space-y-1.5">
-        <span className="text-sm font-semibold text-tinta-2">¿De dónde sacaste este contacto?</span>
-        <textarea
-          value={datos.nota}
-          onChange={(e) => cambiar("nota", e.target.value)}
-          rows={2}
-          placeholder="Ej.: me dio su tarjeta en una expo"
-          className="w-full rounded-xl border border-linea bg-white px-3.5 py-2.5 text-[15px] leading-relaxed outline-none placeholder:text-tenue focus:border-marca-500 focus:ring-4 focus:ring-marca-100"
-        />
-      </label>
-
-      <div
-        role="status"
-        className={cx(
-          "flex items-start gap-3 rounded-2xl px-4 py-3 text-sm",
-          ambar ? "bg-ambar-50 text-ambar-700" : "bg-rojo-50 text-rojo-700",
-        )}
-      >
-        <PildoraSemaforo valor={ambar ? "ambar" : "rojo"} texto={`Quedará en: ${ambar ? "Ámbar" : "Rojo"}`} />
-        <span className="pt-0.5 font-medium">
-          {ambar ? "Lo podrás elegir para escribirle." : "Si no dices de dónde salió, no se podrá usar."}
-        </span>
-      </div>
     </form>
   );
 }

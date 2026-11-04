@@ -1,4 +1,4 @@
-import type { Contacto, Empresa, EstadoDemo, Origen, Semaforo } from "@/lib/tipos";
+import type { Contacto, Empresa, EstadoDemo, Origen, Semaforo, TipoOrigen } from "@/lib/tipos";
 
 export const FUENTE_EJEMPLO = "Datos de ejemplo (simula el DENUE de INEGI)";
 
@@ -15,6 +15,15 @@ export function semaforoDe(origen: Origen): Semaforo {
       return "rojo";
   }
 }
+
+/** De dónde salió, en dos o tres palabras (para la pantalla; el expediente en Excel usa nombres más formales). */
+export const ORIGEN_CORTO: Record<TipoOrigen, string> = {
+  directorio_publico: "Directorio público",
+  formulario_propio: "Tu formulario",
+  cliente_actual: "Tu cliente",
+  declarado: "Lo agregaste tú",
+  desconocido: "Sin origen",
+};
 
 export function normalizarCorreo(correo: string | null | undefined): string {
   return (correo ?? "").trim().toLowerCase();
@@ -39,9 +48,10 @@ export function motivoBloqueo(contacto: Contacto, estado: Pick<EstadoDemo, "supr
   return null;
 }
 
+/** Por qué no se le puede escribir, en palabras sencillas. */
 export const TEXTO_BLOQUEO: Record<MotivoBloqueo, string> = {
   sin_correo: "No tiene correo",
-  rojo: "Sin origen conocido (rojo)",
+  rojo: "No sabemos de dónde salió",
   no_contactar: "Marcado «No contactar»",
 };
 
@@ -84,6 +94,25 @@ export function marcarNoContactar(estado: EstadoDemo, id: string, ahora = new Da
   };
 }
 
+/**
+ * Deshace «No contactar» si se tocó por error (el aviso ofrece «Deshacer» unos segundos).
+ * Lo deja como estaba en `antes`: elegido o no, y con su borrador. Si ya estaba en «No contactar» antes, no cambia nada.
+ */
+export function deshacerNoContactar(estado: EstadoDemo, antes: EstadoDemo, id: string): EstadoDemo {
+  const correo = normalizarCorreo(antes.contactos.find((c) => c.id === id)?.correo);
+  if (!correo || antes.supresion.some((s) => s.correo === correo)) return estado;
+  if (!estado.supresion.some((s) => s.correo === correo)) return estado;
+  const borradores = { ...estado.borradores };
+  if (antes.borradores[id] && !borradores[id]) borradores[id] = antes.borradores[id];
+  const volverAElegir = antes.seleccionados.includes(id) && !estado.seleccionados.includes(id);
+  return {
+    ...estado,
+    supresion: estado.supresion.filter((s) => s.correo !== correo),
+    seleccionados: volverAElegir ? [...estado.seleccionados, id] : estado.seleccionados,
+    borradores,
+  };
+}
+
 /** Convierte una empresa del buscador en contacto con origen verde (directorio público). */
 export function contactoDesdeEmpresa(empresa: Empresa, fuente: string, esEjemplo: boolean, ahora = new Date()): Contacto {
   return {
@@ -105,6 +134,27 @@ export function agregarContactos(estado: EstadoDemo, nuevos: Contacto[]): Estado
   const aAgregar = nuevos.filter((c) => !ids.has(c.id));
   if (!aAgregar.length) return estado;
   return { ...estado, contactos: [...estado.contactos, ...aAgregar] };
+}
+
+/**
+ * Agrega contactos y deja elegidos a los nuevos que sí se pueden usar, para no pedir lo mismo dos veces
+ * (agregar en «Buscar» y otra vez elegir). Los que no se pueden usar (sin correo, rojo o «No contactar»)
+ * se agregan pero no se eligen.
+ */
+export function agregarYElegir(estado: EstadoDemo, nuevos: Contacto[]): EstadoDemo {
+  const conNuevos = agregarContactos(estado, nuevos);
+  const antes = new Set(estado.contactos.map((c) => c.id));
+  const elegir = conNuevos.contactos.filter((c) => !antes.has(c.id) && puedeRedactar(c, conNuevos)).map((c) => c.id);
+  if (!elegir.length) return conNuevos;
+  return { ...conNuevos, seleccionados: Array.from(new Set([...conNuevos.seleccionados, ...elegir])) };
+}
+
+/**
+ * Nombre sin el «(ejemplo)» del final, para mostrarlo junto a la etiqueta «Ejemplo» sin repetir.
+ * Si el contacto no es de ejemplo (lo escribió el usuario), se deja tal cual.
+ */
+export function nombreVisible(nombre: string, esEjemplo = true): string {
+  return esEjemplo ? nombre.replace(/\s*\(ejemplo\)\s*$/i, "") : nombre;
 }
 
 export interface DatosContactoManual {

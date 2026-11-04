@@ -1,10 +1,12 @@
 "use client";
 
 import { ArrowRight, Check, CircleAlert, Lock, Paperclip, Pencil, PenLine, RotateCcw, Sparkles, Undo2, Users } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { Avatar } from "@/components/Avatar";
 import { avisar } from "@/components/avisos";
 import {
+  BOTON_BARRA,
+  BarraAccion,
   BarraProgreso,
   Boton,
   BotonEnlace,
@@ -18,7 +20,7 @@ import {
 } from "@/components/ui";
 import { abrirMiDesarrollo } from "@/components/ventanas";
 import { actualizarEstado, reiniciarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
-import { contactosParaRedactar } from "@/lib/contactos";
+import { contactosParaRedactar, nombreVisible } from "@/lib/contactos";
 import { AJUSTES_EJEMPLO, estadoDeRecorrido } from "@/lib/estado";
 import { obtenerAsistente } from "@/lib/ia";
 import { aprobar, armarCorreo, generarBorrador, validarAjustes, validarAsunto } from "@/lib/redaccion";
@@ -32,7 +34,9 @@ export function PantallaRedactar() {
   const estado = useEstado();
   const enNavegador = useEnNavegador();
   const [actualId, setActualId] = useState<string | null>(null);
+  const [errores, setErrores] = useState<Record<string, string[]>>({});
   const editorRef = useRef<HTMLDivElement>(null);
+  const erroresRef = useRef<HTMLDivElement>(null);
   if (!enNavegador) return <Cargando />;
 
   const contactos = contactosParaRedactar(estado);
@@ -40,39 +44,60 @@ export function PantallaRedactar() {
   const aprobados = contactos.filter(esAprobado).length;
   const todos = contactos.length > 0 && aprobados === contactos.length;
   const actual = contactos.find((c) => c.id === actualId) ?? contactos.find((c) => !esAprobado(c)) ?? contactos[0];
+  const faltanDatos = validarAjustes(estado.ajustes).length > 0;
 
-  function elegir(id: string) {
+  function irA(id: string) {
     setActualId(id);
     editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  // Al aprobar, pasa solo al siguiente correo pendiente.
-  function alAprobar(id: string) {
+  function limpiarErrores(id: string) {
+    setErrores((e) => {
+      if (!e[id]) return e;
+      const resto = { ...e };
+      delete resto[id];
+      return resto;
+    });
+  }
+
+  /** El que sigue sin aprobar, empezando después del actual. */
+  function siguientePendiente(id: string, aprobadoAhora = false) {
     const i = contactos.findIndex((c) => c.id === id);
-    const siguiente = [...contactos.slice(i + 1), ...contactos.slice(0, i)].find((c) => !esAprobado(c));
+    return [...contactos.slice(i + 1), ...contactos.slice(0, i)].find((c) => !esAprobado(c) && !(aprobadoAhora && c.id === id));
+  }
+
+  function aprobarActual() {
+    if (!actual) return;
+    const r = aprobar(estado.borradores[actual.id] ?? generarBorrador(actual, estado.ajustes), estado.ajustes);
+    if ("errores" in r) {
+      setErrores((e) => ({ ...e, [actual.id]: r.errores }));
+      requestAnimationFrame(() => erroresRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
+      return;
+    }
+    limpiarErrores(actual.id);
+    guardar(r);
+    const siguiente = siguientePendiente(actual.id, true);
     if (siguiente) {
-      avisar("Aprobado. Sigue el siguiente correo");
-      elegir(siguiente.id);
+      avisar("Aprobado. Va el siguiente");
+      irA(siguiente.id);
     } else {
       avisar("¡Listo! Todos tus correos están aprobados");
-      setActualId(id);
+      setActualId(actual.id);
     }
   }
+
+  const pendienteSiguiente = actual ? siguientePendiente(actual.id) : undefined;
 
   return (
     <div>
       <Encabezado
         paso={3}
         titulo="Redactar"
-        subtitulo="Un correo personal para cada negocio. Léelo, corrígelo y apruébalo."
+        subtitulo="Lee cada correo, cámbiale lo que quieras y apruébalo."
         ayuda={
           <>
-            <p>
-              Para cada negocio elegido se arma un correo con su nombre, su giro y su ciudad, y con los datos de tu
-              desarrollo.
-            </p>
-            <p>Lo lees, lo corriges si quieres y lo apruebas. Sólo los aprobados pasan a «Envío».</p>
-            <p>El pie legal se agrega solo y no se puede borrar.</p>
+            <p>Cada negocio que elegiste ya tiene un correo armado con su nombre y los datos de tu desarrollo.</p>
+            <p>Sólo los que apruebes pasan a «Envío». El pie legal se agrega solo y no se puede borrar.</p>
           </>
         }
       />
@@ -81,7 +106,7 @@ export function PantallaRedactar() {
         <EstadoVacio
           icono={<PenLine size={30} aria-hidden />}
           titulo="Aún no eliges a quién escribirle"
-          texto="Marca contactos en «Elegir contactos» y aquí aparecerá un correo para cada uno."
+          texto="Elige contactos y aquí aparecerá un correo listo para cada uno."
         >
           <BotonEnlace href="/contactos" icono={<Users size={18} aria-hidden />}>
             Elegir contactos
@@ -90,20 +115,20 @@ export function PantallaRedactar() {
             variante="secundario"
             icono={<Sparkles size={18} aria-hidden />}
             onClick={() => {
-              reiniciarEstado(estadoDeRecorrido());
-              avisar("Recorrido de ejemplo cargado");
+              const nuevo = estadoDeRecorrido();
+              reiniciarEstado(nuevo);
+              avisar(`Listo: ${nuevo.contactos.length} negocios de ejemplo`);
             }}
           >
-            Cargar ejemplo
+            Llenar con un ejemplo
           </Boton>
         </EstadoVacio>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-start lg:gap-6">
-          <aside className="space-y-4 lg:sticky lg:top-6">
+          <aside className="hidden space-y-4 lg:sticky lg:top-6 lg:block">
             <TarjetaResumen ajustes={estado.ajustes} aprobados={aprobados} total={contactos.length} />
 
-            {/* Lista de correos (computadora) */}
-            <Tarjeta className="entrada hidden overflow-hidden lg:block">
+            <Tarjeta className="entrada overflow-hidden">
               <p className="px-4 pt-3.5 pb-2 text-xs font-bold tracking-[0.12em] text-tenue uppercase">
                 Correos ({contactos.length})
               </p>
@@ -112,7 +137,7 @@ export function PantallaRedactar() {
                   <li key={c.id}>
                     <button
                       type="button"
-                      onClick={() => elegir(c.id)}
+                      onClick={() => irA(c.id)}
                       aria-pressed={c.id === actual.id}
                       className={cx(
                         "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
@@ -121,9 +146,9 @@ export function PantallaRedactar() {
                     >
                       <Avatar nombre={c.nombre} tamano={34} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-tinta">{c.nombre}</span>
+                        <span className="block truncate text-sm font-semibold text-tinta">{nombreVisible(c.nombre, c.esEjemplo)}</span>
                         <span className={cx("block text-xs font-semibold", esAprobado(c) ? "text-verde-700" : "text-tenue")}>
-                          {esAprobado(c) ? "Aprobado" : "Pendiente"}
+                          {esAprobado(c) ? "Aprobado" : "Falta aprobar"}
                         </span>
                       </span>
                       {esAprobado(c) ? <MarcaAprobado /> : null}
@@ -136,7 +161,11 @@ export function PantallaRedactar() {
 
           <div ref={editorRef} className="min-w-0 scroll-mt-20 space-y-4 lg:scroll-mt-6">
             {/* Lista de correos (celular) */}
-            <div role="group" aria-label="Correos" className="sin-barra -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:hidden">
+            <div
+              role="group"
+              aria-label="Correos"
+              className="sin-barra -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:hidden"
+            >
               {contactos.map((c) => {
                 const activo = c.id === actual.id;
                 return (
@@ -151,25 +180,24 @@ export function PantallaRedactar() {
                     )}
                   >
                     <Avatar nombre={c.nombre} tamano={30} />
-                    <span className="truncate">{c.nombre.replace(/\s*\(ejemplo\)\s*$/i, "")}</span>
-                    {esAprobado(c) ? <Check size={16} aria-label="Aprobado" strokeWidth={3} className={activo ? "text-verde-50" : "text-verde-500"} /> : null}
+                    <span className="truncate">{nombreVisible(c.nombre, c.esEjemplo)}</span>
+                    {esAprobado(c) ? (
+                      <Check size={16} aria-label="Aprobado" strokeWidth={3} className={activo ? "text-verde-50" : "text-verde-500"} />
+                    ) : null}
                   </button>
                 );
               })}
             </div>
 
-            {todos ? (
-              <div className="entrada flex flex-wrap items-center gap-4 rounded-tarjeta bg-verde-50 p-4 sm:p-5">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-verde-500 text-white">
-                  <Check size={26} strokeWidth={3} aria-hidden />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-lg font-bold text-verde-700">¡Todos aprobados!</p>
-                  <p className="text-sm text-tinta-2">Ahora mira cómo saldrían, poco a poco.</p>
-                </div>
-                <BotonEnlace href="/envio" variante="exito" icono={<ArrowRight size={18} aria-hidden />}>
-                  Ver el envío
-                </BotonEnlace>
+            {faltanDatos ? (
+              <div className="entrada flex items-start gap-3 rounded-2xl bg-rojo-50 px-4 py-3 text-sm text-rojo-700">
+                <CircleAlert size={18} aria-hidden className="mt-0.5 shrink-0" />
+                <p className="min-w-0 flex-1">
+                  <span className="font-semibold">Antes de aprobar, faltan tus datos para el pie legal.</span>{" "}
+                  <button type="button" onClick={abrirMiDesarrollo} className="font-bold underline">
+                    Completar
+                  </button>
+                </p>
               </div>
             ) : null}
 
@@ -179,8 +207,41 @@ export function PantallaRedactar() {
               borrador={estado.borradores[actual.id] ?? generarBorrador(actual, estado.ajustes)}
               guardado={!!estado.borradores[actual.id]}
               ajustes={estado.ajustes}
-              onAprobado={() => alAprobar(actual.id)}
+              errores={errores[actual.id] ?? []}
+              erroresRef={erroresRef}
+              onCambio={() => limpiarErrores(actual.id)}
             />
+
+            <BarraAccion
+              nota={
+                <span role="status">
+                  {todos
+                    ? contactos.length === 1
+                      ? "¡Tu correo está listo!"
+                      : `¡Los ${contactos.length} correos están listos!`
+                    : `${aprobados} de ${contactos.length} aprobados`}
+                </span>
+              }
+            >
+              {todos ? (
+                <BotonEnlace href="/envio" className={BOTON_BARRA} icono={<ArrowRight size={19} aria-hidden />}>
+                  Siguiente: ver el envío
+                </BotonEnlace>
+              ) : esAprobado(actual) && pendienteSiguiente ? (
+                <Boton className={BOTON_BARRA} icono={<ArrowRight size={19} aria-hidden />} onClick={() => irA(pendienteSiguiente.id)}>
+                  Siguiente correo
+                </Boton>
+              ) : (
+                <Boton
+                  variante="exito"
+                  className={BOTON_BARRA}
+                  icono={<Check size={19} strokeWidth={2.8} aria-hidden />}
+                  onClick={aprobarActual}
+                >
+                  Aprobar este correo
+                </Boton>
+              )}
+            </BarraAccion>
           </div>
         </div>
       )}
@@ -197,7 +258,6 @@ function MarcaAprobado() {
 }
 
 function TarjetaResumen({ ajustes, aprobados, total }: { ajustes: AjustesProyecto; aprobados: number; total: number }) {
-  const errores = validarAjustes(ajustes);
   const portada = ajustes.fotos[0]?.url ?? AJUSTES_EJEMPLO.fotos[0]?.url;
   return (
     <Tarjeta className="entrada overflow-hidden">
@@ -223,23 +283,12 @@ function TarjetaResumen({ ajustes, aprobados, total }: { ajustes: AjustesProyect
       <div className="border-t border-linea px-4 py-3">
         <div className="mb-2 flex items-baseline justify-between gap-2">
           <span className="text-sm font-semibold text-tinta-2">Aprobados</span>
-          <span role="status" className="cifras text-sm font-bold text-tinta">
+          <span className="text-sm font-bold text-tinta">
             {aprobados} de {total}
           </span>
         </div>
         <BarraProgreso valor={aprobados} max={total} color="bg-verde-500" />
       </div>
-      {errores.length ? (
-        <div className="flex items-start gap-2 border-t border-rojo-500/20 bg-rojo-50 px-4 py-3 text-sm text-rojo-700">
-          <CircleAlert size={17} aria-hidden className="mt-0.5 shrink-0" />
-          <p>
-            Para aprobar faltan datos del pie legal.{" "}
-            <button type="button" onClick={abrirMiDesarrollo} className="font-bold underline">
-              Completar
-            </button>
-          </p>
-        </div>
-      ) : null}
     </Tarjeta>
   );
 }
@@ -251,15 +300,18 @@ function Redactor({
   borrador,
   guardado,
   ajustes,
-  onAprobado,
+  errores,
+  erroresRef,
+  onCambio,
 }: {
   contacto: Contacto;
   borrador: Borrador;
   guardado: boolean;
   ajustes: AjustesProyecto;
-  onAprobado: () => void;
+  errores: string[];
+  erroresRef: RefObject<HTMLDivElement | null>;
+  onCambio: () => void;
 }) {
-  const [errores, setErrores] = useState<string[]>([]);
   const erroresAsunto = validarAsunto(borrador.asunto);
   const { pie } = armarCorreo(borrador, contacto, ajustes);
   const aprobado = borrador.estado === "aprobado";
@@ -267,19 +319,8 @@ function Redactor({
 
   // Cualquier cambio regresa el borrador a "pendiente": hay que volver a aprobarlo.
   function editar(cambios: Partial<Borrador>) {
-    setErrores([]);
+    onCambio();
     guardar({ ...borrador, ...cambios, estado: "pendiente", fechaAprobado: undefined });
-  }
-
-  function aprobarEste() {
-    const r = aprobar(borrador, ajustes);
-    if ("errores" in r) {
-      setErrores(r.errores);
-      return;
-    }
-    setErrores([]);
-    guardar(r);
-    onAprobado();
   }
 
   return (
@@ -288,20 +329,16 @@ function Redactor({
         <Avatar nombre={contacto.nombre} tamano={44} />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="font-semibold text-tinta">{contacto.nombre}</span>
+            <span className="font-semibold text-tinta">{nombreVisible(contacto.nombre, contacto.esEjemplo)}</span>
             {contacto.esEjemplo ? <Insignia tipo="ejemplo" /> : null}
           </p>
           <p className="truncate text-sm text-suave">Para: {contacto.correo}</p>
         </div>
-        <span
-          className={cx(
-            "hidden shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold sm:inline-flex",
-            aprobado ? "bg-verde-50 text-verde-700" : "bg-fondo text-suave",
-          )}
-        >
-          {aprobado ? <Check size={14} strokeWidth={3} aria-hidden /> : null}
-          {aprobado ? "Aprobado" : "Pendiente"}
-        </span>
+        {aprobado ? (
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-verde-50 px-2.5 py-1 text-xs font-bold text-verde-700">
+            <Check size={14} strokeWidth={3} aria-hidden /> Aprobado
+          </span>
+        ) : null}
       </div>
 
       <div className="space-y-4 px-4 py-4 sm:px-5">
@@ -365,7 +402,7 @@ function Redactor({
         </div>
 
         {errores.length ? (
-          <div role="alert" className="rounded-2xl bg-rojo-50 px-4 py-3 text-sm font-semibold text-rojo-700">
+          <div ref={erroresRef} role="alert" className="rounded-2xl bg-rojo-50 px-4 py-3 text-sm font-semibold text-rojo-700">
             No se pudo aprobar: {errores.join(" ")}
           </div>
         ) : null}
@@ -373,20 +410,17 @@ function Redactor({
 
       <div className="flex flex-wrap items-center gap-2 border-t border-linea bg-fondo/60 px-4 py-3 sm:px-5">
         {aprobado ? (
-          <Boton variante="secundario" icono={<Undo2 size={18} aria-hidden />} onClick={() => editar({})}>
+          <Boton variante="secundario" tamano="sm" icono={<Undo2 size={16} aria-hidden />} onClick={() => editar({})}>
             Quitar aprobación
           </Boton>
-        ) : (
-          <Boton variante="exito" className="min-w-[9rem] flex-1 sm:flex-none" icono={<Check size={18} strokeWidth={2.8} aria-hidden />} onClick={aprobarEste}>
-            Aprobar
-          </Boton>
-        )}
+        ) : null}
         {guardado ? (
           <Boton
             variante="fantasma"
-            icono={<RotateCcw size={17} aria-hidden />}
+            tamano="sm"
+            icono={<RotateCcw size={16} aria-hidden />}
             onClick={() => {
-              setErrores([]);
+              onCambio();
               guardar(generarBorrador(contacto, ajustes));
             }}
           >

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowRight,
   ChartColumn,
   Check,
   ChevronRight,
@@ -35,6 +36,21 @@ interface Paso {
   etiqueta?: string;
 }
 
+/** Lo que conviene hacer ahora, según lo que ya hiciste. */
+function loQueSigue(elegidos: number, aprobados: number) {
+  if (elegidos === 0) return { numero: 2, titulo: "Elegir contactos", texto: "Marca a quién quieres escribirle.", ruta: "/contactos" };
+  if (aprobados < elegidos) {
+    const faltan = elegidos - aprobados;
+    return {
+      numero: 3,
+      titulo: "Redactar",
+      texto: faltan === 1 ? "Te falta aprobar 1 correo." : `Te faltan ${faltan} correos por aprobar.`,
+      ruta: "/redactar",
+    };
+  }
+  return { numero: 4, titulo: "Envío", texto: "Tus correos están listos. Mira cómo saldrían.", ruta: "/envio" };
+}
+
 export function PantallaInicio() {
   const estado = useEstado();
   const enNavegador = useEnNavegador();
@@ -46,13 +62,14 @@ export function PantallaInicio() {
   const aprobados = elegidos.filter((c) => estado.borradores[c.id]?.estado === "aprobado").length;
   const enLista = estado.contactos.length;
   const portada = ajustes.fotos[0]?.url ?? AJUSTES_EJEMPLO.fotos[0]?.url;
+  const sigue = loQueSigue(elegidos.length, aprobados);
 
-  function cargarRecorrido() {
+  function llenarConEjemplo() {
     const nuevo = estadoDeRecorrido();
     reiniciarEstado(nuevo);
     setConfirmar(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
-    avisar(`Listo: ${nuevo.contactos.length} negocios de ejemplo cargados`);
+    avisar(`Listo: ${nuevo.contactos.length} negocios de ejemplo`);
   }
 
   const pasos: Paso[] = [
@@ -60,30 +77,30 @@ export function PantallaInicio() {
       ruta: "/buscar",
       icono: Search,
       titulo: "Buscar empresas",
-      detalle: enLista ? `${enLista} en tu lista` : "Encuentra negocios por giro y ciudad",
+      detalle: enLista ? `${enLista} en tu lista` : "Negocios por tipo y ciudad",
       hecho: enLista > 0,
     },
     {
       ruta: "/contactos",
       icono: Users,
       titulo: "Elegir contactos",
-      detalle: elegidos.length ? `${elegidos.length} elegidos` : "Escoge a quién escribirle",
+      detalle: elegidos.length ? `${elegidos.length} elegidos` : "A quién escribirle",
       hecho: elegidos.length > 0,
     },
     {
       ruta: "/redactar",
       icono: PenLine,
       titulo: "Redactar",
-      detalle: elegidos.length ? `${aprobados} de ${elegidos.length} correos aprobados` : "Un correo personal por negocio",
+      detalle: elegidos.length ? `${aprobados} de ${elegidos.length} aprobados` : "Un correo para cada uno",
       hecho: elegidos.length > 0 && aprobados === elegidos.length,
     },
     { ruta: "/envio", icono: Send, titulo: "Envío", detalle: "Así saldrían, poco a poco", etiqueta: "Simulación" },
-    { ruta: "/seguimiento", icono: ChartColumn, titulo: "Seguimiento", detalle: "Quién abrió y quién respondió", etiqueta: "Simulado" },
+    { ruta: "/seguimiento", icono: ChartColumn, titulo: "Seguimiento", detalle: "Quién abrió y respondió", etiqueta: "Simulado" },
     {
       ruta: "/expediente",
       icono: ShieldCheck,
       titulo: "Expediente",
-      detalle: enLista ? `${enLista} contactos documentados` : "La prueba de dónde salió cada contacto",
+      detalle: enLista ? `${enLista} documentados` : "De dónde salió cada uno",
     },
   ];
 
@@ -97,7 +114,7 @@ export function PantallaInicio() {
             <img src={portada} alt="Imagen de ejemplo del desarrollo" className="absolute inset-0 h-full w-full object-cover" />
           ) : null}
           <div aria-hidden className="absolute inset-0 bg-linear-to-t from-tinta from-15% via-tinta/60 via-50% to-tinta/0" />
-          <div className="relative flex min-h-[23rem] flex-col p-5 sm:min-h-[26rem] sm:p-7">
+          <div className="relative flex min-h-[20rem] flex-col p-5 sm:min-h-[24rem] sm:p-7">
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Insignia tipo="ejemplo" claro />
@@ -122,52 +139,58 @@ export function PantallaInicio() {
                   </span>
                 </p>
               </div>
-              <dl className="grid grid-cols-3 gap-2 sm:gap-3">
-                {(
-                  [
-                    ["En tu lista", enLista],
-                    ["Elegidos", elegidos.length],
-                    ["Aprobados", aprobados],
-                  ] as const
-                ).map(([titulo, valor]) => (
-                  <div key={titulo} className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 backdrop-blur-md">
-                    <dt className="text-xs font-semibold text-white/70">{titulo}</dt>
-                    <dd className="text-2xl font-bold sm:text-[1.7rem]">{valor}</dd>
-                  </div>
-                ))}
-              </dl>
+              {enLista > 0 ? (
+                <dl className="grid grid-cols-3 gap-2 sm:gap-3">
+                  {(
+                    [
+                      ["En tu lista", enLista],
+                      ["Elegidos", elegidos.length],
+                      ["Aprobados", aprobados],
+                    ] as const
+                  ).map(([titulo, valor]) => (
+                    <div key={titulo} className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5 backdrop-blur-md">
+                      <dt className="text-xs font-semibold text-white/70">{titulo}</dt>
+                      <dd className="text-2xl font-bold sm:text-[1.7rem]">{valor}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
             </div>
           </div>
         </section>
 
-        {enLista === 0 ? (
-          <Tarjeta className="entrada p-5 sm:p-6">
-            <div className="flex items-start gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-marca-600 text-white shadow-sm shadow-marca-600/40">
-                <Sparkles size={22} aria-hidden />
-              </span>
-              <div>
-                <h2 className="font-display text-lg font-bold">Mírala funcionando en un clic</h2>
-                <p className="text-suave">Carga negocios inventados de Tijuana con sus correos ya listos.</p>
-              </div>
-            </div>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Boton onClick={cargarRecorrido} icono={<Sparkles size={18} aria-hidden />}>
-                Cargar recorrido de ejemplo
-              </Boton>
-              <BotonEnlace href="/buscar" variante="secundario" icono={<Search size={18} aria-hidden />}>
-                Empezar buscando
+        {/* Qué hacer ahora: un solo botón grande */}
+        <Tarjeta className="entrada p-5 sm:p-6">
+          {enLista === 0 ? (
+            <>
+              <h2 className="font-display text-xl font-bold">¿Cómo empiezo?</h2>
+              <p className="mt-1 text-suave">Busca negocios, elige a quién escribirle y revisa los correos. Nada se envía.</p>
+              <BotonEnlace href="/buscar" tamano="lg" className="mt-5 w-full sm:w-auto" icono={<Search size={19} aria-hidden />}>
+                Empezar
               </BotonEnlace>
-            </div>
-          </Tarjeta>
-        ) : null}
+              <button
+                type="button"
+                onClick={llenarConEjemplo}
+                className="mt-3 inline-flex w-full items-center justify-center gap-1.5 py-2 text-[15px] font-semibold text-marca-700 hover:underline sm:ml-4 sm:w-auto"
+              >
+                <Sparkles size={16} aria-hidden /> O mira un ejemplo ya lleno
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-bold tracking-[0.14em] text-marca-600 uppercase">Lo que sigue · Paso {sigue.numero}</p>
+              <h2 className="mt-0.5 font-display text-xl font-bold">{sigue.titulo}</h2>
+              <p className="mt-1 text-suave">{sigue.texto}</p>
+              <BotonEnlace href={sigue.ruta} tamano="lg" className="mt-5 w-full sm:w-auto" icono={<ArrowRight size={19} aria-hidden />}>
+                Continuar
+              </BotonEnlace>
+            </>
+          )}
+        </Tarjeta>
 
-        {/* Pasos */}
+        {/* Los pasos */}
         <Tarjeta className="entrada overflow-hidden">
-          <div className="flex items-center justify-between px-4 pt-4 pb-2 sm:px-5">
-            <h2 className="font-display text-lg font-bold">Tu recorrido</h2>
-            <span className="text-sm text-suave">6 pasos</span>
-          </div>
+          <h2 className="px-4 pt-4 pb-2 font-display text-lg font-bold sm:px-5">Los 6 pasos</h2>
           <ol className="divide-y divide-linea">
             {pasos.map((p, i) => {
               const Icono = p.hecho ? Check : p.icono;
@@ -183,8 +206,9 @@ export function PantallaInicio() {
                       <Icono size={20} aria-hidden strokeWidth={p.hecho ? 2.6 : 2} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[11px] font-bold tracking-[0.12em] text-tenue uppercase">Paso {i + 1}</span>
-                      <span className="block font-semibold text-tinta">{p.titulo}</span>
+                      <span className="block font-semibold text-tinta">
+                        {i + 1}. {p.titulo}
+                      </span>
                       <span className="block truncate text-sm text-suave">{p.detalle}</span>
                     </span>
                     {p.etiqueta ? <Insignia tipo="simulado">{p.etiqueta}</Insignia> : null}
@@ -200,22 +224,19 @@ export function PantallaInicio() {
       <div className="space-y-5">
         <Tarjeta className="entrada p-5">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-tinta text-white">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-tinta text-white">
               <Lock size={18} aria-hidden />
             </span>
             <div>
-              <h2 className="font-display text-lg leading-tight font-bold">Modo demo</h2>
-              <p className="text-sm text-suave">Nada se envía. Los negocios son inventados.</p>
+              <h2 className="font-display text-lg leading-tight font-bold">Es una demo</h2>
+              <p className="text-sm text-suave">Nada se envía y los negocios son inventados.</p>
             </div>
           </div>
           {enLista > 0 ? (
             <div className="mt-4 flex flex-col gap-2">
-              <Boton variante="secundario" onClick={cargarRecorrido} icono={<Sparkles size={17} aria-hidden />}>
-                Volver a cargar el ejemplo
-              </Boton>
               {confirmar ? (
                 <div className="rounded-2xl bg-rojo-50 p-3">
-                  <p className="text-sm font-semibold text-rojo-700">¿Borrar todo lo que hiciste en la demo?</p>
+                  <p className="text-sm font-semibold text-rojo-700">¿Borrar todo lo que hiciste?</p>
                   <div className="mt-2 flex gap-2">
                     <Boton
                       variante="peligro"
@@ -223,7 +244,7 @@ export function PantallaInicio() {
                       onClick={() => {
                         reiniciarEstado(estadoInicial());
                         setConfirmar(false);
-                        avisar("La demo quedó vacía");
+                        avisar("Listo: la demo quedó vacía");
                       }}
                     >
                       Sí, borrar
@@ -234,20 +255,22 @@ export function PantallaInicio() {
                   </div>
                 </div>
               ) : (
-                <Boton variante="fantasma" onClick={() => setConfirmar(true)} icono={<RotateCcw size={17} aria-hidden />}>
-                  Empezar de cero
-                </Boton>
+                <>
+                  <Boton variante="secundario" onClick={llenarConEjemplo} icono={<Sparkles size={17} aria-hidden />}>
+                    Volver a llenar con el ejemplo
+                  </Boton>
+                  <Boton variante="fantasma" onClick={() => setConfirmar(true)} icono={<RotateCcw size={17} aria-hidden />}>
+                    Borrar todo
+                  </Boton>
+                </>
               )}
             </div>
           ) : null}
         </Tarjeta>
 
         <AyudaPlegable>
-          <p>
-            Esta app te ayuda a encontrar negocios, escribirle un correo personal a cada uno y llevar el seguimiento, sin
-            mandar correos masivos.
-          </p>
-          <p>Es una demostración: ningún correo sale de aquí y lo que escribas se queda sólo en este navegador.</p>
+          <p>Esta app te ayuda a encontrar negocios, escribirle un correo personal a cada uno y ver quién responde.</p>
+          <p>Es una demostración: ningún correo sale de aquí y lo que hagas se queda sólo en este navegador.</p>
         </AyudaPlegable>
       </div>
     </div>

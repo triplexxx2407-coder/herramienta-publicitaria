@@ -1,13 +1,32 @@
 "use client";
 
-import { ArrowRight, ChartColumn, Check, CircleCheck, FlaskConical, MailOpen, Minus, PenLine, Reply, Send, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowRight, ChartColumn, FlaskConical, MailOpen, PenLine, Reply, Send, Sparkles, type LucideIcon } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { avisar } from "@/components/avisos";
-import { Boton, BotonEnlace, BotonProximamente, Cargando, Encabezado, EstadoVacio, Insignia, Tarjeta, cx } from "@/components/ui";
+import {
+  BOTON_BARRA,
+  BarraAccion,
+  Boton,
+  BotonEnlace,
+  BotonProximamente,
+  Cargando,
+  Encabezado,
+  EstadoVacio,
+  Insignia,
+  Tarjeta,
+  cx,
+} from "@/components/ui";
 import { reiniciarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
-import { contactosParaRedactar } from "@/lib/contactos";
+import { contactosParaRedactar, nombreVisible } from "@/lib/contactos";
 import { estadoDeRecorrido } from "@/lib/estado";
-import { DIAS_PARA_SEGUNDO_MENSAJE, simularSeguimiento } from "@/lib/seguimiento";
+import { DIAS_PARA_SEGUNDO_MENSAJE, simularSeguimiento, type EstadoSimulado } from "@/lib/seguimiento";
+
+/** Lo más lejos que llegó cada correo, en una palabra. */
+function situacion(f: EstadoSimulado): { texto: string; clase: string; orden: number } {
+  if (f.respondio) return { texto: "Respondió", clase: "bg-violeta-500 text-white", orden: 0 };
+  if (f.abrio) return { texto: "Lo abrió", clase: "bg-violeta-50 text-violeta-700", orden: 1 };
+  return { texto: "No lo ha abierto", clase: "bg-fondo text-suave", orden: 2 };
+}
 
 export function PantallaSeguimiento() {
   const estado = useEstado();
@@ -16,8 +35,9 @@ export function PantallaSeguimiento() {
 
   const aprobados = contactosParaRedactar(estado).filter((c) => estado.borradores[c.id]?.estado === "aprobado");
   const filas = simularSeguimiento(aprobados);
-  const cuenta = (f: (x: (typeof filas)[number]) => boolean) => filas.filter(f).length;
+  const cuenta = (f: (x: EstadoSimulado) => boolean) => filas.filter(f).length;
   const segundo = filas.filter((f) => f.necesitaSegundoMensaje);
+  const ordenadas = [...filas].sort((a, b) => situacion(a).orden - situacion(b).orden);
 
   return (
     <div>
@@ -27,11 +47,8 @@ export function PantallaSeguimiento() {
         subtitulo="Quién abrió, quién respondió y a quién volver a escribirle."
         ayuda={
           <>
-            <p>Aquí verías qué pasó con cada correo: si lo abrieron, si te respondieron y a quién conviene escribirle otra vez.</p>
-            <p>
-              Como la demo no envía nada, todo lo que dice «Simulado» es inventado sólo para mostrar cómo se vería. No es
-              un resultado ni una predicción.
-            </p>
+            <p>Aquí verías qué pasó con cada correo y a quién conviene escribirle otra vez.</p>
+            <p>Como la demo no envía nada, estos números son inventados sólo para mostrar cómo se vería. No son resultados.</p>
           </>
         }
       />
@@ -45,142 +62,105 @@ export function PantallaSeguimiento() {
         <EstadoVacio
           icono={<ChartColumn size={30} aria-hidden />}
           titulo="Aún no hay correos aprobados"
-          texto="Apruébalos en «Redactar» o carga el recorrido de ejemplo para ver el tablero."
+          texto="Aprueba tus correos en «Redactar» y aquí verás cómo irían."
         >
           <BotonEnlace href="/redactar" icono={<PenLine size={18} aria-hidden />}>
-            Ir a Redactar
+            Ir a redactar
           </BotonEnlace>
           <Boton
             variante="secundario"
             icono={<Sparkles size={18} aria-hidden />}
             onClick={() => {
-              reiniciarEstado(estadoDeRecorrido());
-              avisar("Recorrido de ejemplo cargado");
+              const nuevo = estadoDeRecorrido();
+              reiniciarEstado(nuevo);
+              avisar(`Listo: ${nuevo.contactos.length} negocios de ejemplo`);
             }}
           >
-            Cargar ejemplo
+            Llenar con un ejemplo
           </Boton>
         </EstadoVacio>
       ) : (
         <>
-          <ul className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Cifra icono={CircleCheck} titulo="Aprobados" valor={aprobados.length} />
-            <Cifra icono={Send} titulo="Enviados" valor={cuenta((f) => f.enviado)} simulado />
-            <Cifra icono={MailOpen} titulo="Abrieron" valor={cuenta((f) => f.abrio)} simulado />
-            <Cifra icono={Reply} titulo="Respondieron" valor={cuenta((f) => f.respondio)} simulado />
+          <ul className="mb-7 grid grid-cols-3 gap-2 sm:gap-3">
+            <Cifra icono={Send} titulo="Enviados" valor={cuenta((f) => f.enviado)} />
+            <Cifra icono={MailOpen} titulo="Abrieron" valor={cuenta((f) => f.abrio)} />
+            <Cifra icono={Reply} titulo="Respondieron" valor={cuenta((f) => f.respondio)} />
           </ul>
 
-          <section className="mb-6">
-            <div className="mb-1 flex flex-wrap items-center gap-2">
-              <h2 className="font-display text-xl font-bold">Necesitan segundo mensaje</h2>
-              <Insignia tipo="simulado" />
-            </div>
-            <p className="mb-3 text-sm text-suave">
-              No han respondido en {DIAS_PARA_SEGUNDO_MENSAJE} días o más. Un segundo mensaje corto y amable es lo normal.
-            </p>
-            {segundo.length ? (
+          {segundo.length ? (
+            <section aria-labelledby="titulo-otra-vez" className="mb-7">
+              <h2 id="titulo-otra-vez" className="flex flex-wrap items-center gap-2 font-display text-xl font-bold">
+                Volver a escribirles <span className="font-sans text-lg font-semibold text-suave">({segundo.length})</span>
+                <Insignia tipo="ejemplo" />
+              </h2>
+              <p className="mt-1 mb-3 text-suave">No han respondido en {DIAS_PARA_SEGUNDO_MENSAJE} días o más.</p>
               <Tarjeta className="overflow-hidden">
                 <ul className="divide-y divide-linea">
                   {segundo.map((f) => (
-                    <li key={f.contacto.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
-                      <Avatar nombre={f.contacto.nombre} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-semibold text-tinta">{f.contacto.nombre}</span>
-                        <span className="block text-sm text-suave">Hace {f.diasDesdeEnvio} días · simulado</span>
-                      </span>
-                      <BotonProximamente texto="Preparar segundo mensaje" className="w-full justify-center sm:w-auto" />
+                    <li key={f.contacto.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                      <Avatar nombre={f.contacto.nombre} tamano={36} />
+                      <span className="min-w-0 flex-1 truncate font-semibold text-tinta">{nombreVisible(f.contacto.nombre, f.contacto.esEjemplo)}</span>
+                      <span className="shrink-0 text-sm text-suave">Hace {f.diasDesdeEnvio} días</span>
                     </li>
                   ))}
                 </ul>
+                <div className="border-t border-linea bg-fondo/60 px-4 py-3 sm:px-5">
+                  <BotonProximamente texto="Escribirles otra vez" className="w-full justify-center sm:w-auto" />
+                </div>
               </Tarjeta>
-            ) : (
-              <p className="rounded-tarjeta bg-white px-5 py-6 text-center text-suave">Nadie por ahora.</p>
-            )}
-          </section>
+            </section>
+          ) : null}
 
-          <section>
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <h2 className="font-display text-xl font-bold">Por contacto</h2>
-              <Insignia tipo="simulado" />
-            </div>
+          <section aria-labelledby="titulo-cada-uno">
+            <h2 id="titulo-cada-uno" className="mb-3 flex flex-wrap items-center gap-2 font-display text-xl font-bold">
+              Cómo va cada uno <Insignia tipo="ejemplo" />
+            </h2>
             <Tarjeta className="overflow-hidden">
               <ul className="divide-y divide-linea">
-                {filas.map((f) => (
-                  <li key={f.contacto.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-5">
-                    <Avatar nombre={f.contacto.nombre} tamano={36} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold text-tinta">{f.contacto.nombre}</span>
-                      <span className="block text-xs text-tenue">Hace {f.diasDesdeEnvio} días</span>
-                    </span>
-                    <span className="flex w-full gap-1.5 pl-12 sm:w-auto sm:pl-0">
-                      <Paso si={f.enviado} texto="Enviado" />
-                      <Paso si={f.abrio} texto="Abrió" />
-                      <Paso si={f.respondio} texto="Respondió" />
-                    </span>
-                  </li>
-                ))}
+                {ordenadas.map((f) => {
+                  const s = situacion(f);
+                  return (
+                    <li key={f.contacto.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                      <Avatar nombre={f.contacto.nombre} tamano={36} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold text-tinta">{nombreVisible(f.contacto.nombre, f.contacto.esEjemplo)}</span>
+                        <span className="block text-xs text-tenue">Enviado hace {f.diasDesdeEnvio} días</span>
+                      </span>
+                      <span className={cx("shrink-0 rounded-full px-2.5 py-1 text-xs font-bold", s.clase)}>{s.texto}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </Tarjeta>
-            <p className="mt-2 text-sm text-tenue">Todos los valores de esta lista son simulados.</p>
           </section>
+
+          <BarraAccion notaComputadora="Números de ejemplo: nada se envió">
+            <BotonEnlace href="/expediente" className={BOTON_BARRA} icono={<ArrowRight size={19} aria-hidden />}>
+              Siguiente: el expediente
+            </BotonEnlace>
+          </BarraAccion>
         </>
       )}
-
-      <div className="mt-8 flex justify-end">
-        <BotonEnlace href="/expediente" tamano="lg" icono={<ArrowRight size={19} aria-hidden />}>
-          Siguiente: expediente
-        </BotonEnlace>
-      </div>
     </div>
   );
 }
 
-function Cifra({
-  icono: Icono,
-  titulo,
-  valor,
-  simulado = false,
-}: {
-  icono: LucideIcon;
-  titulo: string;
-  valor: number;
-  simulado?: boolean;
-}) {
+function Cifra({ icono: Icono, titulo, valor }: { icono: LucideIcon; titulo: string; valor: number }) {
   return (
-    <li
-      className={cx(
-        "entrada rounded-tarjeta p-4",
-        simulado ? "rayas-simulado border-2 border-dashed border-violeta-200 bg-violeta-50/60" : "border border-linea/80 bg-superficie shadow-tarjeta",
-      )}
-    >
+    <li className="entrada rayas-simulado rounded-tarjeta border-2 border-dashed border-violeta-200 bg-violeta-50/60 p-3 sm:p-4">
       <div className="flex items-start justify-between gap-2">
-        <span
-          className={cx(
-            "flex h-10 w-10 items-center justify-center rounded-2xl",
-            simulado ? "bg-white text-violeta-700" : "bg-marca-50 text-marca-600",
-          )}
-        >
-          <Icono size={19} aria-hidden />
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-violeta-700 sm:h-10 sm:w-10 sm:rounded-2xl">
+          <Icono size={18} aria-hidden />
         </span>
-        <Insignia tipo={simulado ? "simulado" : "tusdatos"} />
+        <span className="hidden sm:block">
+          <Insignia tipo="ejemplo" />
+        </span>
       </div>
-      <p className="mt-3 text-sm font-semibold text-suave">{titulo}</p>
-      <p className="text-3xl leading-tight font-bold text-tinta">{valor}</p>
+      <p className="mt-2.5 text-3xl leading-tight font-bold text-tinta">{valor}</p>
+      <p className="text-sm font-semibold text-suave">{titulo}</p>
+      <span className="mt-1.5 block sm:hidden">
+        <Insignia tipo="ejemplo" />
+      </span>
     </li>
-  );
-}
-
-function Paso({ si, texto }: { si: boolean; texto: string }) {
-  return (
-    <span
-      className={cx(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
-        si ? "bg-violeta-50 text-violeta-700" : "bg-fondo text-tenue",
-      )}
-    >
-      {si ? <Check size={13} strokeWidth={3} aria-hidden /> : <Minus size={13} aria-hidden />}
-      {texto}
-      <span className="sr-only">{si ? ": sí" : ": no"}</span>
-    </span>
   );
 }

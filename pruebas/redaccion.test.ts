@@ -90,3 +90,12 @@ describe("asunto veraz", () => {
     expect("estado" in r && r.estado).toBe("aprobado");
   });
 });
+
+describe("plantilla sin giro", () => {
+  it("no deja la frase a medias si el contacto no tiene giro", () => {
+    const sinGiro = { ...contacto, giro: "" };
+    const b = generarBorrador(sinGiro, ajustes);
+    expect(b.cuerpo).toContain("vi que su negocio está en Tijuana");
+    expect(b.cuerpo).not.toContain("negocio de  ");
+  });
+});

@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowRight, CalendarDays, ChevronDown, Clock, FlaskConical, Lock, Mail, Send, ShieldCheck, Timer, TrendingUp, type LucideIcon } from "lucide-react";
+import { ArrowRight, ChevronDown, FlaskConical, Lock, PenLine, Send } from "lucide-react";
 import { useState } from "react";
-import { BotonEnlace, Cargando, Encabezado, Insignia, Segmentado, Tarjeta, cx } from "@/components/ui";
+import { BOTON_BARRA, BarraAccion, BotonEnlace, Cargando, Encabezado, Insignia, Tarjeta, cx } from "@/components/ui";
 import { useEnNavegador, useEstado } from "@/lib/almacen";
-import { contactosParaRedactar } from "@/lib/contactos";
+import { contactosParaRedactar, nombreVisible } from "@/lib/contactos";
 import { formatoHora, generarPlan, OPCIONES_PLAN, type DiaDelPlan } from "@/lib/plan-envio";
 
 const CANTIDAD_EJEMPLO = 150;
@@ -15,20 +15,23 @@ function fechaCorta(fecha: Date): string {
   return fecha.toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" });
 }
 
+/** «jue 5 nov» → «Jue 5 nov» (sólo la primera letra en mayúscula). */
+function conMayuscula(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
 export function PantallaEnvio() {
   const estado = useEstado();
   const enNavegador = useEnNavegador();
-  const [modo, setModo] = useState<"mios" | "ejemplo">("mios");
   if (!enNavegador) return <Cargando />;
 
   const aprobados = contactosParaRedactar(estado).filter((c) => estado.borradores[c.id]?.estado === "aprobado");
-  const usarEjemplo = modo === "ejemplo" || aprobados.length === 0;
-  const cantidad = usarEjemplo ? CANTIDAD_EJEMPLO : aprobados.length;
   const manana = new Date();
   manana.setHours(0, 0, 0, 0);
   manana.setDate(manana.getDate() + 1);
-  const plan = generarPlan(cantidad, { inicio: manana });
-  const nombreDe = (i: number) => (usarEjemplo ? `Correo de ejemplo #${i + 1}` : (aprobados[i]?.nombre ?? ""));
+  const plan = generarPlan(aprobados.length, { inicio: manana });
+  const planEjemplo = generarPlan(CANTIDAD_EJEMPLO, { inicio: manana });
+  const nombreDe = (i: number) => nombreVisible(aprobados[i]?.nombre ?? "", aprobados[i]?.esEjemplo);
 
   return (
     <div>
@@ -38,8 +41,8 @@ export function PantallaEnvio() {
         subtitulo="Así saldrían tus correos: poco a poco y desde tu propio correo."
         ayuda={
           <>
-            <p>Aquí verías cómo se mandarían tus correos aprobados desde tu propia cuenta de correo, poco a poco.</p>
-            <p>En esta demo el envío está apagado: nada sale de aquí. Lo que ves es una simulación del calendario.</p>
+            <p>Aquí ves cuándo saldría cada correo aprobado si el envío estuviera conectado a tu cuenta de correo.</p>
+            <p>En esta demo el envío está apagado: nada sale de aquí. Es una simulación del calendario.</p>
           </>
         }
       />
@@ -53,9 +56,6 @@ export function PantallaEnvio() {
             <p className="text-sm font-semibold text-white/65">Listos para salir</p>
             <p className="text-6xl leading-none font-bold tracking-tight">{aprobados.length}</p>
             <p className="mt-1 text-lg text-white/85">{aprobados.length === 1 ? "correo aprobado" : "correos aprobados"}</p>
-            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white/85">
-              <Lock size={14} aria-hidden /> El envío real todavía no está conectado.
-            </p>
           </div>
           <button
             type="button"
@@ -72,92 +72,56 @@ export function PantallaEnvio() {
         </div>
       </section>
 
-      <p className="rayas-simulado entrada mb-6 flex items-center gap-2.5 rounded-2xl border border-violeta-200 bg-violeta-50 px-4 py-3 font-semibold text-violeta-700">
+      <p className="rayas-simulado entrada mb-7 flex items-center gap-2.5 rounded-2xl border border-violeta-200 bg-violeta-50 px-4 py-3 font-semibold text-violeta-700">
         <FlaskConical size={19} aria-hidden className="shrink-0" />
         Simulación, no se envía nada.
       </p>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 font-display text-xl font-bold">
-          Plan de envío <Insignia tipo="simulado">Simulación</Insignia>
+      <section aria-labelledby="titulo-asi-saldrian">
+        <h2 id="titulo-asi-saldrian" className="mb-3 flex flex-wrap items-center gap-2 font-display text-xl font-bold">
+          Así saldrían tus correos <Insignia tipo="simulado">Simulación</Insignia>
         </h2>
-        <Segmentado
-          etiqueta="Qué correos ver"
-          className="w-full sm:w-fit"
-          valor={usarEjemplo ? "ejemplo" : "mios"}
-          onChange={setModo}
-          opciones={[
-            { valor: "mios", texto: `Mis aprobados (${aprobados.length})`, desactivado: aprobados.length === 0 },
-            { valor: "ejemplo", texto: `Ejemplo con ${CANTIDAD_EJEMPLO}` },
-          ]}
-        />
-      </div>
-      {aprobados.length === 0 ? (
-        <p className="mb-4 text-sm text-suave">
-          Aún no tienes correos aprobados, así que te mostramos el ejemplo con {CANTIDAD_EJEMPLO}.
-        </p>
-      ) : null}
-
-      <dl className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
-        <Dato icono={Mail} titulo="Correos" valor={String(cantidad)} />
-        <Dato icono={CalendarDays} titulo={plan.length === 1 ? "Día" : "Días"} valor={String(plan.length)} />
-        <Dato icono={Clock} titulo="Horario" valor={`${OPCIONES_PLAN.horaInicio} a ${OPCIONES_PLAN.horaFin} h`} />
-      </dl>
-
-      {plan.length > 1 ? <GraficaPorDia plan={plan} /> : null}
-
-      <h3 className="mt-6 mb-3 font-semibold text-tinta-2">Así saldrían, día por día</h3>
-      <ol className="space-y-3">
-        {plan.slice(0, DIAS_CON_HORARIO).map((dia) => (
-          <li key={dia.numero}>
-            <DiaLineaDeTiempo dia={dia} nombreDe={nombreDe} />
-          </li>
-        ))}
-      </ol>
-      {plan.length > DIAS_CON_HORARIO ? (
-        <p className="mt-3 text-sm text-suave">
-          … y {plan.length - DIAS_CON_HORARIO} {plan.length - DIAS_CON_HORARIO === 1 ? "día más" : "días más"}, con hasta{" "}
-          {OPCIONES_PLAN.cupoMaximo} correos por día.
-        </p>
-      ) : null}
-
-      <section className="mt-8">
-        <h2 className="mb-3 font-display text-xl font-bold">¿Por qué poco a poco?</h2>
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Razon
-            icono={ShieldCheck}
-            titulo="Cuida tu cuenta"
-            texto="Si mandas muchos de golpe, Gmail y Outlook te marcan como spam o te bloquean."
-          />
-          <Razon
-            icono={Timer}
-            titulo="Como lo haría una persona"
-            texto={`Pausas al azar de ${OPCIONES_PLAN.minutosMin} a ${OPCIONES_PLAN.minutosMax} minutos entre un correo y otro.`}
-          />
-          <Razon
-            icono={TrendingUp}
-            titulo="Sube poco a poco"
-            texto={`${OPCIONES_PLAN.cupoInicial} el primer día y ${OPCIONES_PLAN.aumentoDiario} más cada día, hasta ${OPCIONES_PLAN.cupoMaximo} al día.`}
-          />
-        </ul>
+        {aprobados.length ? (
+          <>
+            <ol className="space-y-3">
+              {plan.slice(0, DIAS_CON_HORARIO).map((dia) => (
+                <li key={dia.numero}>
+                  <DiaLineaDeTiempo dia={dia} nombreDe={nombreDe} />
+                </li>
+              ))}
+            </ol>
+            {plan.length > DIAS_CON_HORARIO ? (
+              <p className="mt-3 text-sm text-suave">
+                … y {plan.length - DIAS_CON_HORARIO} {plan.length - DIAS_CON_HORARIO === 1 ? "día más" : "días más"}.
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <Tarjeta className="flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center">
+            <p className="min-w-0 flex-1 text-suave">Todavía no apruebas ningún correo. Abajo ves un ejemplo con {CANTIDAD_EJEMPLO}.</p>
+            <BotonEnlace href="/redactar" variante="secundario" icono={<PenLine size={17} aria-hidden />}>
+              Ir a redactar
+            </BotonEnlace>
+          </Tarjeta>
+        )}
       </section>
 
-      <div className="mt-8 flex justify-end">
-        <BotonEnlace href="/seguimiento" tamano="lg" icono={<ArrowRight size={19} aria-hidden />}>
-          Siguiente: seguimiento
-        </BotonEnlace>
-      </div>
-    </div>
-  );
-}
+      <section aria-labelledby="titulo-si-fueran" className="mt-8">
+        <h2 id="titulo-si-fueran" className="font-display text-xl font-bold">
+          ¿Y si fueran {CANTIDAD_EJEMPLO}?
+        </h2>
+        <p className="mt-1 mb-3 text-suave">
+          {OPCIONES_PLAN.cupoInicial} el primer día y {OPCIONES_PLAN.aumentoDiario} más cada día, hasta {OPCIONES_PLAN.cupoMaximo}. Así
+          Gmail y Outlook no te marcan como spam.
+        </p>
+        <GraficaPorDia plan={planEjemplo} />
+      </section>
 
-function Dato({ icono: Icono, titulo, valor }: { icono: LucideIcon; titulo: string; valor: string }) {
-  return (
-    <div className="rounded-2xl border border-linea/80 bg-superficie px-3 py-3 shadow-tarjeta sm:px-4">
-      <dt className="flex items-center gap-1.5 text-xs font-semibold text-suave">
-        <Icono size={14} aria-hidden className="text-marca-600" /> {titulo}
-      </dt>
-      <dd className="mt-1 text-xl leading-tight font-bold whitespace-nowrap text-tinta sm:text-2xl">{valor}</dd>
+      <BarraAccion notaComputadora="Simulación: no se envía nada">
+        <BotonEnlace href="/seguimiento" className={BOTON_BARRA} icono={<ArrowRight size={19} aria-hidden />}>
+          Siguiente: ver quién respondió
+        </BotonEnlace>
+      </BarraAccion>
     </div>
   );
 }
@@ -296,7 +260,7 @@ function DiaLineaDeTiempo({ dia, nombreDe }: { dia: DiaDelPlan; nombreDe: (i: nu
           <span className="text-lg leading-none font-bold">{dia.numero}</span>
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-tinta capitalize">{fechaCorta(dia.fecha)}</p>
+          <p className="font-semibold text-tinta">{conMayuscula(fechaCorta(dia.fecha))}</p>
           <p className="text-sm text-suave">
             {dia.envios.length} {dia.envios.length === 1 ? "correo" : "correos"}
             {primero && ultimo ? ` · de ${formatoHora(primero.minuto)} a ${formatoHora(ultimo.minuto)}` : ""}
@@ -336,19 +300,5 @@ function DiaLineaDeTiempo({ dia, nombreDe }: { dia: DiaDelPlan; nombreDe: (i: nu
         </ol>
       </details>
     </Tarjeta>
-  );
-}
-
-function Razon({ icono: Icono, titulo, texto }: { icono: LucideIcon; titulo: string; texto: string }) {
-  return (
-    <li>
-      <Tarjeta className="h-full p-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-marca-50 text-marca-600">
-          <Icono size={21} aria-hidden />
-        </span>
-        <p className="mt-3 font-semibold text-tinta">{titulo}</p>
-        <p className="mt-0.5 text-sm text-suave">{texto}</p>
-      </Tarjeta>
-    </li>
   );
 }

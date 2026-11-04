@@ -9,24 +9,29 @@ Además guarda la prueba de dónde salió cada contacto.
 
 ## Las 6 pantallas
 
-1. **Buscar empresas.** Filtras por giro, ciudad y tamaño, y agregas negocios a tu lista.
-2. **Elegir contactos.** Escoges a mano a quién escribirle. Cada contacto tiene un semáforo según de dónde salió:
+1. **Buscar empresas.** Filtras por ciudad, tamaño y tipo de negocio, y tocas «Agregar» en los que te interesen.
+   Lo que agregas ya queda elegido para escribirle.
+2. **Elegir contactos.** Ves a quién le vas a escribir y le quitas la palomita a quien no quieras. Cada contacto
+   tiene un color según de dónde salió:
    - verde: viene de un directorio público, de tu formulario o de tus clientes
    - ámbar: lo agregaste tú y anotaste de dónde salió
    - rojo: no se sabe de dónde salió, y no se puede usar
 
-   Los marcados «No contactar» ya no se pueden volver a elegir.
-3. **Redactar.** Revisas el correo de cada negocio y lo apruebas. Los datos de tu desarrollo (nombre, precio,
-   fotos y datos del pie legal) se cambian en **«Mi desarrollo»**. El pie legal se agrega solo y no se puede
-   borrar. Los asuntos engañosos, como «Re:» o «Factura», se rechazan.
-4. **Envío.** Aquí está el botón «Enviar», apagado. Debajo hay una simulación de cómo se repartirían los correos:
-   pocos por hora, con pausas al azar y subiendo poco a poco cada día.
-5. **Seguimiento.** Un tablero de ejemplo con quién «abrió», quién «respondió» y a quién mandarle un segundo
-   mensaje. Todo ahí es simulado.
-6. **Expediente.** De cada contacto dice de dónde salió, cuándo, qué semáforo tiene y qué mensaje se aprobó.
-   Se descarga en un archivo CSV que abre en Excel.
+   Abajo aparecen, aparte, los que no se pueden usar y por qué (no tienen correo, no se sabe de dónde salieron o
+   están en «No contactar»). Si tocas «No contactar» por error, el aviso trae «Deshacer».
+3. **Redactar.** Lees el correo de cada negocio, lo corriges si quieres y tocas «Aprobar este correo»; pasa solo
+   al siguiente. Los datos de tu desarrollo (nombre, precio, fotos y datos del pie legal) se cambian en
+   **«Mi desarrollo»** (botón «Editar» del inicio). El pie legal se agrega solo y no se puede borrar. Los asuntos
+   engañosos, como «Re:» o «Factura», se rechazan.
+4. **Envío.** Aquí está el botón «Enviar», apagado. Debajo se ve cuándo saldría cada correo aprobado y un ejemplo
+   con 150: pocos por hora, con pausas al azar y subiendo poco a poco cada día.
+5. **Seguimiento.** Un tablero de ejemplo con quién «abrió», quién «respondió» y a quién volver a escribirle.
+   Todo ahí es simulado.
+6. **Expediente.** De cada contacto dice de dónde salió, cuándo se agregó y qué correo se aprobó. Se descarga en
+   un archivo CSV que abre en Excel.
 
-Para presentarla rápido, en la página de inicio está el botón **«Cargar recorrido de ejemplo»**.
+En cada pantalla hay un solo botón grande abajo que dice qué sigue. Para presentarla rápido, en el inicio está
+**«O mira un ejemplo ya lleno»**, y «Borrar todo» la deja vacía otra vez.
 
 Se ve como una app: en el celular las pantallas van en pestañas abajo y en la computadora en una barra a la
 izquierda.
