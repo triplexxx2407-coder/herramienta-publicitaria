@@ -172,7 +172,7 @@ function TablaContactos({ contactos, estado }: { contactos: Contacto[]; estado: 
                 </p>
                 <p className="text-sm break-all text-slate-600">{c.correo}</p>
                 <p className="text-sm text-slate-500">
-                  {nombreGiro(c.giro)} · {nombreCiudad(c.ciudad)}
+                  {[nombreGiro(c.giro), nombreCiudad(c.ciudad)].filter(Boolean).join(" · ")}
                 </p>
               </div>
               <div className="col-start-2 text-sm md:col-start-auto">
