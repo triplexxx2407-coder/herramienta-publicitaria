@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PANTALLAS } from "@/components/Navegacion";
+import { PANTALLAS } from "@/lib/pantallas";
 import { QueHaceEsto } from "@/components/QueHaceEsto";
 import { BotonesInicio } from "./BotonesInicio";
 
