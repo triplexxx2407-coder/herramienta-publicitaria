@@ -1,0 +1,372 @@
+[
+  {
+    "id": "ej-001",
+    "nombre": "Consultorio Médico Alba Ficticia (ejemplo)",
+    "giro": "consultorios-medicos",
+    "ciudad": "culiacan",
+    "estrato": 2,
+    "telefono": "667 000 11 03",
+    "correo": "consultorio-medico-alba-ficticia@example.com",
+    "sitioWeb": "https://example.com/consultorio-medico-alba-ficticia"
+  },
+  {
+    "id": "ej-002",
+    "nombre": "Centro Médico Nogal Imaginario (ejemplo)",
+    "giro": "consultorios-medicos",
+    "ciudad": "tijuana",
+    "estrato": 3,
+    "telefono": "664 000 12 06",
+    "correo": "centro-medico-nogal-imaginario@example.com",
+    "sitioWeb": "https://example.com/centro-medico-nogal-imaginario"
+  },
+  {
+    "id": "ej-003",
+    "nombre": "Consultorio Doctora Lumen (ejemplo)",
+    "giro": "consultorios-medicos",
+    "ciudad": "los-mochis",
+    "estrato": 3,
+    "telefono": "668 000 13 09",
+    "correo": "consultorio-doctora-lumen@example.com",
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-004",
+    "nombre": "Clínica Familiar Brisa Inventada (ejemplo)",
+    "giro": "consultorios-medicos",
+    "ciudad": "ensenada",
+    "estrato": 4,
+    "telefono": "646 000 14 12",
+    "correo": null,
+    "sitioWeb": "https://example.com/clinica-familiar-brisa-inventada"
+  },
+  {
+    "id": "ej-005",
+    "nombre": "Clínica Dental Sonrisa Ficticia (ejemplo)",
+    "giro": "clinicas-dentales",
+    "ciudad": "culiacan",
+    "estrato": 5,
+    "telefono": "667 000 15 15",
+    "correo": "clinica-dental-sonrisa-ficticia@example.com",
+    "sitioWeb": "https://example.com/clinica-dental-sonrisa-ficticia"
+  },
+  {
+    "id": "ej-006",
+    "nombre": "Dental Arcoíris Imaginario (ejemplo)",
+    "giro": "clinicas-dentales",
+    "ciudad": "tecate",
+    "estrato": 2,
+    "telefono": "665 000 16 18",
+    "correo": "dental-arcoiris-imaginario@example.com",
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-007",
+    "nombre": "Odontología Perla Inventada (ejemplo)",
+    "giro": "clinicas-dentales",
+    "ciudad": "tijuana",
+    "estrato": 6,
+    "telefono": "664 000 17 21",
+    "correo": "odontologia-perla-inventada@example.com",
+    "sitioWeb": "https://example.com/odontologia-perla-inventada"
+  },
+  {
+    "id": "ej-008",
+    "nombre": "Dental Cumbre Demo (ejemplo)",
+    "giro": "clinicas-dentales",
+    "ciudad": "mazatlan",
+    "estrato": 3,
+    "telefono": "669 000 18 24",
+    "correo": null,
+    "sitioWeb": "https://example.com/dental-cumbre-demo"
+  },
+  {
+    "id": "ej-009",
+    "nombre": "Despacho Jurídico Roble y Asociados (ejemplo)",
+    "giro": "despachos-abogados",
+    "ciudad": "mexicali",
+    "estrato": 7,
+    "telefono": "686 000 19 27",
+    "correo": "despacho-juridico-roble-y-asociados@example.com",
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-010",
+    "nombre": "Abogados Faro Ficticio (ejemplo)",
+    "giro": "despachos-abogados",
+    "ciudad": "tijuana",
+    "estrato": 1,
+    "telefono": "664 000 20 30",
+    "correo": "abogados-faro-ficticio@example.com",
+    "sitioWeb": "https://example.com/abogados-faro-ficticio"
+  },
+  {
+    "id": "ej-011",
+    "nombre": "Bufete Legal Imaginario Norte (ejemplo)",
+    "giro": "despachos-abogados",
+    "ciudad": "rosarito",
+    "estrato": 2,
+    "telefono": "661 000 21 33",
+    "correo": "bufete-legal-imaginario-norte@example.com",
+    "sitioWeb": "https://example.com/bufete-legal-imaginario-norte"
+  },
+  {
+    "id": "ej-012",
+    "nombre": "Consultoría Legal Ámbar Demo (ejemplo)",
+    "giro": "despachos-abogados",
+    "ciudad": "tijuana",
+    "estrato": 3,
+    "telefono": "664 000 22 36",
+    "correo": null,
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-013",
+    "nombre": "Contadores Brújula Ficticia (ejemplo)",
+    "giro": "despachos-contables",
+    "ciudad": "culiacan",
+    "estrato": 3,
+    "telefono": "667 000 23 39",
+    "correo": "contadores-brujula-ficticia@example.com",
+    "sitioWeb": "https://example.com/contadores-brujula-ficticia"
+  },
+  {
+    "id": "ej-014",
+    "nombre": "Despacho Contable Sauce Demo (ejemplo)",
+    "giro": "despachos-contables",
+    "ciudad": "tijuana",
+    "estrato": 4,
+    "telefono": "664 000 24 42",
+    "correo": "despacho-contable-sauce-demo@example.com",
+    "sitioWeb": "https://example.com/despacho-contable-sauce-demo"
+  },
+  {
+    "id": "ej-015",
+    "nombre": "Asesoría Fiscal Imaginaria Delta (ejemplo)",
+    "giro": "despachos-contables",
+    "ciudad": "los-mochis",
+    "estrato": 5,
+    "telefono": "668 000 25 45",
+    "correo": "asesoria-fiscal-imaginaria-delta@example.com",
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-016",
+    "nombre": "Contabilidad Prisma Inventada (ejemplo)",
+    "giro": "despachos-contables",
+    "ciudad": "ensenada",
+    "estrato": 2,
+    "telefono": "646 000 26 48",
+    "correo": null,
+    "sitioWeb": "https://example.com/contabilidad-prisma-inventada"
+  },
+  {
+    "id": "ej-017",
+    "nombre": "Agencia Aduanal Puente Ficticio (ejemplo)",
+    "giro": "agencias-aduanales",
+    "ciudad": "culiacan",
+    "estrato": 6,
+    "telefono": "667 000 27 51",
+    "correo": "agencia-aduanal-puente-ficticio@example.com",
+    "sitioWeb": "https://example.com/agencia-aduanal-puente-ficticio"
+  },
+  {
+    "id": "ej-018",
+    "nombre": "Comercio Exterior Garza Demo (ejemplo)",
+    "giro": "agencias-aduanales",
+    "ciudad": "tecate",
+    "estrato": 3,
+    "telefono": "665 000 28 54",
+    "correo": "comercio-exterior-garza-demo@example.com",
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-019",
+    "nombre": "Aduanas Frontera Imaginaria (ejemplo)",
+    "giro": "agencias-aduanales",
+    "ciudad": "tijuana",
+    "estrato": 7,
+    "telefono": "664 000 29 57",
+    "correo": "aduanas-frontera-imaginaria@example.com",
+    "sitioWeb": "https://example.com/aduanas-frontera-imaginaria"
+  },
+  {
+    "id": "ej-020",
+    "nombre": "Agencia Aduanal Halcón Inventado (ejemplo)",
+    "giro": "agencias-aduanales",
+    "ciudad": "mazatlan",
+    "estrato": 1,
+    "telefono": "669 000 30 60",
+    "correo": null,
+    "sitioWeb": "https://example.com/agencia-aduanal-halcon-inventado"
+  },
+  {
+    "id": "ej-021",
+    "nombre": "Autos Cometa Ficticios (ejemplo)",
+    "giro": "agencias-autos",
+    "ciudad": "mexicali",
+    "estrato": 2,
+    "telefono": "686 000 31 63",
+    "correo": "autos-cometa-ficticios@example.com",
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-022",
+    "nombre": "Agencia Automotriz Rueda Demo (ejemplo)",
+    "giro": "agencias-autos",
+    "ciudad": "tijuana",
+    "estrato": 3,
+    "telefono": "664 000 32 66",
+    "correo": "agencia-automotriz-rueda-demo@example.com",
+    "sitioWeb": "https://example.com/agencia-automotriz-rueda-demo"
+  },
+  {
+    "id": "ej-023",
+    "nombre": "Seminuevos Imaginarios del Norte (ejemplo)",
+    "giro": "agencias-autos",
+    "ciudad": "rosarito",
+    "estrato": 3,
+    "telefono": "661 000 33 69",
+    "correo": "seminuevos-imaginarios-del-norte@example.com",
+    "sitioWeb": "https://example.com/seminuevos-imaginarios-del-norte"
+  },
+  {
+    "id": "ej-024",
+    "nombre": "Restaurante La Mesa Inventada (ejemplo)",
+    "giro": "restaurantes",
+    "ciudad": "tijuana",
+    "estrato": 4,
+    "telefono": "664 000 34 72",
+    "correo": null,
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-025",
+    "nombre": "Mariscos El Ancla Ficticia (ejemplo)",
+    "giro": "restaurantes",
+    "ciudad": "culiacan",
+    "estrato": 5,
+    "telefono": "667 000 35 75",
+    "correo": "mariscos-el-ancla-ficticia@example.com",
+    "sitioWeb": "https://example.com/mariscos-el-ancla-ficticia"
+  },
+  {
+    "id": "ej-026",
+    "nombre": "Cocina Fusión Imaginaria (ejemplo)",
+    "giro": "restaurantes",
+    "ciudad": "tijuana",
+    "estrato": 2,
+    "telefono": "664 000 36 78",
+    "correo": "cocina-fusion-imaginaria@example.com",
+    "sitioWeb": "https://example.com/cocina-fusion-imaginaria"
+  },
+  {
+    "id": "ej-027",
+    "nombre": "Restaurante Terraza Demo (ejemplo)",
+    "giro": "restaurantes",
+    "ciudad": "los-mochis",
+    "estrato": 6,
+    "telefono": "668 000 37 81",
+    "correo": "restaurante-terraza-demo@example.com",
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-028",
+    "nombre": "Manufacturas Engrane Ficticio (ejemplo)",
+    "giro": "fabricas",
+    "ciudad": "ensenada",
+    "estrato": 3,
+    "telefono": "646 000 38 84",
+    "correo": null,
+    "sitioWeb": "https://example.com/manufacturas-engrane-ficticio"
+  },
+  {
+    "id": "ej-029",
+    "nombre": "Maquiladora Circuito Demo (ejemplo)",
+    "giro": "fabricas",
+    "ciudad": "culiacan",
+    "estrato": 7,
+    "telefono": "667 000 39 87",
+    "correo": "maquiladora-circuito-demo@example.com",
+    "sitioWeb": "https://example.com/maquiladora-circuito-demo"
+  },
+  {
+    "id": "ej-030",
+    "nombre": "Industrias Imaginarias del Pacífico (ejemplo)",
+    "giro": "fabricas",
+    "ciudad": "tecate",
+    "estrato": 1,
+    "telefono": "665 000 40 90",
+    "correo": "industrias-imaginarias-del-pacifico@example.com",
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-031",
+    "nombre": "Ensambles Cobalto Inventados (ejemplo)",
+    "giro": "fabricas",
+    "ciudad": "tijuana",
+    "estrato": 2,
+    "telefono": "664 000 41 93",
+    "correo": "ensambles-cobalto-inventados@example.com",
+    "sitioWeb": "https://example.com/ensambles-cobalto-inventados"
+  },
+  {
+    "id": "ej-032",
+    "nombre": "Hotel Marea Ficticia (ejemplo)",
+    "giro": "hoteles",
+    "ciudad": "mazatlan",
+    "estrato": 3,
+    "telefono": "669 000 42 96",
+    "correo": null,
+    "sitioWeb": "https://example.com/hotel-marea-ficticia"
+  },
+  {
+    "id": "ej-033",
+    "nombre": "Hotel Boutique Imaginario (ejemplo)",
+    "giro": "hoteles",
+    "ciudad": "mexicali",
+    "estrato": 3,
+    "telefono": "686 000 43 99",
+    "correo": "hotel-boutique-imaginario@example.com",
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-034",
+    "nombre": "Posada Demo del Valle (ejemplo)",
+    "giro": "hoteles",
+    "ciudad": "tijuana",
+    "estrato": 4,
+    "telefono": "664 000 44 02",
+    "correo": "posada-demo-del-valle@example.com",
+    "sitioWeb": "https://example.com/posada-demo-del-valle"
+  },
+  {
+    "id": "ej-035",
+    "nombre": "Logística Ruta Ficticia (ejemplo)",
+    "giro": "transporte",
+    "ciudad": "rosarito",
+    "estrato": 5,
+    "telefono": "661 000 45 05",
+    "correo": "logistica-ruta-ficticia@example.com",
+    "sitioWeb": "https://example.com/logistica-ruta-ficticia"
+  },
+  {
+    "id": "ej-036",
+    "nombre": "Transportes Imaginarios del Bajío (ejemplo)",
+    "giro": "transporte",
+    "ciudad": "tijuana",
+    "estrato": 2,
+    "telefono": "664 000 46 08",
+    "correo": null,
+    "sitioWeb": null
+  },
+  {
+    "id": "ej-037",
+    "nombre": "Fletes Cóndor Demo (ejemplo)",
+    "giro": "transporte",
+    "ciudad": "culiacan",
+    "estrato": 6,
+    "telefono": "667 000 47 11",
+    "correo": "fletes-condor-demo@example.com",
+    "sitioWeb": "https://example.com/fletes-condor-demo"
+  }
+]
