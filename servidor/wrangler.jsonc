@@ -23,7 +23,10 @@
   "assets": {
     "directory": "../salida-archivo/sitio",
     "binding": "PANTALLA",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    // Sin esto, al abrir una dirección /api/... en el navegador (Google, aviso de privacidad)
+    // la pantalla se la ganaba al servidor y devolvía la bandeja.
+    "run_worker_first": ["/api/*"]
   },
 
   // Cada minuto revisa el correo nuevo y limpia sesiones vencidas.
