@@ -18,6 +18,7 @@ import {
   platicaParaResponder,
 } from "./bandeja";
 import { leerCorreosNuevos, mandarCorreo, type CuentaCorreo } from "./correo";
+import { PREFIJO, accesoNuevo, type ClaveGoogle } from "./google";
 
 const MEMORIA = "correo:ultimo_uid";
 
@@ -78,6 +79,16 @@ export async function revisarCorreo(db: D1Database, cuenta: CuentaCorreo): Promi
 }
 
 /**
+ * Arma lo que hace falta para entrar a un buzón: si se conectó con Google, pide un permiso de uso corto;
+ * si se pegó una contraseña de aplicación, usa esa.
+ */
+export async function credencialDeCorreo(usuario: string, clave: string, google: ClaveGoogle | null): Promise<CuentaCorreo> {
+  if (!clave.startsWith(PREFIJO)) return { usuario, contrasena: clave };
+  if (!google) throw new Error("falta GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el servidor");
+  return { usuario, contrasena: "", accessToken: await accesoNuevo(google, clave) };
+}
+
+/**
  * Revisa todos los buzones: los que se dieron de alta desde la pantalla (cada uno con su propia
  * contraseña de aplicación) y, si existe, el que viene en los secretos del servidor.
  * Un buzón que falla no detiene a los demás.
@@ -85,17 +96,21 @@ export async function revisarCorreo(db: D1Database, cuenta: CuentaCorreo): Promi
 export async function revisarTodosLosCorreos(
   db: D1Database,
   deSecretos: CuentaCorreo | null,
+  google: ClaveGoogle | null = null,
 ): Promise<{ nuevos: number; errores: string[] }> {
-  const cuentas: CuentaCorreo[] = (await correosConClave(db)).map((c) => ({ usuario: c.usuario, contrasena: c.clave }));
-  if (deSecretos && !cuentas.some((c) => c.usuario === deSecretos.usuario)) cuentas.push(deSecretos);
+  const guardadas = await correosConClave(db);
+  const pendientes = guardadas.map((c) => ({ usuario: c.usuario, clave: c.clave }));
+  if (deSecretos && !pendientes.some((c) => c.usuario === deSecretos.usuario)) {
+    pendientes.push({ usuario: deSecretos.usuario, clave: deSecretos.contrasena });
+  }
   let nuevos = 0;
   const errores: string[] = [];
-  for (const cuenta of cuentas) {
+  for (const p of pendientes) {
     try {
-      nuevos += await revisarCorreo(db, cuenta);
+      nuevos += await revisarCorreo(db, await credencialDeCorreo(p.usuario, p.clave, google));
     } catch (falla) {
-      // Ya quedó apuntado en la bitácora.
-      errores.push(`${cuenta.usuario}: ${(falla as Error).message}`);
+      // Los fallos de lectura ya quedaron apuntados en la bitácora.
+      errores.push(`${p.usuario}: ${(falla as Error).message}`);
     }
   }
   return { nuevos, errores };

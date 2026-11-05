@@ -28,7 +28,8 @@ import {
   platicaParaResponder,
   dentroDelPlazo,
 } from "./bandeja";
-import { entregarPorCorreo, revisarCorreo, revisarTodosLosCorreos } from "./canal-correo";
+import { credencialDeCorreo, entregarPorCorreo, revisarCorreo, revisarTodosLosCorreos } from "./canal-correo";
+import { PREFIJO, crearEstado, intercambiarCodigo, leerEstado, urlDeGoogle, type ClaveGoogle } from "./google";
 import { enviarPorMeta, firmaValida, guardarDeMeta } from "./meta";
 import { ORDEN_REDES } from "../../lib/redes";
 import type { Red } from "../../lib/tipos";
@@ -63,6 +64,9 @@ export interface Entorno {
   /** Instagram y Facebook: la clave de la app de Meta (firma los avisos) y la palabra con que Meta verifica tu dirección. */
   META_APP_SECRET?: string;
   META_VERIFY_TOKEN?: string;
+  /** «Conectar con Google»: la clave de la app que se creó en Google Cloud. */
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
 }
 
 function json(datos: unknown, estado = 200, galleta?: string): Response {
@@ -99,6 +103,11 @@ function estadoDeConexion(
   return { estado: "falta", nota: "Falta conectarla con Meta (la empresa dueña de Instagram, Facebook y WhatsApp)." };
 }
 
+function claveDeGoogle(entorno: Entorno): ClaveGoogle | null {
+  if (!entorno.GOOGLE_CLIENT_ID || !entorno.GOOGLE_CLIENT_SECRET) return null;
+  return { clientId: entorno.GOOGLE_CLIENT_ID, clientSecret: entorno.GOOGLE_CLIENT_SECRET };
+}
+
 function cuentaDeCorreo(entorno: Entorno): CuentaCorreo | null {
   if (!entorno.CORREO_USUARIO || !entorno.CORREO_CONTRASENA) return null;
   return { usuario: normalizarCorreo(entorno.CORREO_USUARIO), contrasena: entorno.CORREO_CONTRASENA };
@@ -129,6 +138,35 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
 
   if (ruta === "/api/salud") {
     return json({ bien: true, correoConectado: !!cuentaDeCorreo(entorno) });
+  }
+
+  // La vuelta de Google al conectar un correo. Va sin sesión: se protege con el estado firmado que armó el dueño.
+  if (ruta === "/api/google/vuelta" && metodo === "GET") {
+    const google = claveDeGoogle(entorno);
+    const aPantalla = (resultado: string) => Response.redirect(`${url.origin}/?google=${resultado}#empresas`, 302);
+    if (!google) return aPantalla("falta");
+    const cuentaId = await leerEstado(google.clientSecret, url.searchParams.get("state") ?? "");
+    const codigo = url.searchParams.get("code");
+    if (!cuentaId || !codigo) return aPantalla("no");
+    const fila = await entorno.DB.prepare("SELECT identificador FROM cuentas WHERE id = ? AND red = 'correo'")
+      .bind(cuentaId)
+      .first<{ identificador: string }>();
+    if (!fila) return aPantalla("no");
+    const permiso = await intercambiarCodigo(google, codigo, `${url.origin}/api/google/vuelta`);
+    if (!permiso.refresh_token || !permiso.access_token) {
+      await apuntar(entorno.DB, "correo", "error", `Google no dio el permiso: ${permiso.error ?? "sin respuesta"}`);
+      return aPantalla("no");
+    }
+    await guardarClaveCorreo(entorno.DB, cuentaId, PREFIJO + permiso.refresh_token);
+    try {
+      // La prueba de que el permiso es de ese correo: Google sólo deja entrar si coinciden.
+      await revisarCorreo(entorno.DB, { usuario: fila.identificador, contrasena: "", accessToken: permiso.access_token });
+    } catch {
+      await guardarClaveCorreo(entorno.DB, cuentaId, null);
+      return aPantalla("otrocorreo");
+    }
+    await apuntar(entorno.DB, "correo", "info", `se conectó con Google el correo ${fila.identificador}`);
+    return aPantalla("ok");
   }
 
   // Los avisos de Instagram y Facebook entran sin sesión: Meta no tiene cuenta. Se protegen con la firma.
@@ -305,6 +343,20 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     }
   }
 
+  // Empieza «Conectar con Google»: manda a la persona a Google a dar permiso para ese correo.
+  if (ruta === "/api/google/iniciar" && metodo === "GET") {
+    if (quien.papel !== "dueño") return json({ error: "sólo el dueño puede conectar correos" }, 403);
+    const google = claveDeGoogle(entorno);
+    if (!google) return json({ error: "falta GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el servidor" }, 503);
+    const cuentaId = url.searchParams.get("cuentaId") ?? "";
+    const fila = await entorno.DB.prepare("SELECT identificador FROM cuentas WHERE id = ? AND red = 'correo'")
+      .bind(cuentaId)
+      .first<{ identificador: string }>();
+    if (!fila) return json({ error: "esa cuenta no existe o no es de correo" }, 404);
+    const estado = await crearEstado(google.clientSecret, cuentaId);
+    return Response.redirect(urlDeGoogle(google, `${url.origin}/api/google/vuelta`, estado, fila.identificador), 302);
+  }
+
   // Pegar la contraseña de aplicación de un correo (sólo el dueño). Se prueba al momento: si Google no la acepta, no se guarda.
   if (ruta === "/api/cuentas/clave" && metodo === "POST") {
     if (quien.papel !== "dueño") return json({ error: "sólo el dueño puede conectar correos" }, 403);
@@ -373,11 +425,17 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
       // Cada correo contesta con su propia contraseña; si no tiene, se usa la de los secretos (si es la misma dirección).
       const clave = await tokenDeCuenta(entorno.DB, platica.cuentaId);
       const deSecretos = cuentaDeCorreo(entorno);
-      const cuenta = clave
-        ? { usuario: platica.cuenta, contrasena: clave }
-        : deSecretos && deSecretos.usuario === platica.cuenta
-          ? deSecretos
-          : null;
+      let cuenta: Awaited<ReturnType<typeof credencialDeCorreo>> | null = null;
+      try {
+        cuenta = clave
+          ? await credencialDeCorreo(platica.cuenta, clave, claveDeGoogle(entorno))
+          : deSecretos && deSecretos.usuario === platica.cuenta
+            ? deSecretos
+            : null;
+      } catch (falla) {
+        await marcarEntrega(entorno.DB, guardado.id, "falló", (falla as Error).message);
+        return json({ mensaje: { ...guardado, entrega: "falló", error: (falla as Error).message } });
+      }
       if (!cuenta) {
         return json({ mensaje: { ...guardado, entrega: "pendiente" }, aviso: "falta conectar el correo" });
       }
@@ -409,7 +467,7 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
 
   // Para probar sin esperar al reloj.
   if (ruta === "/api/revisar-correo" && metodo === "POST") {
-    const { nuevos, errores } = await revisarTodosLosCorreos(entorno.DB, cuentaDeCorreo(entorno));
+    const { nuevos, errores } = await revisarTodosLosCorreos(entorno.DB, cuentaDeCorreo(entorno), claveDeGoogle(entorno));
     return json({ nuevos, errores });
   }
 
@@ -457,7 +515,7 @@ const servidor = {
         await limpiarSesiones(entorno.DB);
         await borrarArchivadasViejas(entorno.DB);
         // Ya queda apuntado en la bitácora lo que falle; un buzón caído no tira el reloj.
-        await revisarTodosLosCorreos(entorno.DB, cuentaDeCorreo(entorno));
+        await revisarTodosLosCorreos(entorno.DB, cuentaDeCorreo(entorno), claveDeGoogle(entorno));
       })(),
     );
   },

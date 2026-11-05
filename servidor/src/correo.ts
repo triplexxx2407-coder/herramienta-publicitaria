@@ -17,6 +17,8 @@ export interface CuentaCorreo {
   usuario: string;
   /** Contraseña de aplicación de Google (16 letras), no la del correo. */
   contrasena: string;
+  /** Con «Conectar con Google»: el permiso de uso corto, en lugar de la contraseña. */
+  accessToken?: string;
   servidorEntrada?: string;
   servidorSalida?: string;
 }
@@ -124,6 +126,8 @@ class Charla {
         linea = linea.slice(0, bulto.index) + contenido + (await this.lector.linea());
       }
       lineas.push(linea);
+      // Si el inicio de sesión con permiso de Google falla, el servidor pide un renglón vacío para cerrar.
+      if (linea.startsWith("+")) await this.escribir(CORTE);
       if (linea.startsWith(`${etiqueta} `)) {
         if (!/^\S+ OK/.test(linea)) {
           // Nunca repetimos la orden completa: podría llevar la contraseña.
@@ -142,6 +146,11 @@ class Charla {
     }
     void this.cable.close().catch(() => {});
   }
+}
+
+/** El «usuario y permiso» que Google pide para entrar sin contraseña (XOAUTH2). */
+function xoauth2(usuario: string, token: string): string {
+  return btoa(`user=${usuario}\x01auth=Bearer ${token}\x01\x01`);
 }
 
 function entreComillas(valor: string): string {
@@ -166,7 +175,8 @@ export async function leerCorreosNuevos(
   const charla = new Charla(cable, lector);
   try {
     await lector.linea(); // el saludo del servidor
-    await charla.orden(`LOGIN ${entreComillas(cuenta.usuario)} ${entreComillas(cuenta.contrasena)}`);
+    if (cuenta.accessToken) await charla.orden(`AUTHENTICATE XOAUTH2 ${xoauth2(cuenta.usuario, cuenta.accessToken)}`);
+    else await charla.orden(`LOGIN ${entreComillas(cuenta.usuario)} ${entreComillas(cuenta.contrasena)}`);
     await charla.orden("SELECT INBOX");
 
     let uids: number[] = [];
@@ -275,9 +285,13 @@ export async function mandarCorreo(
   try {
     await respuestaSmtp(lector); // el saludo
     await decir("EHLO nexora");
-    await decir("AUTH LOGIN", "3");
-    await decir(aBase64(cuenta.usuario), "3");
-    await decir(aBase64(cuenta.contrasena), "2");
+    if (cuenta.accessToken) {
+      await decir(`AUTH XOAUTH2 ${xoauth2(cuenta.usuario, cuenta.accessToken)}`);
+    } else {
+      await decir("AUTH LOGIN", "3");
+      await decir(aBase64(cuenta.usuario), "3");
+      await decir(aBase64(cuenta.contrasena), "2");
+    }
     await decir(`MAIL FROM:<${cuenta.usuario}>`);
     await decir(`RCPT TO:<${datos.para}>`);
     await decir("DATA", "3");

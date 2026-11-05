@@ -21,3 +21,15 @@ export async function firmaValida(cuerpoCrudo: string, cabecera: string | null, 
   const firma = await crypto.subtle.sign("HMAC", llave, new TextEncoder().encode(cuerpoCrudo));
   return iguales(`sha256=${aHex(firma)}`, cabecera.trim().toLowerCase());
 }
+
+/** Firma de un texto con un secreto (HMAC-SHA256), en hexadecimal. */
+export async function firmarTexto(secreto: string, texto: string): Promise<string> {
+  const llave = await crypto.subtle.importKey("raw", new TextEncoder().encode(secreto), { name: "HMAC", hash: "SHA-256" }, false, [
+    "sign",
+  ]);
+  return aHex(await crypto.subtle.sign("HMAC", llave, new TextEncoder().encode(texto)));
+}
+
+export function firmasIguales(a: string, b: string): boolean {
+  return iguales(a, b);
+}

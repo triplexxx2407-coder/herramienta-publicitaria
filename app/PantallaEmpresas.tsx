@@ -2,7 +2,7 @@
 
 import { Building2, CircleCheck, CircleDashed, Plus, Save, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { avisar } from "@/components/avisos";
 import { CirculoRed, IconoRed } from "@/components/IconoRed";
 import {
@@ -40,6 +40,22 @@ export function PantallaEmpresas() {
   const { modo, usuario } = useFuente();
   const { empresas, empresaActiva } = useBandeja();
   const [elegida, setElegida] = useState<string | null>(null);
+
+  // Al volver de Google se dice cómo salió y se limpia la dirección.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const res = url.searchParams.get("google");
+    if (!res) return;
+    const textos: Record<string, string> = {
+      ok: "Correo conectado con Google",
+      no: "Google no dio el permiso. Intenta de nuevo",
+      otrocorreo: "Entraste con otro correo distinto al de la cuenta. Intenta de nuevo con el correcto",
+      falta: "Falta configurar Google en el servidor",
+    };
+    avisar(textos[res] ?? "No se pudo conectar con Google");
+    url.searchParams.delete("google");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  }, []);
 
   if (modo === "revisando") return <CargandoPanel />;
   if (modo !== "real") {
@@ -535,13 +551,21 @@ function ConectarCorreo({ cuentaId, conectada }: { cuentaId: string; conectada: 
 
   if (!abierto) {
     return (
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="mt-1.5 rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-[#1c4fd6] shadow-sm hover:bg-[#eef3ff]"
-      >
-        {conectada ? "Cambiar contraseña de aplicación" : "Pegar contraseña de aplicación"}
-      </button>
+      <span className="mt-1.5 flex flex-wrap gap-1.5">
+        <a
+          href={`/api/google/iniciar?cuentaId=${encodeURIComponent(cuentaId)}`}
+          className="rounded-full bg-marca-600 px-3 py-1 text-[12.5px] font-bold text-white shadow-sm hover:opacity-90"
+        >
+          {conectada ? "Volver a conectar con Google" : "Conectar con Google"}
+        </a>
+        <button
+          type="button"
+          onClick={() => setAbierto(true)}
+          className="rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-[#1c4fd6] shadow-sm hover:bg-[#eef3ff]"
+        >
+          {conectada ? "Cambiar contraseña de aplicación" : "Usar contraseña de aplicación"}
+        </button>
+      </span>
     );
   }
   return (

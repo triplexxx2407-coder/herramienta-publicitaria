@@ -60,3 +60,9 @@ en `.env.example`. El correo usa una contraseña de aplicación de Google, nunca
 - Cada cuenta lleva su número en Meta y su token (tabla `cuentas`, columnas `id_meta` y `token`). Se pegan en la pantalla de Empresas y el token no vuelve a salir del servidor.
 - Las respuestas salen por la API de Graph (`servidor/src/meta.ts`). Sólo se puede contestar a quien escribió primero y dentro del plazo.
 - Secretos del servidor: `META_APP_SECRET` y `META_VERIFY_TOKEN` (ver `.env.example`).
+
+## Conectar correos con Google (sin contraseña de aplicación)
+
+En Empresas, cada correo tiene el botón «Conectar con Google». Necesita un cliente OAuth de Google Cloud
+(tipo Web, redirección `/api/google/vuelta`, permiso `https://mail.google.com/`) y dos secretos:
+`GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. Sin ellos el botón avisa que falta configurar.
