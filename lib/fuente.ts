@@ -216,3 +216,49 @@ export async function marcarLeidaDeVerdad(platicaId: string): Promise<void> {
     /* la próxima carga lo corrige */
   }
 }
+
+/* ── Administrar empresas y sus cuentas (sólo el dueño) ── */
+
+async function cambiarYRecargar(ruta: string, cuerpo: unknown): Promise<string | null> {
+  try {
+    const r = await pedir<{ error?: string }>(ruta, cuerpo);
+    await cargar();
+    if (r.estado !== 200) {
+      const error = r.datos?.error ?? "No se pudo guardar.";
+      return error.charAt(0).toUpperCase() + error.slice(1);
+    }
+    return null;
+  } catch {
+    return "No se pudo hablar con el servidor.";
+  }
+}
+
+export async function crearEmpresa(nombre: string, giro: string): Promise<{ id?: string; error: string | null }> {
+  try {
+    const r = await pedir<{ empresa?: { id: string }; error?: string }>("/api/empresas", { nombre, giro });
+    await cargar();
+    if (r.estado !== 200 || !r.datos?.empresa) {
+      const error = r.datos?.error ?? "No se pudo guardar.";
+      return { error: error.charAt(0).toUpperCase() + error.slice(1) };
+    }
+    return { id: r.datos.empresa.id, error: null };
+  } catch {
+    return { error: "No se pudo hablar con el servidor." };
+  }
+}
+
+export function editarEmpresa(id: string, nombre: string, giro: string) {
+  return cambiarYRecargar("/api/empresas/editar", { id, nombre, giro });
+}
+
+export function borrarEmpresa(id: string) {
+  return cambiarYRecargar("/api/empresas/borrar", { id });
+}
+
+export function agregarCuenta(empresaId: string, red: Red, identificador: string) {
+  return cambiarYRecargar("/api/cuentas", { empresaId, red, identificador });
+}
+
+export function quitarCuenta(id: string) {
+  return cambiarYRecargar("/api/cuentas/borrar", { id });
+}

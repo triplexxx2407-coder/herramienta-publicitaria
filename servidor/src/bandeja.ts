@@ -199,6 +199,45 @@ export async function crearEmpresa(
   return { id: empresaId };
 }
 
+/** Cambia el nombre o el giro de una empresa. Devuelve false si no existe. */
+export async function editarEmpresa(
+  db: D1Database,
+  datos: { id: string; nombre: string; giro: string | null },
+): Promise<boolean> {
+  const r = await db
+    .prepare("UPDATE empresas SET nombre = ?, giro = ? WHERE id = ?")
+    .bind(datos.nombre, datos.giro, datos.id)
+    .run();
+  return !!r.meta.changes;
+}
+
+/** Borra una empresa con todo lo suyo: cuentas, pláticas, mensajes e interesados. */
+export async function borrarEmpresa(db: D1Database, empresaId: string): Promise<boolean> {
+  // Se borra a mano en orden, por si la base no tiene prendido el borrado en cascada.
+  const platicas = "SELECT id FROM conversaciones WHERE empresa_id = ?";
+  const r = await db.batch([
+    db.prepare(`DELETE FROM mensajes WHERE conversacion_id IN (${platicas})`).bind(empresaId),
+    db.prepare("DELETE FROM conversaciones WHERE empresa_id = ?").bind(empresaId),
+    db.prepare("DELETE FROM personas WHERE empresa_id = ?").bind(empresaId),
+    db.prepare("DELETE FROM cuentas WHERE empresa_id = ?").bind(empresaId),
+    db.prepare("DELETE FROM empresas WHERE id = ?").bind(empresaId),
+  ]);
+  return !!r[r.length - 1].meta.changes;
+}
+
+/** Quita una cuenta de una empresa, con sus pláticas. */
+export async function borrarCuenta(db: D1Database, cuentaId: string): Promise<boolean> {
+  const platicas = "SELECT id FROM conversaciones WHERE cuenta_id = ?";
+  const r = await db.batch([
+    db.prepare(`DELETE FROM mensajes WHERE conversacion_id IN (${platicas})`).bind(cuentaId),
+    db.prepare("DELETE FROM conversaciones WHERE cuenta_id = ?").bind(cuentaId),
+    db.prepare("DELETE FROM cuentas WHERE id = ?").bind(cuentaId),
+  ]);
+  // Los interesados que se quedaron sin ninguna plática ya no sirven.
+  await db.prepare("DELETE FROM personas WHERE id NOT IN (SELECT persona_id FROM conversaciones)").run();
+  return !!r[r.length - 1].meta.changes;
+}
+
 /** Da de alta un canal de una empresa (su Instagram, su correo…). */
 export async function crearCuenta(
   db: D1Database,

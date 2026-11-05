@@ -218,3 +218,8 @@ select option {
   background: var(--color-superficie);
   color: var(--color-tinta);
 }
+
+/* Fondo de la pantalla de entrada. */
+.fondo-entrada {
+  background: radial-gradient(120% 90% at 0% 0%, #13274a 0%, #0a1428 55%, #070f1f 100%);
+}

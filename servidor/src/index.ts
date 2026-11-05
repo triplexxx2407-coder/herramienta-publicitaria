@@ -11,8 +11,11 @@
 import {
   apuntar,
   conversacionesGuardadas,
+  borrarCuenta,
+  borrarEmpresa,
   crearCuenta,
   crearEmpresa,
+  editarEmpresa,
   empresas,
   guardarSaliente,
   marcarLeida,
@@ -60,6 +63,25 @@ function json(datos: unknown, estado = 200, galleta?: string): Response {
   };
   if (galleta) cabeceras["Set-Cookie"] = galleta;
   return new Response(JSON.stringify(datos), { status: estado, headers: cabeceras });
+}
+
+/**
+ * Si una cuenta ya recibe y manda mensajes de verdad, y si no, qué le falta.
+ * Por ahora sólo el correo está conectado; las demás redes se conectan después.
+ */
+function estadoDeConexion(
+  cuenta: { red: Red; identificador: string },
+  correo: CuentaCorreo | null,
+): { estado: "conectada" | "falta"; nota: string } {
+  if (cuenta.red === "correo") {
+    if (correo && correo.usuario === cuenta.identificador) {
+      return { estado: "conectada", nota: "Recibe y contesta correos desde aquí." };
+    }
+    if (!correo) return { estado: "falta", nota: "Falta la contraseña de aplicación de Google de este correo." };
+    return { estado: "falta", nota: `Por ahora NEXORA sólo tiene conectado el correo ${correo.usuario}.` };
+  }
+  if (cuenta.red === "tiktok") return { estado: "falta", nota: "Falta que TikTok apruebe el acceso a sus mensajes." };
+  return { estado: "falta", nota: "Falta conectarla con Meta (la empresa dueña de Instagram, Facebook y WhatsApp)." };
 }
 
 function cuentaDeCorreo(entorno: Entorno): CuentaCorreo | null {
@@ -142,7 +164,45 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
   if (ruta === "/api/yo") return json({ usuario: quien });
 
   if (ruta === "/api/empresas" && metodo === "GET") {
-    return json({ empresas: await empresas(entorno.DB) });
+    const correo = cuentaDeCorreo(entorno);
+    const lista = await empresas(entorno.DB);
+    return json({
+      empresas: lista.map((e) => ({
+        ...e,
+        cuentas: e.cuentas.map((k) => ({ ...k, ...estadoDeConexion(k, correo) })),
+      })),
+    });
+  }
+
+  if (ruta === "/api/empresas/editar" && metodo === "POST") {
+    if (quien.papel !== "dueño") return json({ error: "sólo el dueño puede editar empresas" }, 403);
+    const datos = await cuerpo(peticion);
+    const id = texto(datos.id, 60);
+    const nombre = texto(datos.nombre, 120);
+    if (!id || !nombre) return json({ error: "falta el nombre de la empresa" }, 400);
+    try {
+      const hecho = await editarEmpresa(entorno.DB, { id, nombre, giro: texto(datos.giro, 120) || null });
+      return hecho ? json({ bien: true }) : json({ error: "esa empresa ya no existe" }, 404);
+    } catch {
+      return json({ error: "ya hay otra empresa con ese nombre" }, 409);
+    }
+  }
+
+  if (ruta === "/api/empresas/borrar" && metodo === "POST") {
+    if (quien.papel !== "dueño") return json({ error: "sólo el dueño puede borrar empresas" }, 403);
+    const id = texto((await cuerpo(peticion)).id, 60);
+    if (!id) return json({ error: "falta la empresa" }, 400);
+    const hecho = await borrarEmpresa(entorno.DB, id);
+    if (hecho) await apuntar(entorno.DB, "empresas", "info", `${quien.correo} borró una empresa`);
+    return hecho ? json({ bien: true }) : json({ error: "esa empresa ya no existe" }, 404);
+  }
+
+  if (ruta === "/api/cuentas/borrar" && metodo === "POST") {
+    if (quien.papel !== "dueño") return json({ error: "sólo el dueño puede quitar cuentas" }, 403);
+    const id = texto((await cuerpo(peticion)).id, 60);
+    if (!id) return json({ error: "falta la cuenta" }, 400);
+    const hecho = await borrarCuenta(entorno.DB, id);
+    return hecho ? json({ bien: true }) : json({ error: "esa cuenta ya no existe" }, 404);
   }
 
   // Dar de alta una empresa que el equipo va a atender.

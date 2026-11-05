@@ -1,7 +1,8 @@
 "use client";
 
-import { Bell, LogOut } from "lucide-react";
+import { Bell, Building2, Inbox, LogOut } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { CirculoRed } from "./IconoRed";
 import { pedirAbrir } from "./ventanas";
@@ -44,11 +45,24 @@ export function Logo() {
 /** Barra de arriba, como en el diseño: logo y campana de mensajes nuevos. */
 export function BarraSuperior() {
   const { modo, usuario } = useFuente();
+  const ruta = usePathname();
   return (
     <header className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-superficie">
       <div className="flex h-14 items-center gap-1 pr-[max(0.5rem,env(safe-area-inset-right,0px))] pl-[max(0.75rem,env(safe-area-inset-left,0px))] lg:h-[68px] lg:items-start lg:gap-0 lg:pt-[5px] lg:pr-[17px] lg:pl-[15px]">
         <Logo />
         <div className="ml-auto" />
+        {modo === "real" ? (
+          // En el celular no hay menú de la izquierda: de aquí se va a Empresas y de regreso.
+          ruta === "/empresas" ? (
+            <Link href="/" aria-label="Ir a la bandeja" className="flex h-10 w-10 items-center justify-center rounded-full text-marca-400 hover:bg-white/10 lg:hidden">
+              <Inbox size={22} aria-hidden />
+            </Link>
+          ) : (
+            <Link href="/empresas" aria-label="Administrar empresas" className="flex h-10 w-10 items-center justify-center rounded-full text-marca-400 hover:bg-white/10 lg:hidden">
+              <Building2 size={22} aria-hidden />
+            </Link>
+          )
+        ) : null}
         {modo === "real" || modo === "ejemplo" ? <Avisos /> : null}
         {modo === "real" ? (
           <button
@@ -69,6 +83,7 @@ export function BarraSuperior() {
 /** Campana: las pláticas que todavía no abres, de todas las empresas. */
 function Avisos() {
   const { todas } = useBandeja();
+  const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
 
@@ -117,6 +132,7 @@ function Avisos() {
                       // Se abre en la bandeja, mostrando todas las empresas para que no quede oculta.
                       actualizarEstado((e) => elegirEmpresa(e, null));
                       pedirAbrir("/", c.id);
+                      router.push("/");
                     }}
                     className="flex w-full items-center gap-3 border-t border-linea px-3 py-2.5 text-left transition-colors first:border-t-0 hover:bg-pildora"
                   >

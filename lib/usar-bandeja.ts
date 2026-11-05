@@ -22,7 +22,8 @@ export function useBandeja(): {
   const enNavegador = useEnNavegador();
   const fuente = useFuente();
   const real = fuente.modo === "real";
-  const empresas = real ? fuente.empresas : EMPRESAS;
+  // Mientras se revisa si hay servidor no se enseña nada: así no se asoman los ejemplos.
+  const empresas = real ? fuente.empresas : fuente.modo === "ejemplo" ? EMPRESAS : [];
   // Si la empresa guardada ya no existe (otra fuente, o la borraron), se ven todas.
   const guardada = enNavegador ? estado.empresaActiva : null;
   const empresaActiva = empresas.some((e) => e.id === guardada) ? guardada : null;

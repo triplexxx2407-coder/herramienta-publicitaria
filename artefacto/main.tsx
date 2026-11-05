@@ -1,13 +1,14 @@
 import { useEffect, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import { PantallaBandeja } from "@/app/PantallaBandeja";
+import { PantallaEmpresas } from "@/app/PantallaEmpresas";
 import { Marco } from "@/components/Marco";
 import { usePathname } from "next/navigation";
 import "@/app/globals.css";
 
-// Por ahora NEXORA es una sola pantalla: la bandeja.
 const PANTALLAS: Record<string, ComponentType> = {
   "/": PantallaBandeja,
+  "/empresas": PantallaEmpresas,
 };
 
 function App() {

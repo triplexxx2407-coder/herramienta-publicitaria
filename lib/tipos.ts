@@ -9,6 +9,9 @@ export interface CuentaCanal {
   red: Red;
   /** Cómo se llama la cuenta en esa red: @usuario, número o correo. */
   identificador: string;
+  /** Sólo con el servidor de verdad: si ya recibe y manda mensajes, y si no, qué le falta. */
+  estado?: "conectada" | "falta";
+  nota?: string;
 }
 
 /** Una empresa que el equipo atiende. Cada una es una operación aparte. */

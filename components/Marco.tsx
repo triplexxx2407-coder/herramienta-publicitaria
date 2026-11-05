@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { Building2, Inbox } from "lucide-react";
+import { Building2, Inbox, Settings2 } from "lucide-react";
 import { actualizarEstado } from "@/lib/almacen";
 import { elegirEmpresa, sinLeer, sinLeerPorEmpresa } from "@/lib/bandeja";
 import { iniciarFuente, useFuente } from "@/lib/fuente";
@@ -25,7 +27,6 @@ export function Marco({ children }: { children: ReactNode }) {
   if (modo === "entrar") {
     return (
       <div className="flex min-h-dvh flex-col">
-        <BarraSuperior />
         <PantallaEntrar />
       </div>
     );
@@ -52,7 +53,10 @@ export function Marco({ children }: { children: ReactNode }) {
 
 /** Las empresas que atiende el equipo, con sus mensajes sin leer. Elegir una filtra la bandeja. */
 function MenuEmpresas() {
-  const { todas, empresas, empresaActiva: activa, esEjemplo } = useBandeja();
+  const { todas, empresas, empresaActiva: activa, esEjemplo, modo } = useBandeja();
+  const ruta = usePathname();
+  const router = useRouter();
+  const enBandeja = ruta === "/";
   const porEmpresa = sinLeerPorEmpresa(todas);
 
   const opciones: { id: string | null; nombre: string; detalle: string; nuevos: number }[] = [
@@ -73,14 +77,17 @@ function MenuEmpresas() {
       </p>
       <ul className="space-y-[6px]">
         {opciones.map((o) => {
-          const elegida = activa === o.id;
+          const elegida = enBandeja && activa === o.id;
           const Icono = o.id ? Building2 : Inbox;
           return (
             <li key={o.id ?? "todas"}>
               <button
                 type="button"
                 aria-current={elegida ? "page" : undefined}
-                onClick={() => actualizarEstado((e) => elegirEmpresa(e, o.id))}
+                onClick={() => {
+                  actualizarEstado((e) => elegirEmpresa(e, o.id));
+                  if (!enBandeja) router.push("/");
+                }}
                 className={cx(
                   "flex min-h-[38px] w-full items-center gap-2 rounded-[3px] py-1 pr-2.5 pl-2 text-left text-[13px] transition-colors",
                   elegida ? "bg-pildora font-bold text-marca-400" : "text-menu hover:bg-white/5 hover:text-tinta-2",
@@ -101,6 +108,19 @@ function MenuEmpresas() {
           );
         })}
       </ul>
+      {modo === "real" ? (
+        <Link
+          href="/empresas"
+          aria-current={ruta === "/empresas" ? "page" : undefined}
+          className={cx(
+            "mt-4 flex h-[36px] items-center gap-2 rounded-[3px] pr-2.5 pl-2 text-[13px] transition-colors",
+            ruta === "/empresas" ? "bg-pildora font-bold text-marca-400" : "text-menu hover:bg-white/5 hover:text-tinta-2",
+          )}
+        >
+          <Settings2 size={14} aria-hidden strokeWidth={2.4} />
+          Administrar empresas
+        </Link>
+      ) : null}
     </nav>
   );
 }
