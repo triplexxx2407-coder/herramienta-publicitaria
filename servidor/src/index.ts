@@ -140,6 +140,12 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     return json({ bien: true, correoConectado: !!cuentaDeCorreo(entorno) });
   }
 
+  // Aviso de privacidad público: Google lo pide para publicar la app.
+  if (ruta === "/api/privacidad") {
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aviso de privacidad de NEXORA</title></head><body style="font-family:system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;line-height:1.5"><h1>Aviso de privacidad de NEXORA</h1><p>NEXORA es una herramienta privada de uso interno de un equipo de ventas. No está abierta al público.</p><p>Cuando el dueño conecta un correo con su cuenta de Google, NEXORA guarda un permiso de acceso a ese buzón. Lo usa únicamente para mostrar los mensajes recibidos y enviar las respuestas que el equipo escribe.</p><p>Los datos se guardan en la base de datos privada del equipo, en Cloudflare. No se venden, no se comparten con terceros y no se usan para publicidad ni para entrenar modelos.</p><p>El dueño puede quitar una cuenta en cualquier momento desde NEXORA o revocar el permiso en su cuenta de Google.</p></body></html>`;
+    return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
+  }
+
   // La vuelta de Google al conectar un correo. Va sin sesión: se protege con el estado firmado que armó el dueño.
   if (ruta === "/api/google/vuelta" && metodo === "GET") {
     const google = claveDeGoogle(entorno);
