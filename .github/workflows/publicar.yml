@@ -9,6 +9,7 @@
 #   CORREO_CONTRASENA     (opcional) su contraseña de aplicación de Google
 #   CORREO_NOMBRE         (opcional) con qué nombre sales en los correos
 #   META_APP_SECRET       (opcional) clave secreta de la app de Meta (Instagram y Facebook)
+#   META_APP_ID           (opcional) número de la app de Meta («Conectar con Facebook»)
 #   META_VERIFY_TOKEN     (opcional) palabra que inventas para que Meta verifique la dirección
 #   GOOGLE_CLIENT_ID      (opcional) «Conectar con Google»: ID de cliente de la app en Google Cloud
 #   GOOGLE_CLIENT_SECRET  (opcional) su secreto
@@ -35,6 +36,7 @@ jobs:
       CORREO_NOMBRE: ${{ secrets.CORREO_NOMBRE }}
       META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
       META_VERIFY_TOKEN: ${{ secrets.META_VERIFY_TOKEN }}
+      META_APP_ID: ${{ secrets.META_APP_ID }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       CONFIG: servidor/wrangler.jsonc
@@ -101,13 +103,14 @@ jobs:
           CLAVE=$(openssl rand -hex 24)
           echo "::add-mask::$CLAVE"
           echo "CLAVE_ARRANQUE=$CLAVE" >> "$GITHUB_ENV"
-          jq -n --arg clave "$CLAVE" --arg u "$CORREO_USUARIO" --arg c "$CORREO_CONTRASENA" --arg n "$CORREO_NOMBRE" --arg ms "$META_APP_SECRET" --arg mv "$META_VERIFY_TOKEN" --arg gi "$GOOGLE_CLIENT_ID" --arg gs "$GOOGLE_CLIENT_SECRET" '
+          jq -n --arg clave "$CLAVE" --arg u "$CORREO_USUARIO" --arg c "$CORREO_CONTRASENA" --arg n "$CORREO_NOMBRE" --arg ms "$META_APP_SECRET" --arg mv "$META_VERIFY_TOKEN" --arg mi "$META_APP_ID" --arg gi "$GOOGLE_CLIENT_ID" --arg gs "$GOOGLE_CLIENT_SECRET" '
             {CLAVE_ARRANQUE: $clave}
             + (if $u != "" then {CORREO_USUARIO: $u} else {} end)
             + (if $c != "" then {CORREO_CONTRASENA: $c} else {} end)
             + (if $n != "" then {CORREO_NOMBRE: $n} else {} end)
             + (if $ms != "" then {META_APP_SECRET: $ms} else {} end)
             + (if $mv != "" then {META_VERIFY_TOKEN: $mv} else {} end)
+            + (if $mi != "" then {META_APP_ID: $mi} else {} end)
             + (if $gi != "" then {GOOGLE_CLIENT_ID: $gi} else {} end)
             + (if $gs != "" then {GOOGLE_CLIENT_SECRET: $gs} else {} end)' > "$RUNNER_TEMP/secretos.json"
           npx wrangler secret bulk "$RUNNER_TEMP/secretos.json" --config "$CONFIG"

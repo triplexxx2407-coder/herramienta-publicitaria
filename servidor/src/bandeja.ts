@@ -277,6 +277,27 @@ export async function crearCuenta(
   return { id: cuentaId };
 }
 
+/** Deja la cuenta de Meta de esa empresa lista: si ya existía la actualiza, si no la crea. */
+export async function guardarCuentaMeta(
+  db: D1Database,
+  datos: { empresaId: string; red: "instagram" | "facebook"; identificador: string; idMeta: string; token: string },
+  ahora = new Date(),
+): Promise<void> {
+  const existente = await db
+    .prepare("SELECT id FROM cuentas WHERE red = ? AND (id_meta = ? OR identificador = ?)")
+    .bind(datos.red, datos.idMeta, datos.identificador.trim().toLowerCase())
+    .first<{ id: string }>();
+  if (existente) {
+    await db
+      .prepare("UPDATE cuentas SET empresa_id = ?, id_meta = ?, token = ? WHERE id = ?")
+      .bind(datos.empresaId, datos.idMeta, datos.token, existente.id)
+      .run();
+    return;
+  }
+  const { id: cuentaId } = await crearCuenta(db, { empresaId: datos.empresaId, red: datos.red, identificador: datos.identificador }, ahora);
+  await guardarConexionMeta(db, { cuentaId, idMeta: datos.idMeta, token: datos.token });
+}
+
 /** Pega el número de la cuenta en Meta y su token. Con token vacío conserva el que ya había. */
 export async function guardarConexionMeta(
   db: D1Database,

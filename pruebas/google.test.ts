@@ -19,3 +19,13 @@ describe("estado firmado de Google", () => {
     expect(u.searchParams.get("scope")).toBe("https://mail.google.com/");
   });
 });
+
+import { urlDeFacebook } from "../servidor/src/facebook";
+describe("Facebook", () => {
+  it("pide permisos de mensajes y de páginas", () => {
+    const u = new URL(urlDeFacebook({ appId: "1", appSecret: "s" }, "https://x/v", "est"));
+    expect(u.searchParams.get("scope")).toContain("instagram_manage_messages");
+    expect(u.searchParams.get("scope")).toContain("pages_messaging");
+    expect(u.searchParams.get("client_id")).toBe("1");
+  });
+});

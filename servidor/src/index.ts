@@ -27,8 +27,10 @@ import {
   marcarLeida,
   platicaParaResponder,
   dentroDelPlazo,
+  guardarCuentaMeta,
 } from "./bandeja";
 import { credencialDeCorreo, entregarPorCorreo, revisarCorreo, revisarTodosLosCorreos } from "./canal-correo";
+import { paginasDelDueno, suscribirPagina, urlDeFacebook, type ClaveMeta } from "./facebook";
 import { PREFIJO, crearEstado, intercambiarCodigo, leerEstado, urlDeGoogle, type ClaveGoogle } from "./google";
 import { enviarPorMeta, firmaValida, guardarDeMeta } from "./meta";
 import { ORDEN_REDES } from "../../lib/redes";
@@ -67,6 +69,8 @@ export interface Entorno {
   /** «Conectar con Google»: la clave de la app que se creó en Google Cloud. */
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  /** «Conectar con Facebook»: el número de la app de Meta (la clave secreta es META_APP_SECRET). */
+  META_APP_ID?: string;
 }
 
 function json(datos: unknown, estado = 200, galleta?: string): Response {
@@ -108,6 +112,11 @@ function claveDeGoogle(entorno: Entorno): ClaveGoogle | null {
   return { clientId: entorno.GOOGLE_CLIENT_ID, clientSecret: entorno.GOOGLE_CLIENT_SECRET };
 }
 
+function claveDeMeta(entorno: Entorno): ClaveMeta | null {
+  if (!entorno.META_APP_ID || !entorno.META_APP_SECRET) return null;
+  return { appId: entorno.META_APP_ID, appSecret: entorno.META_APP_SECRET };
+}
+
 function cuentaDeCorreo(entorno: Entorno): CuentaCorreo | null {
   if (!entorno.CORREO_USUARIO || !entorno.CORREO_CONTRASENA) return null;
   return { usuario: normalizarCorreo(entorno.CORREO_USUARIO), contrasena: entorno.CORREO_CONTRASENA };
@@ -144,6 +153,33 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
   if (ruta === "/api/privacidad") {
     const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aviso de privacidad de NEXORA</title></head><body style="font-family:system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;line-height:1.5"><h1>Aviso de privacidad de NEXORA</h1><p>NEXORA es una herramienta privada de uso interno de un equipo de ventas. No está abierta al público.</p><p>Cuando el dueño conecta un correo con su cuenta de Google, NEXORA guarda un permiso de acceso a ese buzón. Lo usa únicamente para mostrar los mensajes recibidos y enviar las respuestas que el equipo escribe.</p><p>Los datos se guardan en la base de datos privada del equipo, en Cloudflare. No se venden, no se comparten con terceros y no se usan para publicidad ni para entrenar modelos.</p><p>El dueño puede quitar una cuenta en cualquier momento desde NEXORA o revocar el permiso en su cuenta de Google.</p></body></html>`;
     return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
+  }
+
+  // La vuelta de Facebook al conectar páginas. Va sin sesión: se protege con el estado firmado.
+  if (ruta === "/api/meta/vuelta" && metodo === "GET") {
+    const meta = claveDeMeta(entorno);
+    const aPantalla = (resultado: string) => Response.redirect(`${url.origin}/?meta=${resultado}#empresas`, 302);
+    if (!meta) return aPantalla("falta");
+    const empresaId = await leerEstado(meta.appSecret, url.searchParams.get("state") ?? "");
+    const codigo = url.searchParams.get("code");
+    if (!empresaId || !codigo) return aPantalla("no");
+    const hay = await entorno.DB.prepare("SELECT 1 AS si FROM empresas WHERE id = ?").bind(empresaId).first();
+    if (!hay) return aPantalla("no");
+    const r = await paginasDelDueno(meta, codigo, `${url.origin}/api/meta/vuelta`);
+    if ("error" in r) {
+      await apuntar(entorno.DB, "meta", "error", `Facebook no dio el permiso: ${r.error}`);
+      return aPantalla("no");
+    }
+    if (r.paginas.length === 0) return aPantalla("sinpaginas");
+    for (const p of r.paginas) {
+      await guardarCuentaMeta(entorno.DB, { empresaId, red: "facebook", identificador: p.nombre, idMeta: p.id, token: p.token });
+      if (p.instagram) {
+        await guardarCuentaMeta(entorno.DB, { empresaId, red: "instagram", identificador: `@${p.instagram.usuario}`, idMeta: p.instagram.id, token: p.token });
+      }
+      const suscrita = await suscribirPagina(p.id, p.token);
+      await apuntar(entorno.DB, "meta", suscrita ? "info" : "error", `se conectó la página ${p.nombre}${suscrita ? "" : " (no se pudo suscribir a los avisos)"}`);
+    }
+    return aPantalla("ok");
   }
 
   // La vuelta de Google al conectar un correo. Va sin sesión: se protege con el estado firmado que armó el dueño.
@@ -347,6 +383,18 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     } catch {
       return json({ error: "ese número de Meta ya está en otra cuenta" }, 409);
     }
+  }
+
+  // Empieza «Conectar con Facebook»: manda al dueño a Meta a elegir las páginas de esa empresa.
+  if (ruta === "/api/meta/iniciar" && metodo === "GET") {
+    if (quien.papel !== "dueño") return json({ error: "sólo el dueño puede conectar redes" }, 403);
+    const meta = claveDeMeta(entorno);
+    if (!meta) return Response.redirect(`${url.origin}/?meta=falta#empresas`, 302);
+    const empresaId = url.searchParams.get("empresaId") ?? "";
+    const hay = await entorno.DB.prepare("SELECT 1 AS si FROM empresas WHERE id = ?").bind(empresaId).first();
+    if (!hay) return json({ error: "esa empresa no existe" }, 404);
+    const estado = await crearEstado(meta.appSecret, empresaId);
+    return Response.redirect(urlDeFacebook(meta, `${url.origin}/api/meta/vuelta`, estado), 302);
   }
 
   // Empieza «Conectar con Google»: manda a la persona a Google a dar permiso para ese correo.

@@ -44,16 +44,18 @@ export function PantallaEmpresas() {
   // Al volver de Google se dice cómo salió y se limpia la dirección.
   useEffect(() => {
     const url = new URL(window.location.href);
-    const res = url.searchParams.get("google");
+    const res = url.searchParams.get("google") ?? url.searchParams.get("meta");
     if (!res) return;
     const textos: Record<string, string> = {
-      ok: "Correo conectado con Google",
+      ok: url.searchParams.has("meta") ? "Instagram y Facebook conectados" : "Correo conectado con Google",
       no: "Google no dio el permiso. Intenta de nuevo",
       otrocorreo: "Entraste con otro correo distinto al de la cuenta. Intenta de nuevo con el correcto",
-      falta: "Falta configurar Google en el servidor",
+      falta: "Falta configurar la conexión en el servidor",
+      sinpaginas: "Facebook no dio ninguna página. Elige la página al conectar",
     };
-    avisar(textos[res] ?? "No se pudo conectar con Google");
+    avisar(textos[res] ?? "No se pudo conectar");
     url.searchParams.delete("google");
+    url.searchParams.delete("meta");
     window.history.replaceState(null, "", url.pathname + url.search + url.hash);
   }, []);
 
@@ -274,6 +276,19 @@ function FormularioEmpresa({
 function Conexiones({ empresa, soloVer }: { empresa: EmpresaCliente; soloVer: boolean }) {
   return (
     <Seccion titulo="Conexiones" detalle="Las cuentas de esta empresa en cada red. Los mensajes que les lleguen aparecen en la bandeja.">
+      {!soloVer ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[10px] bg-[#eef3ff] p-3">
+          <a
+            href={`/api/meta/iniciar?empresaId=${encodeURIComponent(empresa.id)}`}
+            className="rounded-full bg-marca-600 px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm hover:opacity-90"
+          >
+            Conectar Instagram y Facebook
+          </a>
+          <span className="text-[12.5px] leading-snug text-chat-tenue">
+            Entras con tu Facebook, eliges la página y NEXORA liga sola su Instagram. Sin copiar claves.
+          </span>
+        </div>
+      ) : null}
       <ul className="divide-y divide-[#e6eaf0]">
         {ORDEN_REDES.map((red) => (
           <li key={red} className="py-3 first:pt-0 last:pb-0">
