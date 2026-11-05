@@ -27,6 +27,9 @@ export interface MensajeRed {
   de: "yo" | "ellos";
   texto: string;
   fecha: string;
+  /** Sólo con el servidor de verdad: cómo le fue a tu respuesta. */
+  entrega?: "recibido" | "pendiente" | "entregado" | "falló";
+  error?: string | null;
 }
 
 /** Una plática de ejemplo de la bandeja, tal como viene en datos/bandeja-ejemplo.json. */

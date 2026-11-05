@@ -1,11 +1,15 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Building2, Inbox } from "lucide-react";
-import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
-import { EMPRESAS, anclajeDeSesion, conversaciones, elegirEmpresa, sinLeer, sinLeerPorEmpresa } from "@/lib/bandeja";
+import { actualizarEstado } from "@/lib/almacen";
+import { elegirEmpresa, sinLeer, sinLeerPorEmpresa } from "@/lib/bandeja";
+import { iniciarFuente, useFuente } from "@/lib/fuente";
+import { useBandeja } from "@/lib/usar-bandeja";
 import { ContenedorAvisos } from "./avisos";
 import { BarraSuperior } from "./BarraSuperior";
+import { CargandoPanel } from "./PanelNexora";
+import { PantallaEntrar } from "./PantallaEntrar";
 import { cx } from "./ui";
 
 /**
@@ -13,6 +17,20 @@ import { cx } from "./ui";
  * empresas que atiende el equipo. En el celular las empresas se eligen arriba de la bandeja.
  */
 export function Marco({ children }: { children: ReactNode }) {
+  const { modo } = useFuente();
+  useEffect(() => {
+    void iniciarFuente();
+  }, []);
+
+  if (modo === "entrar") {
+    return (
+      <div className="flex min-h-dvh flex-col">
+        <BarraSuperior />
+        <PantallaEntrar />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-dvh flex-col">
       <BarraSuperior />
@@ -22,7 +40,9 @@ export function Marco({ children }: { children: ReactNode }) {
           <MenuEmpresas />
         </aside>
 
-        <main className="w-full min-w-0 flex-1 pb-[env(safe-area-inset-bottom,0px)] lg:pt-[5px] lg:pr-[31px] lg:pb-6 lg:pl-px">{children}</main>
+        <main className="w-full min-w-0 flex-1 pb-[env(safe-area-inset-bottom,0px)] lg:pt-[5px] lg:pr-[31px] lg:pb-6 lg:pl-px">
+          {modo === "revisando" ? <CargandoPanel /> : children}
+        </main>
       </div>
 
       <ContenedorAvisos />
@@ -32,22 +52,24 @@ export function Marco({ children }: { children: ReactNode }) {
 
 /** Las empresas que atiende el equipo, con sus mensajes sin leer. Elegir una filtra la bandeja. */
 function MenuEmpresas() {
-  const estado = useEstado();
-  const enNavegador = useEnNavegador();
-  const todas = enNavegador ? conversaciones(estado, anclajeDeSesion()) : [];
+  const { todas, empresas, empresaActiva: activa, esEjemplo } = useBandeja();
   const porEmpresa = sinLeerPorEmpresa(todas);
-  const activa = enNavegador ? estado.empresaActiva : null;
 
   const opciones: { id: string | null; nombre: string; detalle: string; nuevos: number }[] = [
-    { id: null, nombre: "Todas las empresas", detalle: `${EMPRESAS.length} empresas`, nuevos: sinLeer(todas) },
-    ...EMPRESAS.map((e) => ({ id: e.id, nombre: e.nombre, detalle: e.giro, nuevos: porEmpresa[e.id] ?? 0 })),
+    {
+      id: null,
+      nombre: "Todas las empresas",
+      detalle: empresas.length === 1 ? "1 empresa" : `${empresas.length} empresas`,
+      nuevos: sinLeer(todas),
+    },
+    ...empresas.map((e) => ({ id: e.id, nombre: e.nombre, detalle: e.giro, nuevos: porEmpresa[e.id] ?? 0 })),
   ];
 
   return (
     <nav aria-label="Empresas">
       <p className="mb-[7px] flex items-center gap-1.5 text-[11px] leading-4 font-bold text-menu uppercase">
         Empresas
-        <span className="rounded-[2px] bg-marca-600 px-1 text-[9px] leading-[13px] text-white">Ejemplo</span>
+        {esEjemplo ? <span className="rounded-[2px] bg-marca-600 px-1 text-[9px] leading-[13px] text-white">Ejemplo</span> : null}
       </p>
       <ul className="space-y-[6px]">
         {opciones.map((o) => {

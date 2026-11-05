@@ -1,0 +1,149 @@
+# Publica NEXORA en Cloudflare (servidor + base de datos + pantalla).
+# Se corre a mano desde la pestaña «Actions» de GitHub, o lo corre Claude.
+#
+# Las claves NUNCA van en este archivo: este repositorio es público. Se guardan en
+# GitHub → Settings → Secrets and variables → Actions:
+#   CLOUDFLARE_API_TOKEN  (obligatoria) token de Cloudflare con permiso de Workers y D1
+#   NEXORA_CONTRASENA     (obligatoria la primera vez) la contraseña con la que vas a entrar
+#   CORREO_USUARIO        (opcional) el Gmail de pruebas
+#   CORREO_CONTRASENA     (opcional) su contraseña de aplicación de Google
+#   CORREO_NOMBRE         (opcional) con qué nombre sales en los correos
+name: Publicar NEXORA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publicar-nexora
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      NEXORA_CONTRASENA: ${{ secrets.NEXORA_CONTRASENA }}
+      CORREO_USUARIO: ${{ secrets.CORREO_USUARIO }}
+      CORREO_CONTRASENA: ${{ secrets.CORREO_CONTRASENA }}
+      CORREO_NOMBRE: ${{ secrets.CORREO_NOMBRE }}
+      CONFIG: servidor/wrangler.jsonc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Revisar que esté la clave de Cloudflare
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::Falta el secreto CLOUDFLARE_API_TOKEN en Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - name: Armar la pantalla
+        run: npm run build:archivo
+
+      - name: Cuenta y dirección gratis de Cloudflare
+        run: |
+          set -euo pipefail
+          API=https://api.cloudflare.com/client/v4
+          H="Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+          CUENTA=$(curl -fsS -H "$H" "$API/accounts" | jq -r '.result[0].id')
+          if [ -z "$CUENTA" ] || [ "$CUENTA" = "null" ]; then
+            echo "::error::El token no ve ninguna cuenta de Cloudflare."
+            exit 1
+          fi
+          echo "CLOUDFLARE_ACCOUNT_ID=$CUENTA" >> "$GITHUB_ENV"
+          # La dirección gratis es <algo>.workers.dev. Si la cuenta todavía no tiene una, se crea.
+          SUB=$(curl -sS -H "$H" "$API/accounts/$CUENTA/workers/subdomain" | jq -r '.result.subdomain // empty')
+          if [ -z "$SUB" ]; then
+            SUB="nexora-$(openssl rand -hex 3)"
+            curl -fsS -X PUT -H "$H" -H "Content-Type: application/json" \
+              -d "{\"subdomain\":\"$SUB\"}" "$API/accounts/$CUENTA/workers/subdomain" > /dev/null
+          fi
+          echo "DIRECCION=https://nexora.$SUB.workers.dev" >> "$GITHUB_ENV"
+
+      - name: Base de datos
+        run: |
+          set -euo pipefail
+          buscar() { npx wrangler d1 list --json | jq -r '.[] | select(.name=="nexora") | .uuid'; }
+          ID=$(buscar)
+          if [ -z "$ID" ]; then
+            npx wrangler d1 create nexora > /dev/null
+            ID=$(buscar)
+          fi
+          # Sólo aquí adentro: el id no se guarda en el repositorio.
+          sed -i "s/00000000-0000-0000-0000-000000000000/$ID/" "$CONFIG"
+          # El esquema usa CREATE ... IF NOT EXISTS: correrlo otra vez no borra nada.
+          npx wrangler d1 execute nexora --remote --config "$CONFIG" --file=servidor/esquema.sql --yes
+
+      - name: Publicar el servidor
+        run: npx wrangler deploy --config "$CONFIG"
+
+      - name: Guardar las claves del servidor
+        run: |
+          set -euo pipefail
+          CLAVE=$(openssl rand -hex 24)
+          echo "::add-mask::$CLAVE"
+          echo "CLAVE_ARRANQUE=$CLAVE" >> "$GITHUB_ENV"
+          jq -n --arg clave "$CLAVE" --arg u "$CORREO_USUARIO" --arg c "$CORREO_CONTRASENA" --arg n "$CORREO_NOMBRE" '
+            {CLAVE_ARRANQUE: $clave}
+            + (if $u != "" then {CORREO_USUARIO: $u} else {} end)
+            + (if $c != "" then {CORREO_CONTRASENA: $c} else {} end)
+            + (if $n != "" then {CORREO_NOMBRE: $n} else {} end)' > "$RUNNER_TEMP/secretos.json"
+          npx wrangler secret bulk "$RUNNER_TEMP/secretos.json" --config "$CONFIG"
+          rm -f "$RUNNER_TEMP/secretos.json"
+
+      - name: Crear tu cuenta y ligar el correo
+        run: |
+          set -euo pipefail
+          # Espera a que la dirección conteste.
+          for i in $(seq 1 30); do
+            curl -fsS "$DIRECCION/api/salud" > /dev/null 2>&1 && break
+            sleep 5
+          done
+          curl -fsS "$DIRECCION/api/salud"
+          echo
+          if [ -n "$NEXORA_CONTRASENA" ]; then
+            # Sólo funciona la primera vez (si ya hay cuenta, contesta «ya hay una cuenta creada»).
+            for i in $(seq 1 10); do
+              R=$(jq -n --arg clave "$CLAVE_ARRANQUE" --arg c "$NEXORA_CONTRASENA" \
+                '{clave: $clave, correo: "dueno@nexora", nombre: "Dueño", contrasena: $c}' |
+                curl -sS -X POST -H "Content-Type: application/json" -d @- "$DIRECCION/api/arrancar")
+              echo "$R" | grep -q "clave incorrecta" || break
+              sleep 5
+            done
+            echo "$R" | jq -c '{usuario: .usuario.correo, error}'
+          fi
+          if [ -n "$NEXORA_CONTRASENA" ] && [ -n "$CORREO_USUARIO" ]; then
+            GALLETAS="$RUNNER_TEMP/galletas"
+            jq -n --arg c "$NEXORA_CONTRASENA" '{correo: "dueno@nexora", contrasena: $c}' |
+              curl -fsS -c "$GALLETAS" -X POST -H "Content-Type: application/json" -d @- "$DIRECCION/api/entrar" > /dev/null
+            ya=$(curl -fsS -b "$GALLETAS" "$DIRECCION/api/empresas" |
+              jq -r --arg u "$(echo "$CORREO_USUARIO" | tr 'A-Z' 'a-z')" '[.empresas[].cuentas[] | select(.red=="correo" and .identificador==$u)] | length')
+            if [ "$ya" = "0" ]; then
+              EMP=$(curl -fsS -b "$GALLETAS" "$DIRECCION/api/empresas" | jq -r '.empresas[] | select(.nombre=="Empresa de prueba") | .id')
+              if [ -z "$EMP" ]; then
+                EMP=$(curl -fsS -b "$GALLETAS" -X POST -H "Content-Type: application/json" \
+                  -d '{"nombre":"Empresa de prueba","giro":"Pruebas"}' "$DIRECCION/api/empresas" | jq -r '.empresa.id')
+              fi
+              jq -n --arg e "$EMP" --arg u "$CORREO_USUARIO" '{empresaId: $e, red: "correo", identificador: $u}' |
+                curl -fsS -b "$GALLETAS" -X POST -H "Content-Type: application/json" -d @- "$DIRECCION/api/cuentas" > /dev/null
+              echo "Correo ligado a «Empresa de prueba»."
+            fi
+            rm -f "$GALLETAS"
+          fi
+          {
+            echo "## NEXORA está publicada"
+            echo ""
+            echo "Dirección: $DIRECCION"
+            echo ""
+            echo "Usuario para entrar: \`dueno@nexora\` con la contraseña que guardaste en NEXORA_CONTRASENA."
+          } >> "$GITHUB_STEP_SUMMARY"

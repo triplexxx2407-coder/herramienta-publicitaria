@@ -4,9 +4,8 @@ import Link from "next/link";
 import { ArrowLeft, Building2, ChevronDown, CircleHelp, FlaskConical, Tag, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cx } from "./ui";
-import { useEnNavegador, useEstado } from "@/lib/almacen";
-import { EMPRESAS, empresaPorId } from "@/lib/bandeja";
 import { nombreRed } from "@/lib/redes";
+import { useBandeja } from "@/lib/usar-bandeja";
 
 /*
  * El marco de cada pantalla, copiado del diseño NEXORA (1440×810):
@@ -120,15 +119,16 @@ export function TituloLista({ children, className }: { children: ReactNode; clas
 
 /** La tarjeta roja de arriba a la izquierda: la empresa que estás viendo, o todas. */
 function TarjetaRoja() {
-  const estado = useEstado();
-  const enNavegador = useEnNavegador();
-  const empresa = enNavegador ? empresaPorId(estado.empresaActiva) : null;
-  const cuentas = empresa ? empresa.cuentas : EMPRESAS.flatMap((e) => e.cuentas);
+  const { empresas, empresaActiva, esEjemplo } = useBandeja();
+  const empresa = empresas.find((e) => e.id === empresaActiva) ?? null;
+  const cuentas = empresa ? empresa.cuentas : empresas.flatMap((e) => e.cuentas);
   const redes = [...new Set(cuentas.map((k) => k.red))];
   return (
     <div className="flex flex-col bg-proyecto px-4 pt-3 pb-3 text-white lg:h-full lg:overflow-hidden lg:px-[9px] lg:pt-[11px] lg:pb-[7px]">
       <span className="flex flex-wrap items-center gap-1.5">
-        <span className="rounded-[2px] bg-marca-600 px-1.5 text-[9px] leading-[13px] font-bold text-white uppercase">Ejemplo</span>
+        {esEjemplo ? (
+          <span className="rounded-[2px] bg-marca-600 px-1.5 text-[9px] leading-[13px] font-bold text-white uppercase">Ejemplo</span>
+        ) : null}
         <span className="rounded-[2px] bg-pildora px-1.5 text-[9px] leading-[13px] font-bold text-marca-200 uppercase">
           {empresa ? empresa.giro : "Equipo"}
         </span>
@@ -137,17 +137,19 @@ function TarjetaRoja() {
         <Building2 size={11} aria-hidden /> {empresa ? "Empresa" : "Todas las empresas"}
       </span>
       <span className="mt-0.5 line-clamp-2 text-[20px] leading-[1.25] font-bold lg:mt-0 lg:pl-[3px] lg:text-[23px] lg:leading-[33px]">
-        {empresa ? empresa.nombre : `${EMPRESAS.length} empresas`}
+        {empresa ? empresa.nombre : empresas.length === 1 ? "1 empresa" : `${empresas.length} empresas`}
       </span>
       <span className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-0.5 text-[10px] leading-3 font-bold lg:mt-auto">
-        {empresa ? (
+        {empresa?.producto ? (
           <span className="inline-flex items-center gap-1">
             <Tag size={11} aria-hidden className="text-[#9fb0c2]" /> {empresa.producto}
           </span>
         ) : null}
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-cifra" /> {cuentas.length} cuentas:{" "}
-          {redes.map(nombreRed).join(", ")}
+          <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-cifra" />
+          {cuentas.length === 0
+            ? "Sin cuentas todavía"
+            : `${cuentas.length === 1 ? "1 cuenta" : `${cuentas.length} cuentas`}: ${redes.map(nombreRed).join(", ")}`}
         </span>
       </span>
     </div>

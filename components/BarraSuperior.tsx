@@ -1,12 +1,14 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CirculoRed } from "./IconoRed";
 import { pedirAbrir } from "./ventanas";
-import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
-import { anclajeDeSesion, conversaciones, elegirEmpresa } from "@/lib/bandeja";
+import { actualizarEstado } from "@/lib/almacen";
+import { elegirEmpresa } from "@/lib/bandeja";
+import { salir, useFuente } from "@/lib/fuente";
+import { useBandeja } from "@/lib/usar-bandeja";
 import { cuandoCorto } from "@/lib/fechas";
 
 /** El sobre blanco del logo, con las líneas del color de la pastilla (como en el diseño). */
@@ -21,6 +23,7 @@ function Sobre({ className }: { className?: string }) {
 
 /** El logo: sobre y «NEXORA» en una pastilla verde, con la marca «Demo» debajo (al lado en el celular). */
 export function Logo() {
+  const { modo } = useFuente();
   return (
     <Link href="/" aria-label="NEXORA, ir a la bandeja" className="flex shrink-0 items-center gap-2 lg:block">
       <span className="flex h-[30px] items-center gap-[6px] rounded-full bg-logo pr-3.5 pl-[7px] lg:h-[32px] lg:w-[163px] lg:gap-[7px] lg:pr-0 lg:pl-[9px]">
@@ -29,21 +32,35 @@ export function Logo() {
           NEXORA
         </span>
       </span>
-      <span className="flex h-[18px] w-[38px] items-center justify-center rounded-[3px] bg-pildora text-[9.5px] leading-none font-bold text-marca-400 uppercase lg:mt-[6px] lg:ml-[10px]">
-        Demo
-      </span>
+      {modo === "ejemplo" ? (
+        <span className="flex h-[18px] w-[38px] items-center justify-center rounded-[3px] bg-pildora text-[9.5px] leading-none font-bold text-marca-400 uppercase lg:mt-[6px] lg:ml-[10px]">
+          Demo
+        </span>
+      ) : null}
     </Link>
   );
 }
 
 /** Barra de arriba, como en el diseño: logo y campana de mensajes nuevos. */
 export function BarraSuperior() {
+  const { modo, usuario } = useFuente();
   return (
     <header className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-superficie">
       <div className="flex h-14 items-center gap-1 pr-[max(0.5rem,env(safe-area-inset-right,0px))] pl-[max(0.75rem,env(safe-area-inset-left,0px))] lg:h-[68px] lg:items-start lg:gap-0 lg:pt-[5px] lg:pr-[17px] lg:pl-[15px]">
         <Logo />
         <div className="ml-auto" />
-        <Avisos />
+        {modo === "real" || modo === "ejemplo" ? <Avisos /> : null}
+        {modo === "real" ? (
+          <button
+            type="button"
+            onClick={() => void salir()}
+            aria-label={usuario ? `Salir (${usuario.nombre})` : "Salir"}
+            title="Salir"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-marca-400 hover:bg-white/10 lg:mt-[9px] lg:ml-[6px] lg:h-[28px] lg:w-[28px]"
+          >
+            <LogOut size={21} aria-hidden />
+          </button>
+        ) : null}
       </div>
     </header>
   );
@@ -51,8 +68,7 @@ export function BarraSuperior() {
 
 /** Campana: las pláticas que todavía no abres, de todas las empresas. */
 function Avisos() {
-  const estado = useEstado();
-  const enNavegador = useEnNavegador();
+  const { todas } = useBandeja();
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
 
@@ -64,7 +80,7 @@ function Avisos() {
     return () => document.removeEventListener("mousedown", fuera);
   }, []);
 
-  const nuevas = enNavegador ? conversaciones(estado, anclajeDeSesion()).filter((c) => c.noLeida) : [];
+  const nuevas = todas.filter((c) => c.noLeida);
 
   return (
     <div ref={caja} className="relative shrink-0 lg:mt-[9px]">

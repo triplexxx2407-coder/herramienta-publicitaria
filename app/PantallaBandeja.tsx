@@ -15,12 +15,11 @@ import {
 } from "@/components/PanelNexora";
 import { CirculoRed, IconoRed } from "@/components/IconoRed";
 import { cx } from "@/components/ui";
+import { avisar } from "@/components/avisos";
 import { useLoPedido } from "@/components/ventanas";
-import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
+import { actualizarEstado, useEnNavegador } from "@/lib/almacen";
 import {
-  EMPRESAS,
   anclajeDeSesion,
-  conversaciones,
   elegirEmpresa,
   ficha,
   marcarLeidaRed,
@@ -32,8 +31,10 @@ import {
   type Conversacion,
 } from "@/lib/bandeja";
 import { cuandoCorto, hora } from "@/lib/fechas";
+import { marcarLeidaDeVerdad, responderDeVerdad } from "@/lib/fuente";
 import { nombreRed, ORDEN_REDES, REDES } from "@/lib/redes";
-import type { Red } from "@/lib/tipos";
+import type { MensajeRed, Red } from "@/lib/tipos";
+import { useBandeja } from "@/lib/usar-bandeja";
 
 /** Cada minuto se vuelve a dibujar, para que el reloj del plazo vaya bajando. */
 function useMinuto(): number {
@@ -46,8 +47,8 @@ function useMinuto(): number {
 }
 
 export function PantallaBandeja() {
-  const estado = useEstado();
   const enNavegador = useEnNavegador();
+  const { esEjemplo, empresas, empresaActiva, todas: deTodas, deLaEmpresa: todas } = useBandeja();
   const esComputadora = useEsComputadora();
   const [filtro, setFiltro] = useState<Red | "todas">("todas");
   const [abiertaId, setAbiertaId] = useState<string | null>(null);
@@ -61,10 +62,8 @@ export function PantallaBandeja() {
     setAbiertaId(pedido.id);
   }
 
-  const empresaActiva = enNavegador ? estado.empresaActiva : null;
-  const todas = enNavegador ? conversaciones(estado, anclajeDeSesion(), empresaActiva) : [];
   // Sólo los botones de las redes que la empresa sí tiene.
-  const empresa = EMPRESAS.find((e) => e.id === empresaActiva);
+  const empresa = empresas.find((e) => e.id === empresaActiva);
   const redesVisibles = empresa ? ORDEN_REDES.filter((r) => empresa.cuentas.some((k) => k.red === r)) : ORDEN_REDES;
   const filtroValido = filtro === "todas" || redesVisibles.includes(filtro) ? filtro : "todas";
   const lista = filtroValido === "todas" ? todas : todas.filter((c) => c.red === filtroValido);
@@ -75,8 +74,10 @@ export function PantallaBandeja() {
   const idActual = actual?.id;
   const actualSinLeer = actual?.noLeida;
   useEffect(() => {
-    if (idActual && actualSinLeer) actualizarEstado((e) => marcarLeidaRed(e, idActual));
-  }, [idActual, actualSinLeer]);
+    if (!idActual || !actualSinLeer) return;
+    if (esEjemplo) actualizarEstado((e) => marcarLeidaRed(e, idActual));
+    else void marcarLeidaDeVerdad(idActual);
+  }, [idActual, actualSinLeer, esEjemplo]);
 
   if (!enNavegador) return <CargandoPanel />;
 
@@ -93,7 +94,7 @@ export function PantallaBandeja() {
         <>
           <p>Aquí llegan juntos los mensajes de las cuentas de cada empresa que atienden: Instagram, WhatsApp, Facebook, TikTok y correo. Cada plática dice de qué empresa es y qué cuenta lo recibió.</p>
           <p>Contestas desde aquí y Nexora lo entrega por la misma red donde te escribieron. Cada plática avisa cuánto te queda para contestar: las redes dan 24 horas, TikTok 48.</p>
-          <p>Es de ejemplo: las empresas y las pláticas son inventadas y nada se manda de verdad.</p>
+          {esEjemplo ? <p>Es de ejemplo: las empresas y las pláticas son inventadas y nada se manda de verdad.</p> : null}
         </>
       }
       pastilla={
@@ -121,7 +122,7 @@ export function PantallaBandeja() {
             className="mb-2.5 lg:hidden"
           >
             <option value="">Todas las empresas</option>
-            {EMPRESAS.map((e) => (
+            {empresas.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.nombre}
               </option>
@@ -162,7 +163,11 @@ export function PantallaBandeja() {
             </ul>
           ) : (
             <p className="px-2 py-3 text-sm text-tinta-2">
-              {filtroValido === "todas" ? "Esta empresa no tiene mensajes todavía." : `No hay mensajes de ${nombreRed(filtroValido)}.`}
+              {filtroValido !== "todas"
+                ? `No hay mensajes de ${nombreRed(filtroValido)}.`
+                : empresaActiva
+                  ? "Esta empresa no tiene mensajes todavía."
+                  : "Todavía no llega ningún mensaje. En cuanto alguien escriba, aparece aquí."}
             </p>
           )}
         </>
@@ -179,7 +184,7 @@ export function PantallaBandeja() {
       principalConScroll={false}
       principal={
         actual ? (
-          <Platica key={actual.id} conversacion={actual} todas={todas} ahora={ahora} onIr={setAbiertaId} />
+          <Platica key={actual.id} conversacion={actual} todas={deTodas} ahora={ahora} onIr={setAbiertaId} esEjemplo={esEjemplo} />
         ) : (
           <ContenidoClaro className="flex-1">
             <VacioClaro
@@ -238,13 +243,16 @@ function Platica({
   todas,
   ahora,
   onIr,
+  esEjemplo,
 }: {
   conversacion: Conversacion;
   todas: Conversacion[];
   ahora: Date;
   onIr: (id: string) => void;
+  esEjemplo: boolean;
 }) {
   const [texto, setTexto] = useState("");
+  const [mandando, setMandando] = useState(false);
   const finRef = useRef<HTMLDivElement>(null);
   const cuantos = c.mensajes.length;
   const p = plazo(c, ahora);
@@ -256,20 +264,30 @@ function Platica({
     finRef.current?.scrollIntoView({ block: "end" });
   }, [cuantos]);
 
-  function mandar(ev?: FormEvent) {
+  async function mandar(ev?: FormEvent) {
     ev?.preventDefault();
-    if (!texto.trim() || !sePuede) return;
-    // Simulación: se queda en este navegador, no se manda a ninguna red.
-    actualizarEstado((e) => responderEnRed(e, c.id, texto, anclajeDeSesion()));
+    if (!texto.trim() || !sePuede || mandando) return;
+    if (esEjemplo) {
+      // Simulación: se queda en este navegador, no se manda a ninguna red.
+      actualizarEstado((e) => responderEnRed(e, c.id, texto, anclajeDeSesion()));
+      setTexto("");
+      return;
+    }
+    setMandando(true);
+    const aviso = await responderDeVerdad(c.id, texto.trim());
+    setMandando(false);
     setTexto("");
+    if (aviso) avisar(aviso.charAt(0).toUpperCase() + aviso.slice(1));
   }
 
   return (
     <>
       <div className="fondo-platica barra-fina min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-4 sm:px-6">
-        <p className="mx-auto flex w-fit max-w-full items-center gap-1.5 rounded-lg bg-[#fff5c4] px-3 py-1.5 text-center text-xs font-semibold text-[#5c4b00] shadow-sm">
-          <FlaskConical size={13} aria-hidden className="shrink-0" /> Ejemplo: esta plática la inventa la demo. Nada se manda de verdad.
-        </p>
+        {esEjemplo ? (
+          <p className="mx-auto flex w-fit max-w-full items-center gap-1.5 rounded-lg bg-[#fff5c4] px-3 py-1.5 text-center text-xs font-semibold text-[#5c4b00] shadow-sm">
+            <FlaskConical size={13} aria-hidden className="shrink-0" /> Ejemplo: esta plática la inventa la demo. Nada se manda de verdad.
+          </p>
+        ) : null}
 
         <Tarjeta>
           <p className="flex items-center justify-center gap-1.5 text-[13px] font-bold text-chat-tinta">
@@ -296,7 +314,7 @@ function Platica({
         </Tarjeta>
 
         {c.mensajes.map((m) => (
-          <Burbuja key={m.id} de={m.de} fecha={m.fecha} red={c.red}>
+          <Burbuja key={m.id} mensaje={m} red={c.red}>
             <p className="whitespace-pre-wrap">{m.texto}</p>
           </Burbuja>
         ))}
@@ -332,12 +350,12 @@ function Platica({
               if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) mandar(e);
             }}
             rows={Math.min(5, texto.split("\n").length)}
-            placeholder={`Contéstale por ${nombreRed(c.red)} (simulación)`}
+            placeholder={`Contéstale por ${nombreRed(c.red)}${esEjemplo ? " (simulación)" : ""}`}
             className="max-h-36 min-h-11 flex-1 resize-none rounded-[22px] bg-pildora px-4 py-2.5 text-[15px] leading-snug text-tinta outline-none placeholder:text-suave focus:ring-2 focus:ring-marca-400"
           />
           <button
             type="submit"
-            disabled={!texto.trim()}
+            disabled={!texto.trim() || mandando}
             aria-label={`Enviar por ${nombreRed(c.red)}`}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-marca-600 text-white transition-colors hover:bg-marca-700 disabled:opacity-40"
           >
@@ -359,8 +377,11 @@ function Tarjeta({ children }: { children: ReactNode }) {
 }
 
 /** Una burbuja: las tuyas a la derecha en verde, las suyas a la izquierda en blanco. */
-function Burbuja({ de, fecha, red, children }: { de: "yo" | "ellos"; fecha: string; red: Red; children: ReactNode }) {
+function Burbuja({ mensaje, red, children }: { mensaje: MensajeRed; red: Red; children: ReactNode }) {
+  const { de, fecha, entrega, error } = mensaje;
   const mio = de === "yo";
+  const fallo = entrega === "falló";
+  const pendiente = entrega === "pendiente";
   return (
     <div className={cx("flex", mio ? "justify-end" : "justify-start")}>
       <div
@@ -372,8 +393,16 @@ function Burbuja({ de, fecha, red, children }: { de: "yo" | "ellos"; fecha: stri
         <span className="sr-only">{mio ? "Tú escribiste:" : "Te escribió:"}</span>
         {children}
         <span className="mt-0.5 flex items-center justify-end gap-1 text-[11px] text-chat-tenue">
-          {mio ? `Entregado en ${REDES[red].nombre} · ${hora(fecha)}` : hora(fecha)}
-          {mio ? <CheckCheck size={14} aria-hidden className="text-[#3f9fe0]" /> : null}
+          {!mio
+            ? hora(fecha)
+            : fallo
+              ? `No se pudo entregar en ${REDES[red].nombre}${error ? `: ${error}` : ""}`
+              : pendiente
+                ? `Todavía no sale por ${REDES[red].nombre} · ${hora(fecha)}`
+                : `Entregado en ${REDES[red].nombre} · ${hora(fecha)}`}
+          {mio && !fallo && !pendiente ? <CheckCheck size={14} aria-hidden className="text-[#3f9fe0]" /> : null}
+          {fallo ? <TriangleAlert size={14} aria-hidden className="text-[#b42318]" /> : null}
+          {pendiente ? <Clock size={13} aria-hidden /> : null}
         </span>
       </div>
     </div>
