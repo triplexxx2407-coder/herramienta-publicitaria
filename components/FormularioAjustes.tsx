@@ -51,7 +51,7 @@ export function FormularioAjustes() {
                 puntos[i] = e.target.value;
                 cambiar({ puntosFuertes: puntos });
               }}
-              className="h-11 w-full rounded-xl border border-linea bg-fondo px-3.5 text-[15px] text-tinta outline-none focus:border-marca-500 focus:ring-4 focus:ring-marca-600/25"
+              className="h-11 w-full rounded-[4px] border border-linea bg-fondo px-3.5 text-[15px] text-tinta outline-none focus:border-marca-500 focus:ring-4 focus:ring-marca-600/25"
             />
           </div>
         ))}
@@ -63,7 +63,7 @@ export function FormularioAjustes() {
           {ajustes.fotos.map((f, i) => (
             <li key={`${f.url.slice(-24)}-${i}`} className="group relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={f.url} alt={f.nombre} className="aspect-[4/3] w-full rounded-xl border border-linea object-cover" />
+              <img src={f.url} alt={f.nombre} className="aspect-[4/3] w-full rounded-[4px] border border-linea object-cover" />
               <button
                 type="button"
                 aria-label={`Quitar ${f.nombre}`}
@@ -75,7 +75,7 @@ export function FormularioAjustes() {
             </li>
           ))}
           <li>
-            <label className="flex aspect-[4/3] w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-linea text-sm font-semibold text-suave hover:border-marca-500 hover:bg-marca-600/15 hover:text-marca-400">
+            <label className="flex aspect-[4/3] w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-[4px] border-2 border-dashed border-linea text-sm font-semibold text-suave hover:border-marca-500 hover:bg-marca-600/15 hover:text-marca-400">
               <ImagePlus size={22} aria-hidden />
               Agregar
               <input
@@ -118,7 +118,7 @@ export function FormularioAjustes() {
           <Campo id="aj-telefono" etiqueta="Teléfono" value={ajustes.telefono} onChange={(e) => cambiar({ telefono: e.target.value })} />
         </div>
         {errores.length ? (
-          <p role="alert" className="rounded-xl bg-rojo-50 px-3 py-2 text-sm font-medium text-rojo-700">
+          <p role="alert" className="rounded-[4px] bg-rojo-50 px-3 py-2 text-sm font-medium text-rojo-700">
             {errores.join(" ")}
           </p>
         ) : null}

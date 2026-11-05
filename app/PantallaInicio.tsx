@@ -1,10 +1,18 @@
 "use client";
 
-import { ArrowRight, Building2, Mail, MailCheck, MapPin, MessageSquare, RotateCcw, Sparkles, SquarePen, Tag, type LucideIcon } from "lucide-react";
+import { ArrowRight, Building2, Mail, MailCheck, MessageSquare, RotateCcw, Sparkles, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { avisar } from "@/components/avisos";
-import { AyudaPlegable, Boton, BotonEnlace, Cargando, Insignia, Tarjeta, cx } from "@/components/ui";
-import { abrirMiDesarrollo } from "@/components/ventanas";
+import {
+  CargandoPanel,
+  ContenidoClaro,
+  EnlacePie,
+  HojaBlanca,
+  IconoCirculo,
+  MarcaEjemplo,
+  PanelNexora,
+  PastillaCliente,
+} from "@/components/PanelNexora";
 import { reiniciarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
 import { listosParaEnviar, porEscribir } from "@/lib/contactos";
 import { enviosHechos, platicas } from "@/lib/envio";
@@ -46,7 +54,7 @@ export function PantallaInicio() {
   const estado = useEstado();
   const enNavegador = useEnNavegador();
   const [confirmar, setConfirmar] = useState(false);
-  if (!enNavegador) return <Cargando />;
+  if (!enNavegador) return <CargandoPanel />;
 
   const { ajustes } = estado;
   const porEnviar = porEscribir(estado).length;
@@ -65,136 +73,125 @@ export function PantallaInicio() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-      <div className="space-y-4">
-        {/* Portada del desarrollo */}
-        <section className="entrada relative overflow-hidden rounded-tarjeta shadow-tarjeta">
-          {portada ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={portada} alt="Imagen de ejemplo del desarrollo" className="absolute inset-0 h-full w-full object-cover" />
-          ) : null}
-          <div aria-hidden className="absolute inset-0 bg-linear-to-t from-proyecto-oscuro from-10% via-[#5c0d0d]/80 via-55% to-proyecto/25" />
-          <div className="relative flex min-h-[19rem] flex-col p-5 text-white sm:min-h-[22rem] sm:p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Insignia tipo="ejemplo" claro />
-                <Insignia tipo="ejemplo" claro>
-                  Preventa exclusiva
-                </Insignia>
-              </div>
-              <Boton
-                variante="secundario"
-                tamano="sm"
-                className="bg-white/20 hover:bg-white/30"
-                icono={<SquarePen size={15} aria-hidden />}
-                onClick={abrirMiDesarrollo}
-              >
-                Editar
-              </Boton>
+    <PanelNexora
+      titulo={ajustes.nombreDesarrollo}
+      ayuda={
+        <>
+          <p>Esta app te ayuda a encontrar negocios, escribirle un correo personal a cada uno y platicar con los que te contestan.</p>
+          <p>Es una demostración: ningún correo sale de aquí y lo que hagas se queda sólo en este navegador.</p>
+        </>
+      }
+      pastilla={
+        <PastillaCliente
+          icono={
+            <IconoCirculo>
+              <Building2 size={20} strokeWidth={2.4} />
+            </IconoCirculo>
+          }
+          texto={hayAlgo ? `Lo que sigue: ${sigue.titulo}` : "Empieza aquí"}
+        />
+      }
+      etiquetaLista="Cómo vas"
+      claseLista={hayAlgo ? undefined : "hidden lg:block"}
+      lista={
+        <ul className="grid grid-cols-3 gap-2 lg:grid-cols-1 lg:gap-[11px]">
+          <Cifra icono={Mail} titulo="Por enviar" valor={porEnviar} />
+          <Cifra icono={MailCheck} titulo="Enviados" valor={enviados} />
+          <Cifra icono={MessageSquare} titulo="Contestaron" valor={contestaron} />
+        </ul>
+      }
+      etiquetaPrincipal="Tu proyecto"
+      principal={
+        <ContenidoClaro className="space-y-3">
+          <HojaBlanca className="mx-auto max-w-3xl overflow-hidden">
+            <div className="relative h-40 bg-proyecto sm:h-52 lg:h-[clamp(9rem,30dvh,17rem)]">
+              {portada ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={portada} alt="Imagen de ejemplo del desarrollo" className="absolute inset-0 h-full w-full object-cover" />
+              ) : null}
+              <MarcaEjemplo className="absolute top-3 left-3" />
             </div>
-            <div className="mt-auto">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-white/75 uppercase">
-                <Building2 size={13} aria-hidden /> Mi desarrollo inmobiliario
-              </p>
-              <h1 className="mt-1 font-display text-[2rem] leading-[1.1] font-bold sm:text-[2.5rem]">{ajustes.nombreDesarrollo}</h1>
-              <p className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[15px] text-white/90">
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin size={16} aria-hidden /> {ajustes.ciudad}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Tag size={16} aria-hidden /> Desde {ajustes.precioDesde}
-                </span>
-              </p>
+            <div className="px-5 py-5 sm:px-6">
+              {!hayAlgo ? (
+                <>
+                  <h2 className="text-xl font-bold text-chat-tinta">¿Cómo empiezo?</h2>
+                  <p className="mt-1 text-chat-tenue">Marca negocios, revisa su correo y envíalo. Es de prueba: nada sale de aquí.</p>
+                  <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                    <EnlacePie href="/buscar" icono={<ArrowRight size={18} aria-hidden />}>
+                      Empezar
+                    </EnlacePie>
+                    <button
+                      type="button"
+                      onClick={llenarConEjemplo}
+                      className="inline-flex items-center justify-center gap-1.5 py-2 text-[15px] font-semibold text-marca-700 hover:underline"
+                    >
+                      <Sparkles size={16} aria-hidden /> O mira un ejemplo ya lleno
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] font-bold tracking-[0.06em] text-marca-700 uppercase">Lo que sigue · Paso {sigue.numero}</p>
+                  <h2 className="mt-0.5 text-xl font-bold text-chat-tinta">{sigue.titulo}</h2>
+                  <p className="mt-1 text-chat-tenue">{sigue.texto}</p>
+                  <EnlacePie href={sigue.ruta} className="mt-5" icono={<ArrowRight size={18} aria-hidden />}>
+                    Continuar
+                  </EnlacePie>
+                </>
+              )}
             </div>
-          </div>
-        </section>
+          </HojaBlanca>
 
-        {hayAlgo ? (
-          <ul className="grid grid-cols-3 gap-3">
-            <Cifra icono={Mail} titulo="Por enviar" valor={porEnviar} />
-            <Cifra icono={MailCheck} titulo="Enviados" valor={enviados} />
-            <Cifra icono={MessageSquare} titulo="Contestaron" valor={contestaron} />
-          </ul>
-        ) : null}
-      </div>
-
-      <div className="space-y-4">
-        {/* Qué hacer ahora: un solo botón grande */}
-        <Tarjeta className="entrada p-5">
-          {!hayAlgo ? (
-            <>
-              <h2 className="font-display text-xl font-bold">¿Cómo empiezo?</h2>
-              <p className="mt-1 text-suave">Marca negocios, revisa su correo y envíalo. Es de prueba: nada sale de aquí.</p>
-              <BotonEnlace href="/buscar" tamano="lg" className="mt-5 w-full" icono={<ArrowRight size={19} aria-hidden />}>
-                Empezar
-              </BotonEnlace>
-              <button
-                type="button"
-                onClick={llenarConEjemplo}
-                className="mt-3 inline-flex w-full items-center justify-center gap-1.5 py-2 text-[15px] font-semibold text-marca-400 hover:underline"
-              >
-                <Sparkles size={16} aria-hidden /> O mira un ejemplo ya lleno
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="text-xs font-bold tracking-[0.14em] text-marca-400 uppercase">Lo que sigue · Paso {sigue.numero}</p>
-              <h2 className="mt-0.5 font-display text-xl font-bold">{sigue.titulo}</h2>
-              <p className="mt-1 text-suave">{sigue.texto}</p>
-              <BotonEnlace href={sigue.ruta} tamano="lg" className="mt-5 w-full" icono={<ArrowRight size={19} aria-hidden />}>
-                Continuar
-              </BotonEnlace>
-            </>
-          )}
-        </Tarjeta>
-
-        {hayAlgo ? (
-          <Tarjeta className="entrada p-4">
-            {confirmar ? (
-              <>
-                <p className="text-sm font-semibold text-rojo-700">¿Borrar todo lo que hiciste?</p>
-                <div className="mt-2.5 flex gap-2">
-                  <Boton
-                    variante="peligro"
-                    tamano="sm"
+          {hayAlgo ? (
+            <div className="mx-auto max-w-3xl text-center">
+              {confirmar ? (
+                <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-lg bg-white/80 px-3 py-2 shadow-sm">
+                  <p className="text-sm font-semibold text-[#8e1b1b]">¿Borrar todo lo que hiciste?</p>
+                  <button
+                    type="button"
                     onClick={() => {
                       reiniciarEstado(estadoInicial());
                       setConfirmar(false);
                       avisar("Listo: la demo quedó vacía");
                     }}
+                    className="h-9 rounded-[4px] bg-proyecto px-3.5 text-sm font-bold text-white hover:bg-proyecto-claro"
                   >
                     Sí, borrar
-                  </Boton>
-                  <Boton variante="fantasma" tamano="sm" onClick={() => setConfirmar(false)}>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmar(false)}
+                    className="h-9 rounded-[4px] px-3 text-sm font-semibold text-chat-tinta hover:bg-black/5"
+                  >
                     Cancelar
-                  </Boton>
+                  </button>
                 </div>
-              </>
-            ) : (
-              <Boton variante="fantasma" className="w-full" onClick={() => setConfirmar(true)} icono={<RotateCcw size={17} aria-hidden />}>
-                Borrar todo y empezar de nuevo
-              </Boton>
-            )}
-          </Tarjeta>
-        ) : null}
-
-        <AyudaPlegable>
-          <p>Esta app te ayuda a encontrar negocios, escribirle un correo personal a cada uno y platicar con los que te contestan.</p>
-          <p>Es una demostración: ningún correo sale de aquí y lo que hagas se queda sólo en este navegador.</p>
-        </AyudaPlegable>
-      </div>
-    </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmar(true)}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-[4px] px-3 text-sm font-semibold text-chat-tenue hover:bg-black/5 hover:text-chat-tinta"
+                >
+                  <RotateCcw size={16} aria-hidden /> Borrar todo y empezar de nuevo
+                </button>
+              )}
+            </div>
+          ) : null}
+        </ContenidoClaro>
+      }
+    />
   );
 }
 
+/** Una cifra de cómo vas, en forma de pastilla. */
 function Cifra({ icono: Icono, titulo, valor }: { icono: LucideIcon; titulo: string; valor: number }) {
   return (
-    <li className={cx("entrada rounded-tarjeta border border-linea bg-superficie p-3.5 shadow-tarjeta")}>
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-marca-600/20 text-marca-400">
+    <li className="flex flex-col items-center gap-1 rounded-2xl bg-pildora px-2 py-2.5 text-center lg:min-h-[46px] lg:flex-row lg:gap-2.5 lg:rounded-full lg:py-1 lg:pr-4 lg:pl-1 lg:text-left">
+      <span className="hidden h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-white/10 text-marca-400 lg:flex">
         <Icono size={18} aria-hidden />
       </span>
-      <p className="cifras mt-2.5 text-3xl leading-none font-bold text-tinta">{valor}</p>
-      <p className="mt-1 text-sm font-semibold text-suave">{titulo}</p>
+      <span className="cifras order-first text-[24px] leading-none font-bold text-white lg:order-last lg:text-[22px]">{valor}</span>
+      <span className="text-[12.5px] font-semibold text-tinta-2 lg:flex-1 lg:text-[14px]">{titulo}</span>
     </li>
   );
 }

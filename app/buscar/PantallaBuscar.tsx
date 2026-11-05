@@ -1,11 +1,24 @@
 "use client";
 
-import { Ban, Check, LayoutGrid, MailCheck, MapPin, PenLine, RefreshCw, SearchX } from "lucide-react";
+import { Ban, Check, LayoutGrid, MailCheck, MapPin, PenLine, RefreshCw, Search, SearchX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { avisar } from "@/components/avisos";
+import { TrazoGiro } from "@/components/IconoGiro";
+import {
+  AvisoEjemplo,
+  BotonPie,
+  BotonPildora,
+  ContenidoClaro,
+  EnlacePie,
+  HojaBlanca,
+  IconoCirculo,
+  PanelNexora,
+  PastillaCliente,
+  SelectorPildora,
+  VacioClaro,
+} from "@/components/PanelNexora";
 import { olvidarPedido, useLoPedido } from "@/components/ventanas";
-import { IconoGiro } from "@/components/IconoGiro";
-import { BOTON_BARRA, BarraAccion, Boton, BotonEnlace, Encabezado, Insignia, Selector, Tarjeta, cx } from "@/components/ui";
+import { cx } from "@/components/ui";
 import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
 import { CIUDADES, GIROS, nombreCiudad, nombreGiro } from "@/lib/catalogos";
 import { elegirEmpresas, nombreVisible, normalizarCorreo, porEscribir, quitarDeSeleccion } from "@/lib/contactos";
@@ -94,84 +107,66 @@ export function PantallaBuscar() {
     );
   }
 
+  const cuantos = `${empresas.length} ${empresas.length === 1 ? "negocio" : "negocios"}`;
+  const donde = filtros.ciudad ? ` en ${nombreCiudad(filtros.ciudad)}` : "";
+  const esEjemplo = resultado?.fuente.esEjemplo !== false;
+
   return (
-    <div>
-      <Encabezado
-        paso={1}
-        titulo="Buscar empresas"
-        subtitulo="Marca a quién quieres escribirle y toca «Redactar»."
-        ayuda={
-          <>
-            <p>Es la lista de negocios de la ciudad y el tipo que elijas. «Actualizar» la vuelve a cargar.</p>
-            <p>En la versión real saldrán del directorio oficial de negocios del INEGI. Hoy son negocios inventados.</p>
-          </>
-        }
-      />
-
-      {resultado?.aviso ? (
-        <p role="alert" className="mb-4 rounded-2xl bg-rojo-50 px-4 py-3 font-medium text-rojo-700">
-          {resultado.aviso}
-        </p>
-      ) : null}
-
-      <div className="entrada mb-3 grid grid-cols-2 gap-2 sm:gap-3 md:max-w-xl">
-        <Selector
-          etiqueta="Ciudad"
-          icono={<MapPin size={17} aria-hidden />}
-          valor={filtros.ciudad}
-          onChange={(v) => buscar({ ...filtros, ciudad: v })}
-        >
-          <option value="">Todas las ciudades</option>
-          {CIUDADES.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nombre}
-            </option>
-          ))}
-        </Selector>
-        <Selector
-          etiqueta="Tipo de negocio"
-          icono={<LayoutGrid size={17} aria-hidden />}
-          valor={filtros.giro}
-          onChange={(v) => buscar({ ...filtros, giro: v })}
-        >
-          <option value="">Todos los tipos</option>
-          {GIROS.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.nombre}
-            </option>
-          ))}
-        </Selector>
-      </div>
-
-      {error ? (
-        <p role="alert" className="mb-3 rounded-2xl bg-rojo-50 px-4 py-3 font-medium text-rojo-700">
-          {error}
-        </p>
-      ) : null}
-
-      <div className="entrada mb-2 flex items-center gap-2 pl-1">
-        <p role="status" className="flex items-center gap-2 text-[15px] text-suave">
-          <span className="cifras font-semibold text-tinta">
-            {buscando ? "Cargando…" : `${empresas.length} ${empresas.length === 1 ? "negocio" : "negocios"}`}
-          </span>
-          {resultado?.fuente.esEjemplo !== false ? <Insignia tipo="ejemplo" /> : null}
-        </p>
-        <Boton
-          variante="fantasma"
-          tamano="sm"
-          className="ml-auto text-marca-400"
-          onClick={() => buscar(filtros, () => avisar("Lista actualizada"))}
-          disabled={buscando}
-          icono={<RefreshCw size={16} aria-hidden className={buscando ? "animate-spin" : undefined} />}
-        >
-          Actualizar
-        </Boton>
-      </div>
-
-      <Tarjeta className="entrada overflow-hidden">
-        <div className="border-b border-linea px-4 py-1.5 sm:px-5">
-          <button
-            type="button"
+    <PanelNexora
+      titulo="Buscar empresas"
+      ayuda={
+        <>
+          <p>Es la lista de negocios de la ciudad y el tipo que elijas. Marca a quién quieres escribirle y toca «Redactar».</p>
+          <p>«Actualizar» la vuelve a cargar. En la versión real saldrán del directorio oficial de negocios del INEGI; hoy son negocios inventados.</p>
+        </>
+      }
+      pastilla={
+        <PastillaCliente
+          icono={
+            <IconoCirculo>
+              <Search size={22} strokeWidth={2.6} className="lg:h-[26px] lg:w-[26px]" />
+            </IconoCirculo>
+          }
+          texto={buscando ? "Cargando…" : `${cuantos}${donde}`}
+        />
+      }
+      etiquetaLista="Filtros de la lista"
+      lista={
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 lg:gap-[11px]">
+          <SelectorPildora
+            etiqueta="Ciudad"
+            icono={<MapPin size={15} aria-hidden />}
+            valor={filtros.ciudad}
+            onChange={(v) => buscar({ ...filtros, ciudad: v })}
+          >
+            <option value="">Todas las ciudades</option>
+            {CIUDADES.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </SelectorPildora>
+          <SelectorPildora
+            etiqueta="Tipo de negocio"
+            icono={<LayoutGrid size={15} aria-hidden />}
+            valor={filtros.giro}
+            onChange={(v) => buscar({ ...filtros, giro: v })}
+          >
+            <option value="">Todos los tipos</option>
+            {GIROS.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.nombre}
+              </option>
+            ))}
+          </SelectorPildora>
+          <BotonPildora
+            onClick={() => buscar(filtros, () => avisar("Lista actualizada"))}
+            disabled={buscando}
+            icono={<RefreshCw size={15} aria-hidden className={buscando ? "animate-spin" : undefined} />}
+          >
+            Actualizar
+          </BotonPildora>
+          <BotonPildora
             disabled={!enNavegador || buscando || libres.length === 0}
             onClick={() =>
               alternar(
@@ -180,48 +175,69 @@ export function PantallaBuscar() {
               )
             }
             aria-pressed={todasElegidas}
-            className="-ml-1 flex min-h-11 items-center gap-3 rounded-xl pr-3 pl-1 text-[15px] font-semibold text-tinta disabled:opacity-45"
+            activo={todasElegidas}
+            icono={<Check size={16} aria-hidden strokeWidth={3} />}
           >
-            <Casilla marcada={todasElegidas} />
             {todasElegidas ? "Quitar todos" : "Elegir todos"}
-          </button>
+          </BotonPildora>
+          <p role="status" className="col-span-2 px-2 pt-1 text-[13px] font-semibold text-tinta-2 lg:col-span-1">
+            {buscando ? "Cargando…" : `${cuantos}${elegidos ? ` · ${elegidos} ${elegidos === 1 ? "elegido" : "elegidos"}` : ""}`}
+          </p>
         </div>
+      }
+      etiquetaPrincipal="Negocios"
+      principal={
+        <ContenidoClaro className="space-y-3">
+          {esEjemplo ? <AvisoEjemplo>Ejemplo: estos negocios son inventados.</AvisoEjemplo> : null}
 
-        {!buscando && empresas.length === 0 && !error ? (
-          <div className="flex flex-col items-center px-6 py-10 text-center">
-            <SearchX size={32} aria-hidden className="text-tenue" />
-            <p className="mt-3 font-semibold">No hay negocios con esos filtros</p>
-            <p className="text-sm text-suave">Prueba con otro tipo de negocio o con «Todas las ciudades».</p>
-          </div>
-        ) : null}
+          {resultado?.aviso ? (
+            <p role="alert" className="rounded-lg bg-[#fde2e2] px-4 py-3 text-sm font-semibold text-[#8e1b1b]">
+              {resultado.aviso}
+            </p>
+          ) : null}
+          {error ? (
+            <p role="alert" className="rounded-lg bg-[#fde2e2] px-4 py-3 text-sm font-semibold text-[#8e1b1b]">
+              {error}
+            </p>
+          ) : null}
 
-        <ul className={cx("divide-y divide-linea transition-opacity", buscando && "opacity-55")}>
-          {filas.map((f) => (
-            <li key={f.empresa.id}>
-              <FilaEmpresa
-                fila={f}
-                esEjemplo={resultado?.fuente.esEjemplo ?? true}
-                listo={enNavegador}
-                resaltada={f.empresa.id === resaltado}
-                onCambio={(elegir) => alternar([f.empresa], elegir)}
-              />
-            </li>
-          ))}
-        </ul>
-      </Tarjeta>
-
-      <BarraAccion>
-        {elegidos ? (
-          <BotonEnlace href="/redactar" className={BOTON_BARRA} icono={<PenLine size={19} aria-hidden />}>
+          {!buscando && empresas.length === 0 && !error ? (
+            <VacioClaro
+              icono={<SearchX size={30} aria-hidden />}
+              titulo="No hay negocios con esos filtros"
+              texto="Prueba con otro tipo de negocio o con «Todas las ciudades»."
+            />
+          ) : (
+            <HojaBlanca className="overflow-hidden">
+              <ul className={cx("divide-y divide-black/[0.07] transition-opacity", buscando && "opacity-55")}>
+                {filas.map((f) => (
+                  <li key={f.empresa.id}>
+                    <FilaEmpresa
+                      fila={f}
+                      esEjemplo={resultado?.fuente.esEjemplo ?? true}
+                      listo={enNavegador}
+                      resaltada={f.empresa.id === resaltado}
+                      onCambio={(elegir) => alternar([f.empresa], elegir)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </HojaBlanca>
+          )}
+        </ContenidoClaro>
+      }
+      pie={
+        elegidos ? (
+          <EnlacePie href="/redactar" icono={<PenLine size={18} aria-hidden />}>
             Redactar ({elegidos})
-          </BotonEnlace>
+          </EnlacePie>
         ) : (
-          <Boton disabled className={BOTON_BARRA} icono={<PenLine size={19} aria-hidden />}>
+          <BotonPie disabled icono={<PenLine size={18} aria-hidden />}>
             Redactar
-          </Boton>
-        )}
-      </BarraAccion>
-    </div>
+          </BotonPie>
+        )
+      }
+    />
   );
 }
 
@@ -230,8 +246,8 @@ function Casilla({ marcada, apagada = false }: { marcada: boolean; apagada?: boo
     <span
       aria-hidden
       className={cx(
-        "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 transition-colors",
-        marcada ? "border-marca-500 bg-marca-600 text-white" : apagada ? "border-linea bg-fondo" : "border-suave/70 bg-fondo",
+        "flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] border-2 transition-colors",
+        marcada ? "border-marca-600 bg-marca-600 text-white" : apagada ? "border-black/15 bg-black/5" : "border-[#7b8fa3] bg-white",
       )}
     >
       {marcada ? <Check size={16} strokeWidth={3.2} /> : null}
@@ -262,10 +278,10 @@ function FilaEmpresa({
     <label
       ref={caja}
       className={cx(
-        "flex min-h-16 items-center gap-3 px-4 py-2.5 sm:px-5",
-        bloqueo ? "cursor-default" : "cursor-pointer transition-colors hover:bg-superficie-2/60",
-        elegida && "bg-marca-600/15",
-        resaltada && "bg-marca-600/25 ring-2 ring-marca-500 ring-inset",
+        "flex min-h-[60px] items-center gap-3 px-3 py-2 sm:px-4",
+        bloqueo ? "cursor-default" : "cursor-pointer transition-colors hover:bg-[#eef4fd]",
+        elegida && "bg-[#dceafe] hover:bg-[#d2e4fd]",
+        resaltada && "ring-2 ring-marca-600 ring-inset",
       )}
     >
       <input
@@ -277,24 +293,26 @@ function FilaEmpresa({
         aria-label={nombre}
         aria-describedby={`detalle-${e.id}`}
       />
-      <span className="rounded-lg peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-marca-400">
+      <span className="rounded-[5px] peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-marca-600">
         <Casilla marcada={elegida} apagada={!!bloqueo} />
       </span>
-      <span className={cx(bloqueo && "opacity-60")}>
-        <IconoGiro giro={e.giro} />
+      <span className={cx("text-black", bloqueo && "opacity-45")}>
+        <IconoCirculo className="h-10 w-10">
+          <TrazoGiro giro={e.giro} />
+        </IconoCirculo>
       </span>
       <span className={cx("min-w-0 flex-1", bloqueo && "opacity-60")}>
-        <span className="block truncate font-semibold text-tinta">{nombre}</span>
-        <span id={`detalle-${e.id}`} className="block truncate text-sm text-suave">
+        <span className="block truncate text-[15px] font-semibold text-chat-tinta">{nombre}</span>
+        <span id={`detalle-${e.id}`} className="block truncate text-[13px] text-chat-tenue">
           {bloqueo === "enviado" ? "Ya le escribiste" : bloqueo === "no_contactar" ? "Pidió no recibir correos" : detalle}
         </span>
       </span>
       {bloqueo === "enviado" ? (
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-verde-50 px-2.5 py-1 text-xs font-bold text-verde-700">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#dcf5e3] px-2.5 py-1 text-xs font-bold text-[#17603a]">
           <MailCheck size={13} aria-hidden /> Enviado
         </span>
       ) : bloqueo === "no_contactar" ? (
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-rojo-50 px-2.5 py-1 text-xs font-bold text-rojo-700">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#fde2e2] px-2.5 py-1 text-xs font-bold text-[#8e1b1b]">
           <Ban size={13} aria-hidden /> No contactar
         </span>
       ) : null}

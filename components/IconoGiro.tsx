@@ -45,3 +45,10 @@ export function IconoGiro({ giro, tamano = 44 }: { giro: string; tamano?: number
     </span>
   );
 }
+
+/** Sólo el dibujo del tipo de negocio, del color del texto (para el círculo negro del diseño). */
+export function TrazoGiro({ giro, tamano = 18 }: { giro: string; tamano?: number }) {
+  const g = GIROS[giro] ?? OTRO;
+  const Icono = g.icono;
+  return <Icono size={tamano} strokeWidth={2.2} aria-hidden />;
+}

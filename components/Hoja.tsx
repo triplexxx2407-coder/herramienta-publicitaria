@@ -45,7 +45,7 @@ export function Hoja({
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6"
     >
       <div aria-hidden className="velo-entrada absolute inset-0 bg-black/65 backdrop-blur-[2px]" onClick={onCerrar} />
-      <div className="hoja-entrada relative flex max-h-[92dvh] w-full flex-col rounded-t-[28px] border border-linea bg-superficie shadow-flotante sm:max-w-xl sm:rounded-[28px]">
+      <div className="hoja-entrada relative flex max-h-[92dvh] w-full flex-col rounded-t-2xl border border-linea bg-superficie shadow-flotante sm:max-w-xl sm:rounded-xl">
         <div aria-hidden className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-suave/50 sm:hidden" />
         <header className="flex shrink-0 items-start justify-between gap-4 px-5 pt-3 pb-3 sm:px-6 sm:pt-6">
           <div className="min-w-0">

@@ -1,22 +1,37 @@
 "use client";
 
-import { ArrowRight, ChevronRight, FlaskConical, LoaderCircle, PenLine, Search, Send } from "lucide-react";
+import { ArrowRight, LoaderCircle, PenLine, Search, Send } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Avatar } from "@/components/Avatar";
 import { avisar } from "@/components/avisos";
-import { Hoja } from "@/components/Hoja";
+import {
+  AvisoEjemplo,
+  BotonPie,
+  CargandoPanel,
+  ContenidoClaro,
+  EnlacePie,
+  IconoCirculo,
+  PanelNexora,
+  PastillaCliente,
+  PildoraLista,
+  TituloLista,
+  VacioClaro,
+  useEsComputadora,
+} from "@/components/PanelNexora";
 import { olvidarPedido, useLoPedido } from "@/components/ventanas";
 import { VistaCorreo } from "@/components/VistaCorreo";
-import { BOTON_BARRA, BarraAccion, Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Tarjeta } from "@/components/ui";
 import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
 import { listosParaEnviar, nombreVisible, porEscribir } from "@/lib/contactos";
-import { enviarSimulado, enviosHechos } from "@/lib/envio";
+import { enviarSimulado, enviosHechos, type Envio } from "@/lib/envio";
 import { cuandoCorto } from "@/lib/fechas";
+import { armarCorreo } from "@/lib/redaccion";
 
 export function PantallaEnvio() {
   const estado = useEstado();
   const enNavegador = useEnNavegador();
+  const esComputadora = useEsComputadora();
   const [enviando, setEnviando] = useState(false);
+  // El correo abierto. En el celular, null es «viendo la lista».
   const [abierto, setAbierto] = useState<string | null>(null);
 
   // Si otra pantalla pide abrir un correo enviado (el buscador de arriba o la campana), se abre aunque ya
@@ -31,12 +46,21 @@ export function PantallaEnvio() {
     if (pedido) olvidarPedido("/envio");
   }, [pedido]);
 
-  if (!enNavegador) return <Cargando />;
+  if (!enNavegador) return <CargandoPanel />;
 
   const listos = listosParaEnviar(estado);
   const sinAprobar = porEscribir(estado).length - listos.length;
   const envios = enviosHechos(estado);
-  const viendo = envios.find((e) => e.contacto.id === abierto);
+
+  // Los que están por salir se ven como saldrían, con el pie legal.
+  const porSalir: Envio[] = listos.map((c) => {
+    const correo = armarCorreo(estado.borradores[c.id], c, estado.ajustes);
+    return { contacto: c, correo: { contactoId: c.id, para: c.correo ?? "", asunto: correo.asunto, texto: correo.texto, fecha: "" }, respuesta: null };
+  });
+  const elegido = envios.find((e) => e.contacto.id === abierto) ?? porSalir.find((e) => e.contacto.id === abierto);
+  // En la computadora siempre se ve uno: el primero por salir o, si ya enviaste todo, el más nuevo.
+  const viendo = elegido ?? (esComputadora ? (porSalir[0] ?? envios[0]) : undefined);
+  const viendoPendiente = !!viendo && !viendo.correo.fecha;
 
   function enviar() {
     const cuantos = listos.length;
@@ -45,141 +69,160 @@ export function PantallaEnvio() {
     setTimeout(() => {
       actualizarEstado((e) => enviarSimulado(e, new Date()));
       setEnviando(false);
+      setAbierto(null);
       window.scrollTo({ top: 0, behavior: "smooth" });
       avisar(cuantos === 1 ? "¡Listo! Se envió 1 correo" : `¡Listo! Se enviaron ${cuantos} correos`);
     }, 900);
   }
 
-  return (
-    <div>
-      <Encabezado
-        paso={3}
-        titulo="Envío"
-        subtitulo={envios.length ? "A quién le escribiste y a qué hora." : "Revisa cuántos van y toca «Enviar»."}
-        ayuda={
-          <>
-            <p>Aquí envías los correos que aprobaste y ves a quién le escribiste y a qué hora. Toca uno para ver lo que le mandaste.</p>
-            <p>Es una simulación: ningún correo sale de aquí. En la versión real saldrían desde tu propio correo, poco a poco, para que no te marquen como spam.</p>
-          </>
-        }
-      />
+  const cuenta = envios.length
+    ? { numero: envios.length, texto: envios.length === 1 ? "correo enviado" : "correos enviados" }
+    : { numero: listos.length, texto: listos.length === 1 ? "correo listo para enviar" : "correos listos para enviar" };
 
-      {listos.length || envios.length ? (
+  const boton = listos.length ? (
+    <BotonPie
+      disabled={enviando}
+      onClick={enviar}
+      icono={enviando ? <LoaderCircle size={18} aria-hidden className="animate-spin" /> : <Send size={18} aria-hidden />}
+    >
+      {enviando ? "Enviando…" : listos.length === 1 ? "Enviar 1 correo" : `Enviar ${listos.length} correos`}
+    </BotonPie>
+  ) : envios.length ? (
+    <EnlacePie href="/seguimiento" icono={<ArrowRight size={18} aria-hidden />}>
+      Siguiente: ver quién contestó
+    </EnlacePie>
+  ) : undefined;
+  const nota = listos.length ? "Simulación: no sale ningún correo de verdad." : undefined;
+
+  return (
+    <PanelNexora
+      titulo="Envío"
+      ayuda={
         <>
-          <section className="entrada relative mb-3 overflow-hidden rounded-tarjeta border border-linea bg-linear-to-br from-superficie-2 to-superficie p-5 text-white shadow-tarjeta sm:p-6">
-            <div aria-hidden className="absolute -top-24 -right-16 h-64 w-64 rounded-full bg-marca-600/35 blur-3xl" />
-            <div className="relative flex items-center gap-4">
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10">
-                <Send size={26} aria-hidden className="-translate-x-0.5" />
+          <p>Aquí envías los correos que aprobaste y ves a quién le escribiste y a qué hora. Toca uno para ver lo que le mandaste.</p>
+          <p>Es una simulación: ningún correo sale de aquí. En la versión real saldrían desde tu propio correo, poco a poco, para que no te marquen como spam.</p>
+        </>
+      }
+      pastilla={
+        viendo ? (
+          <PastillaCliente texto={viendo.correo.para} />
+        ) : listos.length || envios.length ? (
+          <PastillaCliente
+            icono={
+              <IconoCirculo>
+                <Send size={19} strokeWidth={2.4} className="-translate-x-px" />
+              </IconoCirculo>
+            }
+            texto={envios.length ? `${envios.length} ${envios.length === 1 ? "enviado" : "enviados"}` : `${listos.length} por enviar`}
+          />
+        ) : undefined
+      }
+      etiquetaLista="Tus correos"
+      lista={
+        listos.length || envios.length ? (
+          <div className="space-y-3">
+            {/* En el celular la cuenta ya va en la pastilla verde de arriba. */}
+            <div className="hidden items-center gap-2.5 rounded-full bg-pildora py-1.5 pr-4 pl-1.5 lg:flex">
+              <span className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-marca-600 text-white">
+                <Send size={19} aria-hidden className="-translate-x-px" />
               </span>
-              {envios.length ? (
-                <div className="min-w-0 flex-1">
-                  <p className="cifras text-5xl leading-none font-bold tracking-tight">{envios.length}</p>
-                  <p className="mt-1 text-lg text-white/85">{envios.length === 1 ? "correo enviado" : "correos enviados"}</p>
-                </div>
-              ) : (
-                <div className="min-w-0 flex-1">
-                  <p className="cifras text-5xl leading-none font-bold tracking-tight">{listos.length}</p>
-                  <p className="mt-1 text-lg text-white/85">{listos.length === 1 ? "correo listo para enviar" : "correos listos para enviar"}</p>
-                </div>
-              )}
+              <p className="min-w-0 leading-tight">
+                <span className="cifras block text-[26px] leading-none font-bold text-white">{cuenta.numero}</span>
+                <span className="block truncate text-[12.5px] font-semibold text-tinta-2">{cuenta.texto}</span>
+              </p>
             </div>
             {envios.length && listos.length ? (
-              <p className="relative mt-4 rounded-2xl bg-white/10 px-4 py-2.5 font-semibold">
-                {listos.length === 1 ? "1 correo listo para enviar" : `${listos.length} correos listos para enviar`}
+              <p className="px-2 pt-1 text-[13px] font-semibold text-tinta-2 lg:pt-0">
+                {listos.length === 1 ? "Y 1 listo para enviar" : `Y ${listos.length} listos para enviar`}
               </p>
             ) : null}
-          </section>
+            {sinAprobar > 0 ? (
+              <p className="rounded-2xl bg-ambar-50 px-3.5 py-2.5 text-[13px] font-semibold text-ambar-700">
+                {sinAprobar === 1 ? "Te falta aprobar 1 correo." : `Te faltan ${sinAprobar} correos por aprobar.`}{" "}
+                <Link href="/redactar" className="underline">
+                  Ir a Redactar
+                </Link>
+              </p>
+            ) : null}
 
-          <p className="entrada mb-6 flex items-center gap-2 px-1 text-sm font-semibold text-violeta-700">
-            <FlaskConical size={16} aria-hidden className="shrink-0" />
-            Simulación: no sale ningún correo de verdad.
-          </p>
-
-          {sinAprobar > 0 ? (
-            <p className="mb-6 rounded-2xl bg-ambar-50 px-4 py-3 text-sm font-semibold text-ambar-700">
-              {sinAprobar === 1 ? "Te falta aprobar 1 correo." : `Te faltan ${sinAprobar} correos por aprobar.`}{" "}
-              <BotonEnlace href="/redactar" variante="fantasma" tamano="sm" className="-my-1 underline">
-                Ir a Redactar
-              </BotonEnlace>
-            </p>
-          ) : null}
-
-          {envios.length ? (
-            <section aria-labelledby="titulo-enviados">
-              <h2 id="titulo-enviados" className="mb-3 font-display text-xl font-bold">
-                Enviados
-              </h2>
-              <Tarjeta className="overflow-hidden">
-                <ul className="divide-y divide-linea">
-                  {envios.map((e) => (
+            {porSalir.length ? (
+              <section aria-label="Listos para enviar" className="space-y-[11px]">
+                <TituloLista className="pt-1">Listos para enviar ({porSalir.length})</TituloLista>
+                <ul className="space-y-[11px]">
+                  {porSalir.map((e) => (
                     <li key={e.contacto.id}>
-                      <button
-                        type="button"
-                        onClick={() => setAbierto(e.contacto.id)}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-superficie-2/70 sm:px-5"
-                      >
-                        <Avatar nombre={e.contacto.nombre} tamano={40} />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-semibold text-tinta">
-                            {nombreVisible(e.contacto.nombre, e.contacto.esEjemplo)}
-                          </span>
-                          <span className="block truncate text-sm text-suave">{e.correo.para}</span>
-                        </span>
-                        <span className="cifras shrink-0 text-sm font-semibold text-tinta-2">{cuandoCorto(e.correo.fecha)}</span>
-                        <ChevronRight size={18} aria-hidden className="shrink-0 text-tenue" />
-                      </button>
+                      <Fila envio={e} activa={e.contacto.id === viendo?.contacto.id} onAbrir={() => setAbierto(e.contacto.id)} />
                     </li>
                   ))}
                 </ul>
-              </Tarjeta>
-            </section>
-          ) : null}
+              </section>
+            ) : null}
 
-          <BarraAccion>
-            {listos.length ? (
-              <Boton
-                className={BOTON_BARRA}
-                disabled={enviando}
-                onClick={enviar}
-                icono={
-                  enviando ? (
-                    <LoaderCircle size={19} aria-hidden className="animate-spin" />
-                  ) : (
-                    <Send size={19} aria-hidden />
-                  )
-                }
-              >
-                {enviando ? "Enviando…" : listos.length === 1 ? "Enviar 1 correo" : `Enviar ${listos.length} correos`}
-              </Boton>
-            ) : (
-              <BotonEnlace href="/seguimiento" className={BOTON_BARRA} icono={<ArrowRight size={19} aria-hidden />}>
-                Siguiente: ver quién contestó
-              </BotonEnlace>
-            )}
-          </BarraAccion>
-        </>
-      ) : (
-        <EstadoVacio
-          icono={<Send size={30} aria-hidden />}
-          titulo="No tienes correos listos"
-          texto={sinAprobar > 0 ? "Aprueba tus correos en «Redactar» y aquí los envías." : "Elige negocios en «Buscar» y redacta su correo."}
-        >
-          {sinAprobar > 0 ? (
-            <BotonEnlace href="/redactar" icono={<PenLine size={18} aria-hidden />}>
-              Ir a Redactar
-            </BotonEnlace>
+            {envios.length ? (
+              <section aria-label="Enviados" className="space-y-[11px]">
+                <TituloLista className="pt-1">Enviados ({envios.length})</TituloLista>
+                <ul className="space-y-[11px]">
+                  {envios.map((e) => (
+                    <li key={e.contacto.id}>
+                      <Fila envio={e} activa={e.contacto.id === viendo?.contacto.id} onAbrir={() => setAbierto(e.contacto.id)} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </div>
+        ) : (
+          <p className="px-2 py-3 text-sm text-tinta-2">No tienes correos listos.</p>
+        )
+      }
+      etiquetaPrincipal={viendo ? (viendoPendiente ? "Correo listo para enviar" : "Correo enviado") : "Correo"}
+      modo="detalle"
+      detalleAbierto={!!elegido}
+      onCerrarDetalle={() => setAbierto(null)}
+      encabezadoDetalle={viendo ? <PastillaCliente texto={viendo.correo.para} /> : undefined}
+      principal={
+        <ContenidoClaro className="space-y-3">
+          {viendo ? (
+            <>
+              <AvisoEjemplo>Simulación: no sale ningún correo de verdad.</AvisoEjemplo>
+              <VistaCorreo envio={viendo} ajustes={estado.ajustes} pendiente={viendoPendiente} />
+            </>
           ) : (
-            <BotonEnlace href="/buscar" icono={<Search size={18} aria-hidden />}>
-              Ir a Buscar
-            </BotonEnlace>
+            <VacioClaro
+              icono={<Send size={28} aria-hidden className="-translate-x-0.5" />}
+              titulo="No tienes correos listos"
+              texto={sinAprobar > 0 ? "Aprueba tus correos en «Redactar» y aquí los envías." : "Elige negocios en «Buscar» y redacta su correo."}
+            >
+              {sinAprobar > 0 ? (
+                <EnlacePie href="/redactar" icono={<PenLine size={18} aria-hidden />}>
+                  Ir a Redactar
+                </EnlacePie>
+              ) : (
+                <EnlacePie href="/buscar" icono={<Search size={18} aria-hidden />}>
+                  Ir a Buscar
+                </EnlacePie>
+              )}
+            </VacioClaro>
           )}
-        </EstadoVacio>
-      )}
+        </ContenidoClaro>
+      }
+      pie={boton}
+      notaPie={nota}
+      pieLista={boton ?? null}
+      notaPieLista={nota}
+    />
+  );
+}
 
-      <Hoja abierta={!!viendo} onCerrar={() => setAbierto(null)} titulo="Correo enviado">
-        {viendo ? <VistaCorreo envio={viendo} ajustes={estado.ajustes} /> : null}
-      </Hoja>
-    </div>
+function Fila({ envio: e, activa, onAbrir }: { envio: Envio; activa: boolean; onAbrir: () => void }) {
+  const nombre = nombreVisible(e.contacto.nombre, e.contacto.esEjemplo);
+  const cuando = e.correo.fecha ? cuandoCorto(e.correo.fecha) : "";
+  return (
+    <PildoraLista
+      activa={activa}
+      titulo={nombre}
+      detalle={cuando ? `${cuando} · ${e.correo.para}` : e.correo.para}
+      onClick={onAbrir}
+    />
   );
 }

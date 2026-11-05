@@ -1,10 +1,19 @@
 "use client";
 
-import { ArrowLeft, ArrowUpDown, Ban, CheckCheck, MessageCircle, Send, SendHorizontal } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
-import { Avatar } from "@/components/Avatar";
+import { ArrowUpDown, Ban, CheckCheck, ChevronDown, FlaskConical, MessageCircle, Send, SendHorizontal } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  CargandoPanel,
+  ContenidoClaro,
+  EnlacePie,
+  PanelNexora,
+  PastillaCliente,
+  PildoraLista,
+  VacioClaro,
+  useEsComputadora,
+} from "@/components/PanelNexora";
 import { olvidarPedido, useLoPedido } from "@/components/ventanas";
-import { BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, Selector, cx } from "@/components/ui";
+import { cx } from "@/components/ui";
 import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
 import { nombreVisible } from "@/lib/contactos";
 import {
@@ -17,22 +26,7 @@ import {
   type OrdenChat,
   type Platica,
 } from "@/lib/envio";
-import { cuandoCorto, hora } from "@/lib/fechas";
-
-const COMPUTADORA = "(min-width: 1024px)";
-
-/** true en pantallas grandes, donde la lista y la plática se ven lado a lado. */
-function useEsComputadora(): boolean {
-  return useSyncExternalStore(
-    (avisar) => {
-      const m = window.matchMedia(COMPUTADORA);
-      m.addEventListener("change", avisar);
-      return () => m.removeEventListener("change", avisar);
-    },
-    () => window.matchMedia(COMPUTADORA).matches,
-    () => false,
-  );
-}
+import { hora } from "@/lib/fechas";
 
 export function PantallaChat() {
   const estado = useEstado();
@@ -58,7 +52,6 @@ export function PantallaChat() {
   // en el celular, sólo la que tocas.
   const actual =
     lista.find((p) => p.contacto.id === abiertoId) ?? (esComputadora ? (lista.find((p) => !p.baja) ?? lista[0]) : undefined);
-  const enPantallaCompleta = !!actual && !esComputadora;
 
   const idActual = actual?.contacto.id;
   const sinLeer = actual?.noLeida;
@@ -66,154 +59,112 @@ export function PantallaChat() {
     if (idActual && sinLeer) actualizarEstado((e) => marcarLeida(e, idActual));
   }, [idActual, sinLeer]);
 
-  // En el celular la plática tapa toda la pantalla: la página de atrás no se mueve.
-  useEffect(() => {
-    if (!enPantallaCompleta) return;
-    const antes = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = antes;
-    };
-  }, [enPantallaCompleta]);
-
-  if (!enNavegador) return <Cargando />;
+  if (!enNavegador) return <CargandoPanel />;
   const enviados = enviosHechos(estado).length;
+  const nombreActual = actual ? nombreVisible(actual.contacto.nombre, actual.contacto.esEjemplo) : "";
 
   return (
-    <div>
-      <Encabezado
-        paso={5}
-        titulo="Chat"
-        subtitulo="Platica con los negocios que te contestaron."
-        extra={actual ? <PastillaContacto platica={actual} /> : undefined}
-        ayuda={
+    <PanelNexora
+      titulo="Chat"
+      ayuda={
+        <>
+          <p>Aquí aparecen los negocios que te contestaron. Toca uno para ver la plática y responderle.</p>
+          <p>Es de ejemplo: las respuestas las inventa la demo y lo que escribes no se envía.</p>
+        </>
+      }
+      pastilla={
+        actual ? (
+          <PastillaCliente texto={actual.correo.para} />
+        ) : lista.length ? (
+          <PastillaCliente texto={lista.length === 1 ? "1 te contestó" : `${lista.length} te contestaron`} />
+        ) : undefined
+      }
+      etiquetaLista="Negocios que te contestaron"
+      lista={
+        lista.length ? (
           <>
-            <p>Aquí aparecen los negocios que te contestaron. Tócalos para ver la plática y responderles.</p>
-            <p>En la demo las respuestas son de ejemplo y lo que escribes no se envía.</p>
-          </>
-        }
-      />
-
-      {lista.length === 0 ? (
-        enviados ? (
-          <EstadoVacio
-            icono={<MessageCircle size={30} aria-hidden />}
-            titulo="Todavía nadie te contesta"
-            texto="Cuando alguien te conteste, aparecerá aquí."
-          />
-        ) : (
-          <EstadoVacio
-            icono={<MessageCircle size={30} aria-hidden />}
-            titulo="Todavía no envías ningún correo"
-            texto="Cuando te contesten, aquí platicas con ellos."
-          >
-            <BotonEnlace href="/envio" icono={<Send size={18} aria-hidden />}>
-              Ir a Envío
-            </BotonEnlace>
-          </EstadoVacio>
-        )
-      ) : (
-        <div className="lg:grid lg:h-[calc(100dvh-20rem)] lg:min-h-[28rem] lg:grid-cols-[19rem_minmax(0,1fr)] lg:gap-3">
-          <section
-            aria-label="Negocios que te contestaron"
-            className="entrada overflow-hidden rounded-tarjeta border border-linea bg-superficie shadow-tarjeta lg:flex lg:min-h-0 lg:flex-col"
-          >
-            <div className="flex items-center gap-2.5 border-b border-linea px-3 py-2.5">
-              <Selector
-                etiqueta="Ordenar"
-                icono={<ArrowUpDown size={16} aria-hidden />}
-                valor={orden}
-                onChange={(v) => setOrden(v as OrdenChat)}
-                className="flex-1"
+            <label className="relative mb-2.5 block">
+              <span className="sr-only">Ordenar</span>
+              <ArrowUpDown size={15} aria-hidden className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-marca-400" />
+              <select
+                value={orden}
+                onChange={(e) => setOrden(e.target.value as OrdenChat)}
+                className="h-9 w-full appearance-none rounded-full bg-pildora pr-9 pl-9 text-[13px] font-semibold text-tinta-2 outline-none focus:ring-2 focus:ring-marca-400"
               >
                 {ORDENES_CHAT.map((o) => (
                   <option key={o.valor} value={o.valor}>
                     {o.texto}
                   </option>
                 ))}
-              </Selector>
-              <Insignia tipo="ejemplo" />
-            </div>
-            <ul className="barra-fina divide-y divide-linea lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+              </select>
+              <ChevronDown size={15} aria-hidden className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-suave" />
+            </label>
+            <ul className="space-y-[11px]">
               {lista.map((p) => (
                 <li key={p.contacto.id}>
-                  <FilaPlatica
-                    platica={p}
-                    activa={esComputadora && p.contacto.id === actual?.contacto.id}
-                    onAbrir={() => setAbiertoId(p.contacto.id)}
-                  />
+                  <FilaPlatica platica={p} activa={p.contacto.id === actual?.contacto.id} onAbrir={() => setAbiertoId(p.contacto.id)} />
                 </li>
               ))}
             </ul>
-          </section>
-
-          {actual ? (
-            <div
-              role={enPantallaCompleta ? "dialog" : undefined}
-              aria-modal={enPantallaCompleta || undefined}
-              aria-label={`Plática con ${nombreVisible(actual.contacto.nombre, actual.contacto.esEjemplo)}`}
-              className="fixed inset-0 z-50 flex flex-col bg-superficie pt-[env(safe-area-inset-top,0px)] lg:static lg:z-auto lg:min-h-0 lg:overflow-hidden lg:rounded-tarjeta lg:border lg:border-linea lg:pt-0 lg:shadow-tarjeta"
-            >
-              <Conversacion key={actual.contacto.id} platica={actual} onVolver={() => setAbiertoId(null)} />
-            </div>
-          ) : null}
-        </div>
-      )}
-    </div>
+          </>
+        ) : (
+          <p className="px-2 py-3 text-sm text-tinta-2">{enviados ? "Todavía nadie te contesta." : "Todavía no envías ningún correo."}</p>
+        )
+      }
+      etiquetaPrincipal={actual ? `Plática con ${nombreActual}` : "Plática"}
+      modo="detalle"
+      detalleAbierto={!!actual}
+      onCerrarDetalle={() => setAbiertoId(null)}
+      encabezadoDetalle={actual ? <PastillaCliente texto={actual.correo.para} /> : undefined}
+      principalConScroll={false}
+      principal={actual ? <Conversacion key={actual.contacto.id} platica={actual} /> : <SinPlaticas enviados={enviados} />}
+    />
   );
 }
 
-/** Con quién estás platicando, dentro del panel azul de arriba. */
-function PastillaContacto({ platica: p }: { platica: Platica }) {
+function SinPlaticas({ enviados }: { enviados: number }) {
   return (
-    <p className="inline-flex max-w-full items-center gap-2.5 rounded-full bg-logo py-1.5 pr-4 pl-1.5 text-white">
-      <Avatar nombre={p.contacto.nombre} tamano={30} />
-      <span className="min-w-0 truncate text-sm font-semibold">{p.correo.para}</span>
-    </p>
+    <ContenidoClaro className="flex-1">
+      <VacioClaro
+        icono={<MessageCircle size={28} aria-hidden />}
+        titulo={enviados ? "Todavía nadie te contesta" : "Todavía no envías ningún correo"}
+        texto={enviados ? "Cuando alguien te conteste, aparecerá aquí." : "Cuando te contesten, aquí platicas con ellos."}
+      >
+        {enviados ? null : (
+          <EnlacePie href="/envio" icono={<Send size={18} aria-hidden />}>
+            Ir a Envío
+          </EnlacePie>
+        )}
+      </VacioClaro>
+    </ContenidoClaro>
   );
 }
 
 function FilaPlatica({ platica: p, activa, onAbrir }: { platica: Platica; activa: boolean; onAbrir: () => void }) {
   const nombre = nombreVisible(p.contacto.nombre, p.contacto.esEjemplo);
   return (
-    <button
-      type="button"
+    <PildoraLista
+      activa={activa}
+      titulo={nombre}
+      detalle={p.baja && p.ultimo.de === "ellos" ? "Pidió no recibir correos" : p.correo.para}
+      etiqueta={`${nombre}${p.noLeida ? ", mensaje nuevo" : ""}${p.baja ? ", pidió no recibir correos" : ""}`}
+      apagada={p.baja}
       onClick={onAbrir}
-      aria-current={activa || undefined}
-      aria-label={`${nombre}${p.noLeida ? ", mensaje nuevo" : ""}`}
-      className={cx(
-        "flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors",
-        activa ? "bg-marca-600/20" : "hover:bg-superficie-2/70",
-      )}
-    >
-      <span className="relative shrink-0">
-        <Avatar nombre={p.contacto.nombre} tamano={42} apagado={p.baja} />
-        {p.noLeida ? <span aria-hidden className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-marca-400 ring-2 ring-superficie" /> : null}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-baseline gap-2">
-          <span className={cx("min-w-0 flex-1 truncate", p.noLeida ? "font-bold text-white" : "font-semibold text-tinta")}>{nombre}</span>
-          <span className={cx("cifras shrink-0 text-xs", p.noLeida ? "font-bold text-marca-400" : "text-tenue")}>{cuandoCorto(p.ultimo.fecha)}</span>
-        </span>
-        <span className={cx("block truncate text-sm", p.noLeida ? "font-semibold text-tinta-2" : "text-suave")}>
-          {p.baja && p.ultimo.de === "ellos" ? (
-            <span className="inline-flex items-center gap-1 font-semibold text-rojo-700">
-              <Ban size={13} aria-hidden /> Pidió no recibir correos
-            </span>
-          ) : (
-            `${p.ultimo.de === "yo" ? "Tú: " : ""}${p.ultimo.texto}`
-          )}
-        </span>
-      </span>
-    </button>
+      extra={
+        p.baja ? (
+          <Ban size={16} aria-hidden className={activa ? "text-[#8e1b1b]" : "text-rojo-700"} />
+        ) : p.noLeida ? (
+          <span aria-hidden className="block h-3 w-3 rounded-full bg-marca-500 ring-2 ring-pildora" />
+        ) : null
+      }
+    />
   );
 }
 
-function Conversacion({ platica: p, onVolver }: { platica: Platica; onVolver: () => void }) {
+function Conversacion({ platica: p }: { platica: Platica }) {
   const [texto, setTexto] = useState("");
   const [correoCompleto, setCorreoCompleto] = useState(false);
   const finRef = useRef<HTMLDivElement>(null);
-  const nombre = nombreVisible(p.contacto.nombre, p.contacto.esEjemplo);
   const cuantos = p.mensajes.length;
 
   useEffect(() => {
@@ -230,19 +181,10 @@ function Conversacion({ platica: p, onVolver }: { platica: Platica; onVolver: ()
 
   return (
     <>
-      <header className="flex shrink-0 items-center gap-3 border-b border-linea bg-superficie py-2.5 pr-[max(1rem,env(safe-area-inset-right,0px))] pl-[max(0.5rem,env(safe-area-inset-left,0px))] lg:px-4 lg:py-3">
-        <button type="button" onClick={onVolver} aria-label="Volver a la lista" className="rounded-full p-2 text-tinta-2 hover:bg-white/10 lg:hidden">
-          <ArrowLeft size={22} aria-hidden />
-        </button>
-        <Avatar nombre={p.contacto.nombre} tamano={40} apagado={p.baja} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-tinta">{nombre}</p>
-          <p className="truncate text-xs text-suave">{p.correo.para}</p>
-        </div>
-        <Insignia tipo="ejemplo" />
-      </header>
-
-      <div className="fondo-platica barra-fina min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-4 sm:px-5">
+      <div className="fondo-platica barra-fina min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-4 sm:px-6">
+        <p className="mx-auto flex w-fit max-w-full items-center gap-1.5 rounded-lg bg-[#fff5c4] px-3 py-1.5 text-center text-xs font-semibold text-[#5c4b00] shadow-sm">
+          <FlaskConical size={13} aria-hidden className="shrink-0" /> Ejemplo: esta plática la inventa la demo. Lo que escribes no se envía.
+        </p>
         <Burbuja de="yo" fecha={p.correo.fecha}>
           <p className="font-semibold">{p.correo.asunto}</p>
           <p className={cx("mt-1 whitespace-pre-wrap", !correoCompleto && "line-clamp-5")}>{p.correo.texto}</p>
@@ -260,7 +202,7 @@ function Conversacion({ platica: p, onVolver }: { platica: Platica; onVolver: ()
           </Burbuja>
         ))}
         {p.baja ? (
-          <p className="mx-auto flex w-fit max-w-full items-center gap-1.5 rounded-xl bg-[#fde2e2] px-3 py-2 text-xs font-semibold text-[#8e1b1b] shadow-sm">
+          <p className="mx-auto flex w-fit max-w-full items-center gap-1.5 rounded-lg bg-[#fde2e2] px-3 py-2 text-xs font-semibold text-[#8e1b1b] shadow-sm">
             <Ban size={13} aria-hidden className="shrink-0" /> Pidió no recibir más correos. Quedó en «No contactar».
           </p>
         ) : null}
@@ -268,13 +210,13 @@ function Conversacion({ platica: p, onVolver }: { platica: Platica; onVolver: ()
       </div>
 
       {p.baja ? (
-        <p className="fondo-platica shrink-0 border-t border-black/10 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] text-center text-sm font-semibold text-chat-tenue lg:pb-3">
+        <p className="shrink-0 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] text-center text-sm font-semibold text-suave lg:pb-3">
           Ya no le puedes escribir.
         </p>
       ) : (
         <form
           onSubmit={mandar}
-          className="fondo-platica flex shrink-0 items-end gap-2 border-t border-black/10 pt-2.5 pr-[max(0.75rem,env(safe-area-inset-right,0px))] pb-[max(0.625rem,env(safe-area-inset-bottom,0px))] pl-[max(0.75rem,env(safe-area-inset-left,0px))] lg:px-3 lg:pb-3"
+          className="flex shrink-0 items-end gap-2 pt-2 pr-[max(0.5rem,env(safe-area-inset-right,0px))] pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] pl-[max(0.5rem,env(safe-area-inset-left,0px))] lg:px-0 lg:pt-2 lg:pb-2"
         >
           <label htmlFor={`respuesta-${p.contacto.id}`} className="sr-only">
             Tu respuesta
@@ -288,13 +230,13 @@ function Conversacion({ platica: p, onVolver }: { platica: Platica; onVolver: ()
             }}
             rows={Math.min(5, texto.split("\n").length)}
             placeholder="Escribe tu respuesta (simulación)"
-            className="max-h-36 min-h-11 flex-1 resize-none rounded-[22px] border border-black/10 bg-white px-4 py-2.5 text-[15px] leading-snug text-chat-tinta shadow-sm outline-none placeholder:text-chat-tenue focus:ring-4 focus:ring-marca-600/20"
+            className="max-h-36 min-h-11 flex-1 resize-none rounded-[22px] bg-pildora px-4 py-2.5 text-[15px] leading-snug text-tinta outline-none placeholder:text-suave focus:ring-2 focus:ring-marca-400"
           />
           <button
             type="submit"
             disabled={!texto.trim()}
             aria-label="Enviar respuesta"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-marca-600 text-white shadow-sm transition-colors hover:bg-marca-700 disabled:opacity-40"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-marca-600 text-white transition-colors hover:bg-marca-700 disabled:opacity-40"
           >
             <SendHorizontal size={20} aria-hidden />
           </button>
@@ -311,8 +253,8 @@ function Burbuja({ de, fecha, children }: { de: "yo" | "ellos"; fecha: string; c
     <div className={cx("flex", mio ? "justify-end" : "justify-start")}>
       <div
         className={cx(
-          "max-w-[85%] rounded-xl px-3 py-2 text-[15px] leading-relaxed text-chat-tinta shadow-sm sm:max-w-[75%]",
-          mio ? "rounded-tr-sm bg-chat-mio" : "rounded-tl-sm bg-chat-suyo",
+          "max-w-[85%] rounded-lg px-3 py-2 text-[15px] leading-relaxed text-chat-tinta shadow-sm sm:max-w-[70%] lg:text-[16px]",
+          mio ? "rounded-tr-none bg-chat-mio" : "rounded-tl-none bg-chat-suyo",
         )}
       >
         <span className="sr-only">{mio ? "Tú escribiste:" : "Te contestó:"}</span>

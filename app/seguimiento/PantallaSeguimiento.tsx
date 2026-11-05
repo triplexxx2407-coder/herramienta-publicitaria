@@ -1,13 +1,24 @@
 "use client";
 
-import { ArrowRight, Ban, ChartColumn, ChevronDown, ChevronRight, Clock, MessageCircle, Reply, Send, type LucideIcon } from "lucide-react";
+import { ArrowRight, Ban, ChartLine, ChevronDown, Clock, MessageCircle, Reply, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useId, useState, type ReactNode } from "react";
-import { Avatar } from "@/components/Avatar";
-import { Hoja } from "@/components/Hoja";
-import { VistaCorreo } from "@/components/VistaCorreo";
+import {
+  BotonPie,
+  CargandoPanel,
+  ContenidoClaro,
+  EnlacePie,
+  HojaBlanca,
+  IconoCirculo,
+  MarcaEjemplo,
+  PanelNexora,
+  PastillaCliente,
+  PildoraLista,
+  VacioClaro,
+} from "@/components/PanelNexora";
 import { pedirAbrir } from "@/components/ventanas";
-import { BOTON_BARRA, BarraAccion, Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, Tarjeta, cx } from "@/components/ui";
+import { VistaCorreo } from "@/components/VistaCorreo";
+import { cx } from "@/components/ui";
 import { useEnNavegador, useEstado } from "@/lib/almacen";
 import { nombreVisible } from "@/lib/contactos";
 import { enviosHechos, pideBaja, type Envio } from "@/lib/envio";
@@ -17,173 +28,202 @@ export function PantallaSeguimiento() {
   const estado = useEstado();
   const enNavegador = useEnNavegador();
   const router = useRouter();
+  // El negocio abierto. Mientras no tocas ninguno, a la derecha se ve el resumen.
   const [abierto, setAbierto] = useState<string | null>(null);
-  if (!enNavegador) return <Cargando />;
+  if (!enNavegador) return <CargandoPanel />;
 
   const envios = enviosHechos(estado);
   const contestaron = envios.filter((e) => e.respuesta).sort((a, b) => b.respuesta!.fecha.localeCompare(a.respuesta!.fecha));
   const noContestaron = envios.filter((e) => !e.respuesta);
   const viendo = envios.find((e) => e.contacto.id === abierto);
+  const resumen = `${contestaron.length} de ${envios.length} te contestaron`;
 
   function abrirChat(id: string) {
     pedirAbrir("/chat", id);
     router.push("/chat");
   }
 
+  const botonLista = contestaron.length ? (
+    <EnlacePie href="/chat" icono={<ArrowRight size={18} aria-hidden />}>
+      Siguiente: el chat
+    </EnlacePie>
+  ) : null;
+
   return (
-    <div>
-      <Encabezado
-        paso={4}
-        titulo="Seguimiento"
-        subtitulo="Quién te contestó y quién no."
-        ayuda={
-          <>
-            <p>Abre una lista para ver quién te contestó y quién no. Toca un negocio para ver lo que le escribiste.</p>
-            <p>Como la demo no envía nada, las respuestas son de ejemplo: las inventa la demo para que veas cómo se vería.</p>
-          </>
-        }
-      />
-
-      {envios.length === 0 ? (
-        <EstadoVacio
-          icono={<ChartColumn size={30} aria-hidden />}
-          titulo="Todavía no envías ningún correo"
-          texto="Cuando envíes tus correos, aquí verás quién te contestó."
-        >
-          <BotonEnlace href="/envio" icono={<Send size={18} aria-hidden />}>
-            Ir a Envío
-          </BotonEnlace>
-        </EstadoVacio>
-      ) : (
+    <PanelNexora
+      titulo="Seguimiento"
+      ayuda={
         <>
-          <p className="entrada mb-4 flex items-center gap-2 px-1 text-sm font-semibold text-violeta-700">
-            <Insignia tipo="ejemplo" /> Las respuestas las inventa la demo.
-          </p>
-
-          <div className="space-y-3">
-            <Lista icono={Reply} titulo="Te contestaron" cuenta={contestaron.length} tono="verde">
+          <p>Abre una lista para ver quién te contestó y quién no. Toca un negocio para ver lo que le escribiste.</p>
+          <p>Como la demo no envía nada, las respuestas son de ejemplo: las inventa la demo para que veas cómo se vería.</p>
+        </>
+      }
+      pastilla={
+        viendo ? (
+          <PastillaCliente texto={viendo.correo.para} />
+        ) : envios.length ? (
+          <PastillaCliente
+            icono={
+              <IconoCirculo>
+                <ChartLine size={20} strokeWidth={2.4} />
+              </IconoCirculo>
+            }
+            texto={resumen}
+          />
+        ) : undefined
+      }
+      etiquetaLista="Quién te contestó"
+      lista={
+        envios.length ? (
+          <div className="space-y-[11px]">
+            <p className="flex items-center gap-2 px-1.5 text-[12.5px] font-semibold text-tinta-2">
+              <MarcaEjemplo /> Las respuestas las inventa la demo.
+            </p>
+            <Lista titulo="Te contestaron" cuenta={contestaron.length}>
               {contestaron.map((e) => (
-                <Fila
-                  key={e.contacto.id}
-                  envio={e}
-                  detalle={
-                    pideBaja(e.respuesta!.texto) ? (
-                      <span className="inline-flex items-center gap-1 font-semibold text-rojo-700">
-                        <Ban size={13} aria-hidden /> Pidió no recibir correos
-                      </span>
-                    ) : (
-                      `«${e.respuesta!.texto}»`
-                    )
-                  }
-                  cuando={cuandoCorto(e.respuesta!.fecha)}
-                  onAbrir={() => setAbierto(e.contacto.id)}
-                />
+                <li key={e.contacto.id}>
+                  <Fila
+                    envio={e}
+                    activa={e.contacto.id === viendo?.contacto.id}
+                    detalle={pideBaja(e.respuesta!.texto) ? "Pidió no recibir correos" : `${cuandoCorto(e.respuesta!.fecha)} · ${e.correo.para}`}
+                    extra={pideBaja(e.respuesta!.texto) ? <Ban size={16} aria-hidden className="text-rojo-700" /> : null}
+                    onAbrir={() => setAbierto(e.contacto.id)}
+                  />
+                </li>
               ))}
             </Lista>
-            <Lista icono={Clock} titulo="No te contestaron" cuenta={noContestaron.length} tono="gris">
+            <Lista titulo="No te contestaron" cuenta={noContestaron.length}>
               {noContestaron.map((e) => (
-                <Fila
-                  key={e.contacto.id}
-                  envio={e}
-                  detalle={e.correo.para}
-                  cuando={cuandoCorto(e.correo.fecha)}
-                  onAbrir={() => setAbierto(e.contacto.id)}
-                />
+                <li key={e.contacto.id}>
+                  <Fila
+                    envio={e}
+                    activa={e.contacto.id === viendo?.contacto.id}
+                    detalle={`${cuandoCorto(e.correo.fecha)} · ${e.correo.para}`}
+                    onAbrir={() => setAbierto(e.contacto.id)}
+                  />
+                </li>
               ))}
             </Lista>
           </div>
+        ) : (
+          <p className="px-2 py-3 text-sm text-tinta-2">Todavía no envías ningún correo.</p>
+        )
+      }
+      etiquetaPrincipal={viendo ? (viendo.respuesta ? "Te contestó" : "Correo enviado") : "Resumen"}
+      modo="detalle"
+      detalleAbierto={!!viendo}
+      onCerrarDetalle={() => setAbierto(null)}
+      encabezadoDetalle={viendo ? <PastillaCliente texto={viendo.correo.para} /> : undefined}
+      principal={
+        <ContenidoClaro>
+          {viendo ? (
+            <VistaCorreo envio={viendo} ajustes={estado.ajustes} />
+          ) : envios.length ? (
+            <Resumen contestaron={contestaron.length} noContestaron={noContestaron.length} />
+          ) : (
+            <VacioClaro
+              icono={<ChartLine size={28} aria-hidden />}
+              titulo="Todavía no envías ningún correo"
+              texto="Cuando envíes tus correos, aquí verás quién te contestó."
+            >
+              <EnlacePie href="/envio" icono={<Send size={18} aria-hidden />}>
+                Ir a Envío
+              </EnlacePie>
+            </VacioClaro>
+          )}
+        </ContenidoClaro>
+      }
+      pie={
+        viendo?.respuesta ? (
+          <BotonPie icono={<MessageCircle size={18} aria-hidden />} onClick={() => abrirChat(viendo.contacto.id)}>
+            Abrir el chat
+          </BotonPie>
+        ) : (
+          (botonLista ?? undefined)
+        )
+      }
+      pieLista={botonLista}
+    />
+  );
+}
 
-          {contestaron.length ? (
-            <BarraAccion>
-              <BotonEnlace href="/chat" className={BOTON_BARRA} icono={<ArrowRight size={19} aria-hidden />}>
-                Siguiente: el chat
-              </BotonEnlace>
-            </BarraAccion>
-          ) : null}
-        </>
-      )}
-
-      <Hoja
-        abierta={!!viendo}
-        onCerrar={() => setAbierto(null)}
-        titulo={viendo?.respuesta ? "Te contestó" : "Correo enviado"}
-        pie={
-          viendo?.respuesta ? (
-            <Boton className="w-full" icono={<MessageCircle size={18} aria-hidden />} onClick={() => abrirChat(viendo.contacto.id)}>
-              Abrir el chat
-            </Boton>
-          ) : undefined
-        }
-      >
-        {viendo ? <VistaCorreo envio={viendo} ajustes={estado.ajustes} /> : null}
-      </Hoja>
+/** Lo que se ve a la derecha mientras no abres a nadie: cuántos contestaron y cuántos no. */
+function Resumen({ contestaron, noContestaron }: { contestaron: number; noContestaron: number }) {
+  return (
+    <div className="mx-auto max-w-3xl space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <HojaBlanca className="px-4 py-4 sm:px-5">
+          <p className="flex items-center gap-2 text-sm font-semibold text-[#17603a]">
+            <Reply size={17} aria-hidden /> Te contestaron
+          </p>
+          <p className="cifras mt-1 text-4xl font-bold text-chat-tinta">{contestaron}</p>
+        </HojaBlanca>
+        <HojaBlanca className="px-4 py-4 sm:px-5">
+          <p className="flex items-center gap-2 text-sm font-semibold text-chat-tenue">
+            <Clock size={17} aria-hidden /> No te contestaron
+          </p>
+          <p className="cifras mt-1 text-4xl font-bold text-chat-tinta">{noContestaron}</p>
+        </HojaBlanca>
+      </div>
+      <p className="px-1 text-center text-sm text-chat-tenue">Abre una de las dos listas y toca un negocio para ver lo que le escribiste.</p>
     </div>
   );
 }
 
 /** Una lista que se abre y se cierra, con cuántos hay a la vista. */
-function Lista({
-  icono: Icono,
-  titulo,
-  cuenta,
-  tono,
-  children,
-}: {
-  icono: LucideIcon;
-  titulo: string;
-  cuenta: number;
-  tono: "verde" | "gris";
-  children: ReactNode;
-}) {
+function Lista({ titulo, cuenta, children }: { titulo: string; cuenta: number; children: ReactNode }) {
   const [abierta, setAbierta] = useState(false);
   const id = useId();
   return (
-    <Tarjeta className="entrada overflow-hidden">
+    <div>
       <button
         type="button"
         aria-expanded={abierta}
         aria-controls={id}
         onClick={() => setAbierta((a) => !a)}
-        className="flex w-full items-center gap-3.5 px-4 py-4 text-left transition-colors hover:bg-superficie-2/60 sm:px-5"
+        className={cx(
+          "flex min-h-[46px] w-full items-center gap-2.5 rounded-full py-1 pr-3.5 pl-1 text-left transition-colors",
+          abierta ? "bg-marca-600 text-white" : "bg-pildora text-tinta hover:bg-[#24466f]",
+        )}
       >
         <span
           className={cx(
-            "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl",
-            tono === "verde" ? "bg-verde-50 text-verde-700" : "bg-fondo text-suave",
+            "cifras flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-[17px] font-bold",
+            abierta ? "bg-white text-marca-700" : "bg-white/10 text-white",
           )}
         >
-          <Icono size={22} aria-hidden />
+          {cuenta}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-display text-lg leading-tight font-bold text-tinta">{titulo}</span>
-          <span className="block text-sm text-suave">{abierta ? "Toca para cerrar" : "Toca para ver la lista"}</span>
-        </span>
-        <span className="cifras text-3xl font-bold text-tinta">{cuenta}</span>
-        <ChevronDown size={20} aria-hidden className={cx("shrink-0 text-tenue transition-transform", abierta && "rotate-180")} />
+        <span className="min-w-0 flex-1 truncate text-[15px] font-bold">{titulo}</span>
+        <ChevronDown size={18} aria-hidden className={cx("shrink-0 transition-transform", abierta && "rotate-180")} />
       </button>
-      <div id={id} hidden={!abierta} className="border-t border-linea">
-        {cuenta ? <ul className="divide-y divide-linea">{children}</ul> : <p className="px-5 py-4 text-sm text-suave">Nadie por ahora.</p>}
+      <div id={id} hidden={!abierta} className="pt-[11px]">
+        {cuenta ? <ul className="space-y-[11px]">{children}</ul> : <p className="px-3 py-1 text-sm text-tinta-2">Nadie por ahora.</p>}
       </div>
-    </Tarjeta>
+    </div>
   );
 }
 
-function Fila({ envio: e, detalle, cuando, onAbrir }: { envio: Envio; detalle: ReactNode; cuando: string; onAbrir: () => void }) {
+function Fila({
+  envio: e,
+  activa,
+  detalle,
+  extra,
+  onAbrir,
+}: {
+  envio: Envio;
+  activa: boolean;
+  detalle: string;
+  extra?: ReactNode;
+  onAbrir: () => void;
+}) {
   return (
-    <li>
-      <button
-        type="button"
-        onClick={onAbrir}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-superficie-2/70 sm:px-5"
-      >
-        <Avatar nombre={e.contacto.nombre} tamano={40} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-semibold text-tinta">{nombreVisible(e.contacto.nombre, e.contacto.esEjemplo)}</span>
-          <span className="block truncate text-sm text-suave">{detalle}</span>
-        </span>
-        <span className="cifras shrink-0 text-sm text-suave">{cuando}</span>
-        <ChevronRight size={18} aria-hidden className="shrink-0 text-tenue" />
-      </button>
-    </li>
+    <PildoraLista
+      activa={activa}
+      titulo={nombreVisible(e.contacto.nombre, e.contacto.esEjemplo)}
+      detalle={detalle}
+      extra={extra}
+      onClick={onAbrir}
+    />
   );
 }

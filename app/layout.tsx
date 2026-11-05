@@ -16,7 +16,7 @@ export const viewport: Viewport = {
 };
 
 const FUENTES =
-  "https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap";
+  "https://fonts.googleapis.com/css2?family=Open+Sans:wght@800&family=Roboto:ital,wght@0,400;0,500;0,700;0,900;1,400;1,500;1,700&display=swap";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

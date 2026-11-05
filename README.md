@@ -15,8 +15,8 @@ dominio que existe sólo para ejemplos.
    «BAJA» salen apagados y no se pueden volver a elegir.
 2. **Redactar.** Lees el correo de cada negocio, lo corriges si quieres y tocas «Aprobar este correo»; pasa solo
    al siguiente. Los datos de tu desarrollo (nombre, precio, fotos y datos del pie legal) se cambian en
-   **«Mi desarrollo»** (botón «Editar» del inicio). El pie legal se agrega solo y no se puede borrar. Los asuntos
-   engañosos, como «Re:» o «Factura», se rechazan.
+   **«Editar Proyecto»** (botón azul de arriba o el engrane). El pie legal se agrega solo y no se puede borrar. Los
+   asuntos engañosos, como «Re:» o «Factura», se rechazan.
 3. **Envío.** Tocas «Enviar» y ves cuántos se enviaron, a quién y a qué hora. Al tocar uno ves lo que le
    escribiste, con el pie legal.
 4. **Seguimiento.** Dos listas que se abren: «Te contestaron» y «No te contestaron». Desde ahí también ves lo que
@@ -29,16 +29,20 @@ En cada pantalla hay un solo botón grande abajo que dice qué sigue. Para prese
 
 ## Cómo se ve
 
-El diseño es el que pidió el dueño del proyecto (archivo `NEXORA 1.pdf`): fondo azul oscuro, logo NEXORA y una
-tarjeta roja del desarrollo arriba de cada pantalla.
+El diseño es copia del que hizo el dueño del proyecto (archivo `NEXORA 1.pdf`, 1440×810). Las medidas y los
+colores salieron de medir ese archivo. Todas las pantallas usan el mismo marco (`components/PanelNexora.tsx`):
 
-- **Barra de arriba.** Logo, buscador de clientes y propiedades, campana con las pláticas que no has abierto y
-  un engrane que abre «Editar proyecto».
+- **Barra de arriba.** Logo NEXORA con la marca «Demo», buscador de clientes y propiedades, campana con las
+  pláticas que no has abierto y un engrane que abre «Editar proyecto».
 - **Menú de la izquierda (computadora).** «Proyecto activo», los 5 pasos numerados con cuántos llevas en cada
   uno, y «Resumen de campaña» con la tasa de respuesta, que se calcula con lo que llevas enviado y contestado.
-- **Celular.** El menú se convierte en pestañas abajo y la barra de arriba deja el buscador en una lupa.
-- **Chat.** Fondo claro y burbujas como en WhatsApp: las tuyas en verde a la derecha, las suyas en blanco a la
-  izquierda, con la hora.
+- **Tarjeta roja** del desarrollo (lleva al inicio) y, a su lado, la **barra azul** con la pastilla verde (con
+  quién estás o de qué trata la pantalla), «¿Qué hace esto?», «Compartir» y «Editar Proyecto».
+- **Lista de pastillas** a la izquierda: la elegida va en azul claro.
+- **Área clara** a la derecha, como la plática del diseño: ahí va el correo, el editor o la lista de negocios.
+  En el chat, burbujas como en WhatsApp: las tuyas en verde a la derecha, las suyas en blanco a la izquierda.
+- **Celular.** El menú se convierte en pestañas abajo, el buscador queda en una lupa y, al tocar una pastilla,
+  el correo o la plática se abre a pantalla completa (con la flecha para regresar).
 
 El buscador de arriba lleva a donde está cada cliente: a su plática si te contestó, al correo que le mandaste si
 ya se lo enviaste, a su borrador si está por escribir, o lo resalta en la lista de «Buscar».

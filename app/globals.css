@@ -10,14 +10,16 @@
 @source "../artefacto";
 
 /*
- * Diseño de la demo: app clara para presentar en celular o en videollamada.
- * Un solo tema (claro) por decisión: se ve igual al compartir pantalla.
- * Concepto: barra lateral oscura en computadora, barra de pestañas abajo en celular,
- * tarjetas blancas sobre un fondo gris azulado y un azul "pacífico" como color de acción.
+ * Diseño NEXORA, copiado del archivo que mandó el dueño del proyecto (NEXORA 1.pdf, 1440×810).
+ * Los colores y medidas salieron de medir ese archivo. Todo va en un marco oscuro: barra de arriba,
+ * menú a la izquierda y, en cada pantalla, un panel con la tarjeta roja del proyecto, la barra azul,
+ * una lista a la izquierda y el contenido a la derecha.
  */
 @theme {
-  --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Sora", "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-sans: "Roboto", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Roboto", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  /* Sólo para la palabra NEXORA del logo, como en el diseño. */
+  --font-logo: "Open Sans", "Roboto", ui-sans-serif, system-ui, sans-serif;
 
   /* Texto sobre el azul oscuro */
   --color-tinta: #eaf1ff;
@@ -31,6 +33,17 @@
   --color-superficie-2: #1e3a5f;
   --color-panel: #2b5080;
   --color-linea: #243a63;
+
+  /* Del diseño: el fondo del panel (lo que se ve entre las piezas), las pastillas de la lista
+     y la pastilla elegida. */
+  --color-marco: #172f4c;
+  --color-marco-2: #102134;
+  --color-pildora: #1e3a5f;
+  --color-pildora-activa: #60a5fa;
+  --color-cifra: #10b981;
+  /* Letra gris y los iconos del menú de la izquierda */
+  --color-menu: #7b8fa3;
+  --color-menu-icono: #55677b;
 
   --color-marca-50: #eff6ff;
   --color-marca-100: #dbeafe;
@@ -53,6 +66,7 @@
   --color-verde-50: #123a26;
   --color-verde-400: #4ade80;
   --color-verde-500: #22c55e;
+  --color-verde-600: #16a34a;
   --color-verde-700: #86efac;
   --color-ambar-50: #3a2c0c;
   --color-ambar-500: #f59e0b;
@@ -118,6 +132,11 @@ summary {
 }
 summary::-webkit-details-marker {
   display: none;
+}
+
+/* El engrane de la barra de arriba va relleno, con el hueco del centro del color de la barra. */
+.icono-solido-hueco circle {
+  fill: var(--color-superficie);
 }
 
 .sin-barra {
