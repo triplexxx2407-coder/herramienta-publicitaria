@@ -1,12 +1,20 @@
 /**
  * Quién entra y quién no.
  *
- * Las contraseñas nunca se guardan tal cual: se guarda su huella (PBKDF2 con 210,000 vueltas,
- * que es lo que recomienda OWASP para SHA-256). La galleta de sesión lleva un token al azar y en
- * la base sólo queda su huella, así que ni leyendo la base se puede entrar como otro.
+ * Las contraseñas nunca se guardan tal cual: se guarda su huella (PBKDF2 con SHA-256). La galleta
+ * de sesión lleva un token al azar y en la base sólo queda su huella, así que ni leyendo la base
+ * se puede entrar como otro.
+ *
+ * Sobre las vueltas: el plan gratis de Cloudflare da 10 ms de cálculo por petición, y 210,000
+ * vueltas (lo que pide OWASP) tardan unos 30 ms, así que la petición se corta. Se usan 40,000
+ * (unos 6 ms) y, para compensar, se frenan los intentos fallidos (ver `demasiadosIntentos`).
+ * Cada huella guarda cuántas vueltas usó («pbkdf2$40000$…»): si algún día se paga el plan, se
+ * suben las vueltas y las huellas viejas siguen sirviendo.
  */
 
-const VUELTAS = 210_000;
+const VUELTAS = 40_000;
+/** Las huellas sin prefijo son de antes y usaban esto. */
+const VUELTAS_VIEJAS = 210_000;
 export const DURACION_SESION_DIAS = 30;
 export const GALLETA = "nexora_sesion";
 
@@ -20,15 +28,27 @@ export function alAzar(bytes = 32): string {
   return aHex(crypto.getRandomValues(new Uint8Array(bytes)).buffer);
 }
 
-/** Huella de una contraseña, con su sal. */
-export async function huellaDeContrasena(contrasena: string, sal: string): Promise<string> {
+async function pbkdf2(contrasena: string, sal: string, vueltas: number): Promise<string> {
   const material = await crypto.subtle.importKey("raw", codificador.encode(contrasena), "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: codificador.encode(sal), iterations: VUELTAS, hash: "SHA-256" },
+    { name: "PBKDF2", salt: codificador.encode(sal), iterations: vueltas, hash: "SHA-256" },
     material,
     256,
   );
   return aHex(bits);
+}
+
+/** Huella de una contraseña, con su sal. Lleva adelante cuántas vueltas usó. */
+export async function huellaDeContrasena(contrasena: string, sal: string, vueltas = VUELTAS): Promise<string> {
+  return `pbkdf2$${vueltas}$${await pbkdf2(contrasena, sal, vueltas)}`;
+}
+
+/** ¿Esa contraseña corresponde a esa huella guardada? */
+export async function contrasenaCoincide(contrasena: string, sal: string, guardada: string): Promise<boolean> {
+  const partes = /^pbkdf2\$(\d+)\$([0-9a-f]+)$/.exec(guardada);
+  const vueltas = partes ? Number(partes[1]) : VUELTAS_VIEJAS;
+  const esperada = partes ? partes[2] : guardada;
+  return igualesSeguro(await pbkdf2(contrasena, sal, vueltas), esperada);
 }
 
 /** Huella del token de sesión (SHA-256 basta: el token ya es al azar y largo). */
@@ -68,10 +88,24 @@ export async function revisarContrasena(db: D1Database, correo: string, contrase
     .first<FilaUsuario>();
   // Aunque no exista el usuario se calcula una huella, para que no se note por el tiempo de respuesta.
   const sal = fila?.sal ?? "sal-que-no-existe";
-  const esperada = fila?.huella ?? "0".repeat(64);
-  const calculada = await huellaDeContrasena(contrasena, sal);
-  if (!fila || !igualesSeguro(calculada, esperada)) return null;
+  const guardada = fila?.huella ?? `pbkdf2$${VUELTAS}$${"0".repeat(64)}`;
+  const coincide = await contrasenaCoincide(contrasena, sal, guardada);
+  if (!fila || !coincide) return null;
   return { id: fila.id, correo: fila.correo, nombre: fila.nombre, papel: fila.papel };
+}
+
+/**
+ * Freno contra quien intenta adivinar contraseñas: con 10 intentos fallidos en 15 minutos
+ * (de quien sea) se deja de revisar un rato. Es una herramienta de pocas personas, así que
+ * un freno general basta y no hace falta guardar direcciones de nadie.
+ */
+export async function demasiadosIntentos(db: D1Database, ahora = new Date()): Promise<boolean> {
+  const desde = new Date(ahora.getTime() - 15 * 60 * 1000).toISOString();
+  const fila = await db
+    .prepare("SELECT COUNT(*) AS n FROM bitacora WHERE canal = 'sesion' AND mensaje = 'intento de entrada fallido' AND cuando > ?")
+    .bind(desde)
+    .first<{ n: number }>();
+  return (fila?.n ?? 0) >= 10;
 }
 
 export async function crearUsuario(

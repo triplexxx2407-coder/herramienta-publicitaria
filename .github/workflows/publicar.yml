@@ -120,7 +120,10 @@ jobs:
               echo "$R" | grep -q "clave incorrecta" || break
               sleep 5
             done
-            echo "$R" | jq -c '{usuario: .usuario.correo, error}'
+            if ! echo "$R" | jq -ce '{usuario: .usuario.correo, error}'; then
+              echo "::error::El servidor no contestó bien al crear la cuenta: $(echo "$R" | head -c 300)"
+              exit 1
+            fi
           fi
           if [ -n "$NEXORA_CONTRASENA" ] && [ -n "$CORREO_USUARIO" ]; then
             GALLETAS="$RUNNER_TEMP/galletas"
