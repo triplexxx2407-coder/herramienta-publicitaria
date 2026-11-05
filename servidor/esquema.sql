@@ -74,6 +74,8 @@ CREATE TABLE IF NOT EXISTS conversaciones (
   -- Del último mensaje de la persona: de ahí corre el plazo para contestar.
   ultimo_de_ellos_en TEXT,
   leida_en TEXT,
+  -- Cuándo se archivó. A los 7 días de archivada se borra sola.
+  archivada_en TEXT,
   creada_en TEXT NOT NULL,
   UNIQUE (cuenta_id, usuario_externo)
 );

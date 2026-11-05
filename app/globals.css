@@ -31,14 +31,14 @@
   --color-fondo: #0a1428;
   --color-superficie: #15264a;
   --color-superficie-2: #1e3a5f;
-  --color-panel: #2b5080;
+  --color-panel: #1a2f52;
   --color-linea: #243a63;
 
   /* Del diseño: el fondo del panel (lo que se ve entre las piezas), las pastillas de la lista
      y la pastilla elegida. */
   --color-marco: #172f4c;
   --color-marco-2: #102134;
-  --color-pildora: #1e3a5f;
+  --color-pildora: #243f69;
   --color-pildora-activa: #60a5fa;
   --color-cifra: #10b981;
   /* Letra gris y los iconos del menú de la izquierda */
@@ -80,7 +80,7 @@
   --color-violeta-700: #c4b5fd;
 
   /* Pantalla de la plática: clara, como la de un celular */
-  --color-chat-fondo: #e7e0d6;
+  --color-chat-fondo: #edf1f6;
   --color-chat-mio: #d7f6c6;
   --color-chat-suyo: #ffffff;
   --color-chat-tinta: #0b1a14;
@@ -149,10 +149,7 @@ summary::-webkit-details-marker {
 /* Fondo de la pantalla de la plática, con un tramado suave como el de un celular. */
 .fondo-platica {
   background-color: var(--color-chat-fondo);
-  background-image:
-    radial-gradient(circle at 20% 30%, rgb(255 255 255 / 0.55) 0 2px, transparent 2px),
-    radial-gradient(circle at 70% 70%, rgb(0 0 0 / 0.04) 0 2px, transparent 2px);
-  background-size: 46px 46px, 64px 64px;
+  background-image: linear-gradient(180deg, #f5f7fb 0%, #e6ebf3 100%);
 }
 
 /* La lista de pasos y de pláticas se desplaza sin barra gruesa. */

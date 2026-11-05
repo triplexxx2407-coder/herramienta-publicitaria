@@ -17,6 +17,8 @@ export function useBandeja(): {
   empresaActiva: string | null;
   todas: Conversacion[];
   deLaEmpresa: Conversacion[];
+  /** Las archivadas (de la empresa activa). Se borran solas a los 7 días. */
+  archivadas: Conversacion[];
 } {
   const estado = useEstado();
   const enNavegador = useEnNavegador();
@@ -27,13 +29,16 @@ export function useBandeja(): {
   // Si la empresa guardada ya no existe (otra fuente, o la borraron), se ven todas.
   const guardada = enNavegador ? estado.empresaActiva : null;
   const empresaActiva = empresas.some((e) => e.id === guardada) ? guardada : null;
-  const todas = !enNavegador
+  const completas = !enNavegador
     ? []
     : real
       ? [...fuente.conversaciones].sort((a, b) => b.ultimo.fecha.localeCompare(a.ultimo.fecha))
       : fuente.modo === "ejemplo"
         ? conversacionesDeEjemplo(estado, anclajeDeSesion())
         : [];
+  // Lo archivado no cuenta ni como nuevo ni se mezcla con lo demás.
+  const todas = completas.filter((c) => !c.archivadaEn);
+  const archivadasTodas = completas.filter((c) => !!c.archivadaEn);
   return {
     modo: fuente.modo,
     esEjemplo: fuente.modo === "ejemplo",
@@ -41,5 +46,6 @@ export function useBandeja(): {
     empresaActiva,
     todas,
     deLaEmpresa: empresaActiva ? todas.filter((c) => c.empresaId === empresaActiva) : todas,
+    archivadas: empresaActiva ? archivadasTodas.filter((c) => c.empresaId === empresaActiva) : archivadasTodas,
   };
 }

@@ -62,6 +62,8 @@ export interface Conversacion {
   /** El último mensaje de la persona, del que corre el plazo. */
   ultimoDeEllos: MensajeRed | null;
   noLeida: boolean;
+  /** Sólo con el servidor de verdad: cuándo se archivó. A los 7 días se borra. */
+  archivadaEn?: string | null;
 }
 
 function fechaDesde(anclaje: number, minutosAntes: number): string {

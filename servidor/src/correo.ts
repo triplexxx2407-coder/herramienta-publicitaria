@@ -11,6 +11,7 @@
  */
 
 import { connect } from "cloudflare:sockets";
+import { deBase64, deCitaImprimible, encabezado, textoPlano } from "./mime";
 
 export interface CuentaCorreo {
   usuario: string;
@@ -181,7 +182,7 @@ export async function leerCorreosNuevos(
     const correos: CorreoRecibido[] = [];
     for (const uid of uids) {
       const cabeza = unirBultos(
-        await charla.orden(`UID FETCH ${uid} (BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID)])`),
+        await charla.orden(`UID FETCH ${uid} (BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID CONTENT-TYPE CONTENT-TRANSFER-ENCODING)])`),
       );
       const cuerpo = unirBultos(await charla.orden(`UID FETCH ${uid} (BODY.PEEK[TEXT])`));
       const quien = partirRemitente(encabezado(cabeza, "From") ?? "");
@@ -191,7 +192,7 @@ export async function leerCorreosNuevos(
         nombre: quien.nombre,
         asunto: limpiarEncabezado(encabezado(cabeza, "Subject") ?? "(sin asunto)"),
         fecha: aFechaIso(encabezado(cabeza, "Date")),
-        texto: textoPlano(cuerpo),
+        texto: textoPlano(cuerpo, cabeza),
         idMensaje: encabezado(cabeza, "Message-ID"),
       });
     }
@@ -224,22 +225,6 @@ function unirBultos(lineas: string[]): string {
   return abre === -1 ? texto : texto.slice(abre + 1).replace(/^\s*/, "").replace(/\)\s*$/, "");
 }
 
-function encabezado(cabeza: string, nombre: string): string | null {
-  // Un encabezado puede seguir en la línea de abajo si empieza con espacio.
-  const lineas = cabeza.split(/\r?\n/);
-  for (let i = 0; i < lineas.length; i++) {
-    if (lineas[i].toLowerCase().startsWith(`${nombre.toLowerCase()}:`)) {
-      let valor = lineas[i].slice(nombre.length + 1).trim();
-      while (i + 1 < lineas.length && /^[ \t]/.test(lineas[i + 1])) {
-        valor += ` ${lineas[i + 1].trim()}`;
-        i += 1;
-      }
-      return valor;
-    }
-  }
-  return null;
-}
-
 /** «Juan Pérez <juan@ejemplo.com>» se parte en nombre y correo. */
 export function partirRemitente(crudo: string): { nombre: string; correo: string } {
   const conPicos = /^(.*)<([^>]+)>\s*$/.exec(crudo.trim());
@@ -262,60 +247,6 @@ export function limpiarEncabezado(valor: string): string {
       return todo;
     }
   });
-}
-
-function deBase64(datos: string): string {
-  const bytes = Uint8Array.from(atob(datos.replace(/\s+/g, "")), (c) => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
-function deCitaImprimible(datos: string): string {
-  const sinCortes = datos.replace(/=\r?\n/g, "");
-  const bytes: number[] = [];
-  for (let i = 0; i < sinCortes.length; i++) {
-    if (sinCortes[i] === "=" && /^[0-9a-fA-F]{2}$/.test(sinCortes.slice(i + 1, i + 3))) {
-      bytes.push(parseInt(sinCortes.slice(i + 1, i + 3), 16));
-      i += 2;
-    } else {
-      bytes.push(sinCortes.charCodeAt(i));
-    }
-  }
-  return new TextDecoder().decode(new Uint8Array(bytes));
-}
-
-/**
- * Saca el texto legible de un correo. Si viene en varias partes (texto y versión con
- * formato) se queda con la de texto; si viene codificado, lo descifra.
- */
-export function textoPlano(crudo: string): string {
-  let cuerpo = crudo;
-  const frontera = /boundary="?([^";\r\n]+)"?/i.exec(crudo);
-  if (frontera) {
-    const partes = crudo.split(`--${frontera[1]}`);
-    const plana = partes.find((p) => /content-type:\s*text\/plain/i.test(p));
-    cuerpo = plana ?? partes[1] ?? crudo;
-  }
-  const corte = cuerpo.search(/\r?\n\r?\n/);
-  const cabeza = corte === -1 ? "" : cuerpo.slice(0, corte);
-  let texto = corte === -1 ? cuerpo : cuerpo.slice(corte).replace(/^\s+/, "");
-  const codificacion = /content-transfer-encoding:\s*(\S+)/i.exec(cabeza)?.[1]?.toLowerCase();
-  if (codificacion === "base64") {
-    try {
-      texto = deBase64(texto);
-    } catch {
-      /* lo dejamos como vino */
-    }
-  } else if (codificacion === "quoted-printable") {
-    texto = deCitaImprimible(texto);
-  }
-  // Las respuestas traen pegada la plática anterior; nos quedamos con lo nuevo.
-  return texto
-    .split(/\r?\n/)
-    .filter((l) => !/^\s*>/.test(l))
-    .join("\n")
-    .split(/\r?\n-{2,}\s*$/)[0]
-    .trim()
-    .slice(0, 8000);
 }
 
 function aFechaIso(valor: string | null): string {
@@ -400,3 +331,5 @@ function armarMensaje(
   const texto = aBase64(datos.texto).replace(/(.{76})/g, "$1\r\n");
   return `${lineas.join(CORTE)}${CORTE}${CORTE}${texto}`;
 }
+
+export { textoPlano };

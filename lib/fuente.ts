@@ -108,6 +108,7 @@ interface ConversacionDelServidor {
   persona: string;
   usuario: string;
   noLeida: boolean;
+  archivadaEn: string | null;
   mensajes: (MensajeRed & { entrega: MensajeRed["entrega"]; error: string | null })[];
 }
 
@@ -165,6 +166,7 @@ export async function cargar(): Promise<void> {
             ultimo: mensajes[mensajes.length - 1],
             ultimoDeEllos: deEllos[deEllos.length - 1] ?? null,
             noLeida: c.noLeida,
+            archivadaEn: c.archivadaEn,
           };
         }),
     });
@@ -214,6 +216,27 @@ export async function marcarLeidaDeVerdad(platicaId: string): Promise<void> {
     await pedir("/api/leida", { platicaId });
   } catch {
     /* la próxima carga lo corrige */
+  }
+}
+
+/** Archiva una plática, o la saca del archivo. Se borra sola a los 7 días de archivada. */
+export async function archivarDeVerdad(platicaId: string, archivar: boolean): Promise<string | null> {
+  // Se mueve aquí de una vez, sin esperar al servidor.
+  cambiar({
+    conversaciones: fuente.conversaciones.map((c) =>
+      c.id === platicaId ? { ...c, archivadaEn: archivar ? new Date().toISOString() : null } : c,
+    ),
+  });
+  try {
+    const r = await pedir<{ error?: string }>("/api/archivar", { platicaId, archivar });
+    if (r.estado !== 200) {
+      await cargar();
+      return r.datos?.error ?? "No se pudo archivar.";
+    }
+    return null;
+  } catch {
+    await cargar();
+    return "No se pudo hablar con el servidor.";
   }
 }
 

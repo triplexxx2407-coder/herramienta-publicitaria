@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, CheckCheck, Clock, FlaskConical, Inbox, SendHorizontal, TriangleAlert } from "lucide-react";
+import { Archive, ArchiveRestore, Building2, CheckCheck, Clock, FlaskConical, Inbox, SendHorizontal, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   BotonPildora,
@@ -31,7 +31,7 @@ import {
   type Conversacion,
 } from "@/lib/bandeja";
 import { cuandoCorto, hora } from "@/lib/fechas";
-import { marcarLeidaDeVerdad, responderDeVerdad } from "@/lib/fuente";
+import { archivarDeVerdad, marcarLeidaDeVerdad, responderDeVerdad } from "@/lib/fuente";
 import { nombreRed, ORDEN_REDES, REDES } from "@/lib/redes";
 import type { MensajeRed, Red } from "@/lib/tipos";
 import { useBandeja } from "@/lib/usar-bandeja";
@@ -48,10 +48,11 @@ function useMinuto(): number {
 
 export function PantallaBandeja() {
   const enNavegador = useEnNavegador();
-  const { esEjemplo, empresas, empresaActiva, todas: deTodas, deLaEmpresa: todas } = useBandeja();
+  const { esEjemplo, empresas, empresaActiva, todas: deTodas, deLaEmpresa: activas, archivadas } = useBandeja();
   const esComputadora = useEsComputadora();
   const [filtro, setFiltro] = useState<Red | "todas">("todas");
   const [abiertaId, setAbiertaId] = useState<string | null>(null);
+  const [verArchivadas, setVerArchivadas] = useState(false);
   useMinuto();
 
   // La campana de arriba pide abrir una plática: se abre aquí.
@@ -66,6 +67,10 @@ export function PantallaBandeja() {
   const empresa = empresas.find((e) => e.id === empresaActiva);
   const redesVisibles = empresa ? ORDEN_REDES.filter((r) => empresa.cuentas.some((k) => k.red === r)) : ORDEN_REDES;
   const filtroValido = filtro === "todas" || redesVisibles.includes(filtro) ? filtro : "todas";
+  // Lo archivado se ve en su propia lista; lo demás, sin mezclar.
+  const hayArchivadas = archivadas.length > 0;
+  const viendoArchivadas = verArchivadas && hayArchivadas;
+  const todas = viendoArchivadas ? archivadas : activas;
   const lista = filtroValido === "todas" ? todas : todas.filter((c) => c.red === filtroValido);
 
   // En la computadora siempre se ve una plática; en el celular, sólo la que tocas.
@@ -84,8 +89,8 @@ export function PantallaBandeja() {
   // La hora se lee aquí, ya en el navegador: si se leyera antes, la página armada en el
   // servidor se quedaría con la hora de cuando se armó y el reloj del plazo no serviría.
   const ahora = new Date();
-  const nuevos = sinLeer(todas);
-  const porRed = sinLeerPorRed(todas);
+  const nuevos = sinLeer(activas);
+  const porRed = sinLeerPorRed(activas);
 
   return (
     <PanelNexora
@@ -146,7 +151,25 @@ export function PantallaBandeja() {
                 {porRed[r] ? <span className="cifras ml-1 font-bold text-marca-400">{porRed[r]}</span> : null}
               </BotonPildora>
             ))}
+            {!esEjemplo && hayArchivadas ? (
+              <BotonPildora
+                className="shrink-0"
+                activo={viendoArchivadas}
+                onClick={() => {
+                  setAbiertaId(null);
+                  setVerArchivadas((v) => !v);
+                }}
+                icono={<Archive size={14} aria-hidden />}
+              >
+                Archivados <span className="cifras ml-1 font-bold">{archivadas.length}</span>
+              </BotonPildora>
+            ) : null}
           </div>
+          {viendoArchivadas ? (
+            <p className="mb-2.5 rounded-lg bg-white/5 px-3 py-2 text-[12.5px] text-tinta-2">
+              Los archivados se borran solos a los 7 días. Ábrelos y pica «Sacar del archivo» si quieres conservarlos.
+            </p>
+          ) : null}
           {lista.length ? (
             <ul className="space-y-[11px]">
               {lista.map((c) => (
@@ -184,7 +207,24 @@ export function PantallaBandeja() {
       principalConScroll={false}
       principal={
         actual ? (
-          <Platica key={actual.id} conversacion={actual} todas={deTodas} ahora={ahora} onIr={setAbiertaId} esEjemplo={esEjemplo} />
+          <Platica
+            key={actual.id}
+            conversacion={actual}
+            todas={deTodas}
+            ahora={ahora}
+            onIr={setAbiertaId}
+            esEjemplo={esEjemplo}
+            onArchivar={
+              esEjemplo
+                ? undefined
+                : async () => {
+                    const archivar = !actual.archivadaEn;
+                    setAbiertaId(null);
+                    const error = await archivarDeVerdad(actual.id, archivar);
+                    avisar(error ?? (archivar ? "Archivada. Se borra sola en 7 días." : "Ya no está archivada."));
+                  }
+            }
+          />
         ) : (
           <ContenidoClaro className="flex-1">
             <VacioClaro
@@ -244,12 +284,14 @@ function Platica({
   ahora,
   onIr,
   esEjemplo,
+  onArchivar,
 }: {
   conversacion: Conversacion;
   todas: Conversacion[];
   ahora: Date;
   onIr: (id: string) => void;
   esEjemplo: boolean;
+  onArchivar?: () => void;
 }) {
   const [texto, setTexto] = useState("");
   const [mandando, setMandando] = useState(false);
@@ -290,6 +332,16 @@ function Platica({
         ) : null}
 
         <Tarjeta>
+          {onArchivar ? (
+            <button
+              type="button"
+              onClick={onArchivar}
+              className="float-right -mt-0.5 -mr-1 flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold text-[#1c6b3f] hover:bg-black/5"
+            >
+              {c.archivadaEn ? <ArchiveRestore size={14} aria-hidden /> : <Archive size={14} aria-hidden />}
+              {c.archivadaEn ? "Sacar del archivo" : "Archivar"}
+            </button>
+          ) : null}
           <p className="flex items-center justify-center gap-1.5 text-[13px] font-bold text-chat-tinta">
             <IconoRed red={c.red} tamano={15} /> {c.usuario}
           </p>

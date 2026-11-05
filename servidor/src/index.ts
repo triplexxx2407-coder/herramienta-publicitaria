@@ -11,6 +11,8 @@
 import {
   apuntar,
   conversacionesGuardadas,
+  archivarPlatica,
+  borrarArchivadasViejas,
   borrarCuenta,
   borrarEmpresa,
   crearCuenta,
@@ -255,6 +257,14 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     return json({ bien: true });
   }
 
+  if (ruta === "/api/archivar" && metodo === "POST") {
+    const datos = await cuerpo(peticion);
+    const platicaId = texto(datos.platicaId, 60);
+    if (!platicaId) return json({ error: "falta la plática" }, 400);
+    const hecho = await archivarPlatica(entorno.DB, platicaId, datos.archivar !== false);
+    return hecho ? json({ bien: true }) : json({ error: "esa plática ya no existe" }, 404);
+  }
+
   if (ruta === "/api/responder" && metodo === "POST") {
     const datos = await cuerpo(peticion);
     const platicaId = texto(datos.platicaId, 60);
@@ -343,6 +353,7 @@ const servidor = {
     contexto.waitUntil(
       (async () => {
         await limpiarSesiones(entorno.DB);
+        await borrarArchivadasViejas(entorno.DB);
         const cuenta = cuentaDeCorreo(entorno);
         if (!cuenta) return;
         try {

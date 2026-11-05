@@ -32,6 +32,7 @@ export interface ConversacionGuardada {
   ultimoEn: string;
   ultimoDeEllosEn: string | null;
   noLeida: boolean;
+  archivadaEn: string | null;
   mensajes: MensajeGuardado[];
 }
 
@@ -53,7 +54,7 @@ export async function conversacionesGuardadas(
   const { results: platicas } = await db
     .prepare(
       `SELECT c.id, c.empresa_id, e.nombre AS empresa, c.cuenta_id, k.identificador AS cuenta,
-              c.red, c.persona_id, c.usuario_externo, c.ultimo_en, c.ultimo_de_ellos_en, c.leida_en, p.nombre
+              c.red, c.persona_id, c.usuario_externo, c.ultimo_en, c.ultimo_de_ellos_en, c.leida_en, c.archivada_en, p.nombre
        FROM conversaciones c
        JOIN personas p ON p.id = c.persona_id
        JOIN empresas e ON e.id = c.empresa_id
@@ -74,6 +75,7 @@ export async function conversacionesGuardadas(
       ultimo_en: string;
       ultimo_de_ellos_en: string | null;
       leida_en: string | null;
+      archivada_en: string | null;
       nombre: string;
     }>();
   if (!platicas.length) return [];
@@ -108,8 +110,31 @@ export async function conversacionesGuardadas(
     ultimoDeEllosEn: p.ultimo_de_ellos_en,
     // Nueva si llegó algo de ellos después de la última vez que la abriste.
     noLeida: !!p.ultimo_de_ellos_en && (!p.leida_en || p.leida_en < p.ultimo_de_ellos_en),
+    archivadaEn: p.archivada_en,
     mensajes: porPlatica.get(p.id) ?? [],
   }));
+}
+
+/** Archiva una plática (o la saca del archivo). Devuelve false si ya no existe. */
+export async function archivarPlatica(db: D1Database, platicaId: string, archivar: boolean, ahora = new Date()): Promise<boolean> {
+  const r = await db
+    .prepare("UPDATE conversaciones SET archivada_en = ? WHERE id = ?")
+    .bind(archivar ? ahora.toISOString() : null, platicaId)
+    .run();
+  return !!r.meta.changes;
+}
+
+/** Borra de verdad las pláticas que llevan más de 7 días archivadas. Devuelve cuántas. */
+export async function borrarArchivadasViejas(db: D1Database, ahora = new Date()): Promise<number> {
+  const limite = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const viejas = "SELECT id FROM conversaciones WHERE archivada_en IS NOT NULL AND archivada_en < ?";
+  const r = await db.batch([
+    db.prepare(`DELETE FROM mensajes WHERE conversacion_id IN (${viejas})`).bind(limite),
+    db.prepare("DELETE FROM conversaciones WHERE archivada_en IS NOT NULL AND archivada_en < ?").bind(limite),
+  ]);
+  // Los interesados que se quedaron sin ninguna plática ya no sirven.
+  await db.prepare("DELETE FROM personas WHERE id NOT IN (SELECT persona_id FROM conversaciones)").run();
+  return r[1].meta.changes ?? 0;
 }
 
 /** Busca la plática de ese interesado con esa cuenta de la empresa, o la crea junto con su ficha. */

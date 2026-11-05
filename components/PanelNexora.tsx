@@ -52,14 +52,14 @@ export function AvatarPersona({ tamano = 40, className }: { tamano?: number; cla
 export function PastillaCliente({ texto, icono }: { texto: string; icono?: ReactNode }) {
   const tamano =
     texto.length <= 26
-      ? "lg:text-[20px] lg:tracking-[0.18em]"
+      ? "lg:text-[20px]"
       : texto.length <= 36
-        ? "lg:text-[18px] lg:tracking-[0.14em]"
-        : "lg:text-[16px] lg:tracking-[0.1em]";
+        ? "lg:text-[18px]"
+        : "lg:text-[16px]";
   return (
     <p className="inline-flex h-12 max-w-full min-w-0 items-center gap-2 rounded-full bg-logo pr-5 pl-1 text-black lg:h-[58px] lg:gap-1.5 lg:pr-7 lg:pl-1.5">
       {icono ?? <AvatarPersona tamano={40} className="lg:h-[50px] lg:w-[50px]" />}
-      <span className={cx("min-w-0 truncate text-[14.5px] italic tracking-[0.06em]", tamano)}>{texto}</span>
+      <span className={cx("min-w-0 truncate text-[14.5px] font-semibold tracking-normal", tamano)}>{texto}</span>
     </p>
   );
 }
@@ -93,16 +93,16 @@ export function PildoraLista({
       aria-current={activa || undefined}
       aria-label={etiqueta}
       className={cx(
-        "flex min-h-[46px] w-full items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-left transition-colors",
+        "flex min-h-[54px] w-full items-center gap-2.5 rounded-2xl py-1.5 pr-3.5 pl-1.5 text-left transition-colors",
         activa ? "bg-pildora-activa text-black" : "bg-pildora text-tinta-2 hover:bg-[#24466f]",
         apagada && !activa && "opacity-60",
       )}
     >
       {icono ?? <AvatarPersona tamano={38} className="text-black" />}
-      <span className="min-w-0 flex-1 italic">
-        <span className={cx("block truncate text-[15px] leading-[1.25] tracking-[0.08em]", activa ? "font-medium" : "")}>{titulo}</span>
+      <span className="min-w-0 flex-1">
+        <span className={cx("block truncate text-[15px] leading-[1.25] font-semibold tracking-normal", activa ? "font-medium" : "")}>{titulo}</span>
         {detalle ? (
-          <span className={cx("block truncate text-[12.5px] leading-[1.3] tracking-[0.06em]", activa ? "text-black/75" : "text-suave")}>
+          <span className={cx("block truncate text-[12.5px] leading-[1.3] tracking-normal", activa ? "text-black/75" : "text-suave")}>
             {detalle}
           </span>
         ) : null}
@@ -124,7 +124,7 @@ function TarjetaRoja() {
   const cuentas = empresa ? empresa.cuentas : empresas.flatMap((e) => e.cuentas);
   const redes = [...new Set(cuentas.map((k) => k.red))];
   return (
-    <div className="flex flex-col bg-proyecto px-4 pt-3 pb-3 text-white lg:h-full lg:overflow-hidden lg:px-[9px] lg:pt-[11px] lg:pb-[7px]">
+    <div className="flex flex-col bg-linear-to-br from-proyecto-claro to-proyecto-oscuro px-4 pt-3 pb-3 text-white lg:h-full lg:overflow-hidden lg:rounded-2xl lg:px-4 lg:pt-3.5 lg:pb-3 lg:shadow-tarjeta">
       <span className="flex flex-wrap items-center gap-1.5">
         {esEjemplo ? (
           <span className="rounded-[2px] bg-marca-600 px-1.5 text-[9px] leading-[13px] font-bold text-white uppercase">Ejemplo</span>
@@ -165,9 +165,9 @@ function BarraAzul({ pastilla, ayuda }: { pastilla?: ReactNode; ayuda: ReactNode
   const idAyuda = useId();
 
   return (
-    <div className="relative flex items-center gap-3 bg-panel px-3 py-3 lg:h-full lg:items-start lg:py-0 lg:pr-[34px] lg:pl-[25px]">
+    <div className="relative flex items-center gap-3 bg-panel px-3 py-3 lg:h-full lg:items-center lg:rounded-2xl lg:py-0 lg:pr-5 lg:pl-5 lg:shadow-tarjeta">
       <div className="flex min-w-0 flex-1 lg:h-full lg:items-center">{pastilla}</div>
-      <div className="flex shrink-0 gap-2 lg:mt-[25px] lg:gap-[9px]">
+      <div className="flex shrink-0 gap-2 lg:gap-[9px]">
         <button
           type="button"
           aria-label="¿Qué hace esto?"
@@ -467,14 +467,14 @@ export function PanelNexora({
   const notaCelular = modo === "detalle" ? (pieLista !== undefined ? notaPieLista : notaPie) : notaPie;
 
   return (
-    <div className="lg:grid lg:h-[calc(100dvh-6.0625rem)] lg:min-h-[34rem] lg:grid-cols-[14.5rem_minmax(0,1fr)] lg:grid-rows-[7.8125rem_minmax(0,1fr)] lg:gap-x-1 lg:gap-y-[5px] lg:bg-marco">
+    <div className="lg:grid lg:h-[calc(100dvh-6.0625rem)] lg:min-h-[34rem] lg:grid-cols-[14.5rem_minmax(0,1fr)] lg:grid-rows-[7.8125rem_minmax(0,1fr)] lg:gap-3 lg:p-3">
       <h1 className="sr-only">{titulo}</h1>
       <TarjetaRoja />
       <BarraAzul pastilla={pastilla} ayuda={ayuda} />
 
       <section
         aria-label={etiquetaLista}
-        className={cx("barra-fina bg-panel px-[5px] pt-2.5 pb-3 lg:min-h-0 lg:overflow-y-auto lg:pr-[5px] lg:pl-[7px]", claseLista)}
+        className={cx("barra-fina bg-panel px-[5px] pt-2.5 pb-3 lg:min-h-0 lg:overflow-y-auto lg:rounded-2xl lg:px-3 lg:pt-3 lg:shadow-tarjeta", claseLista)}
       >
         {lista}
       </section>
@@ -488,7 +488,7 @@ export function PanelNexora({
             "flex flex-col bg-marco-2",
             detalleEncima
               ? "fixed inset-0 z-50 pt-[env(safe-area-inset-top,0px)]"
-              : "lg:min-h-0 lg:border-b lg:border-marca-600 lg:pr-[6px] lg:pl-[8px]",
+              : "lg:min-h-0 lg:overflow-hidden lg:rounded-2xl lg:shadow-tarjeta",
           )}
         >
           {detalleEncima ? (
