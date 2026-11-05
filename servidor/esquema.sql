@@ -41,6 +41,10 @@ CREATE TABLE IF NOT EXISTS cuentas (
   red TEXT NOT NULL CHECK (red IN ('instagram', 'whatsapp', 'facebook', 'tiktok', 'correo')),
   -- Cómo se llama la cuenta en esa red: @usuario, número o dirección de correo.
   identificador TEXT NOT NULL,
+  -- Sólo Instagram y Facebook: el número de la cuenta o página en Meta (llega en los avisos) y su token de acceso.
+  -- El token NUNCA se manda a la pantalla.
+  id_meta TEXT,
+  token TEXT,
   creada_en TEXT NOT NULL,
   UNIQUE (red, identificador)
 );

@@ -53,3 +53,10 @@ Rutas (todas piden sesión menos `salud`, `entrar` y `arrancar`):
 **Sin secretos en el código.** El repositorio es público: las claves van como secretos de
 Cloudflare (`npx wrangler secret put NOMBRE --config servidor/wrangler.jsonc`). Los nombres están
 en `.env.example`. El correo usa una contraseña de aplicación de Google, nunca la del correo.
+
+## Instagram y Facebook (Meta)
+
+- Los avisos de Meta entran por `GET/POST /api/meta/webhook` (sin sesión; se protege con la firma `X-Hub-Signature-256` y la palabra `META_VERIFY_TOKEN`).
+- Cada cuenta lleva su número en Meta y su token (tabla `cuentas`, columnas `id_meta` y `token`). Se pegan en la pantalla de Empresas y el token no vuelve a salir del servidor.
+- Las respuestas salen por la API de Graph (`servidor/src/meta.ts`). Sólo se puede contestar a quien escribió primero y dentro del plazo.
+- Secretos del servidor: `META_APP_SECRET` y `META_VERIFY_TOKEN` (ver `.env.example`).

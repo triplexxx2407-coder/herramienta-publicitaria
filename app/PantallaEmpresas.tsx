@@ -19,7 +19,7 @@ import {
 import { cx } from "@/components/ui";
 import { actualizarEstado } from "@/lib/almacen";
 import { elegirEmpresa } from "@/lib/bandeja";
-import { agregarCuenta, borrarEmpresa, crearEmpresa, editarEmpresa, quitarCuenta, useFuente } from "@/lib/fuente";
+import { agregarCuenta, borrarEmpresa, conectarMeta, crearEmpresa, editarEmpresa, quitarCuenta, useFuente } from "@/lib/fuente";
 import { nombreRed, ORDEN_REDES } from "@/lib/redes";
 import type { CuentaCanal, EmpresaCliente, Red } from "@/lib/tipos";
 import { useBandeja } from "@/lib/usar-bandeja";
@@ -336,6 +336,9 @@ function Conexion({ red, empresaId, cuentas, soloVer }: { red: Red; empresaId: s
                     {k.estado === "conectada" ? "Conectada" : "Falta conectar"}
                   </span>
                   {k.nota ? <span className="mt-1 block text-[12.5px] leading-snug text-chat-tenue">{k.nota}</span> : null}
+                  {!soloVer && (red === "instagram" || red === "facebook") ? (
+                    <ConectarMeta cuentaId={k.id} idActual={k.idMeta ?? ""} tieneToken={!!k.tieneToken} />
+                  ) : null}
                 </span>
                 {!soloVer ? (
                   porQuitar === k.id ? (
@@ -448,5 +451,64 @@ function BorrarEmpresa({ empresa, onBorrada }: { empresa: EmpresaCliente; onBorr
         </button>
       )}
     </div>
+  );
+}
+
+/** Instagram y Facebook: pegar el número de la cuenta en Meta y su token. El token no vuelve a mostrarse. */
+function ConectarMeta({ cuentaId, idActual, tieneToken }: { cuentaId: string; idActual: string; tieneToken: boolean }) {
+  const [abierto, setAbierto] = useState(false);
+  const [idMeta, setIdMeta] = useState(idActual);
+  const [token, setToken] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  async function guardar(ev: FormEvent) {
+    ev.preventDefault();
+    setGuardando(true);
+    const falla = await conectarMeta(cuentaId, idMeta.trim(), token.trim());
+    setGuardando(false);
+    setError(falla);
+    if (!falla) {
+      setToken("");
+      setAbierto(false);
+    }
+  }
+
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="mt-1.5 rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-[#1c4fd6] shadow-sm hover:bg-[#eef3ff]"
+      >
+        {idActual && tieneToken ? "Cambiar datos de Meta" : "Pegar datos de Meta"}
+      </button>
+    );
+  }
+  const campo = "mt-1 h-9 w-full rounded-[8px] border border-[#cfd8e3] bg-white px-2.5 text-[14px] text-chat-tinta outline-none focus:border-marca-500";
+  return (
+    <form onSubmit={guardar} className="mt-2 space-y-2 rounded-[8px] bg-white p-2.5">
+      <label className="block text-[12.5px] font-semibold text-chat-tenue">
+        Número de la cuenta en Meta (sólo dígitos)
+        <input value={idMeta} onChange={(e) => setIdMeta(e.target.value)} inputMode="numeric" className={campo} placeholder="17841400000000000" />
+      </label>
+      <label className="block text-[12.5px] font-semibold text-chat-tenue">
+        Token de acceso {tieneToken ? "(déjalo vacío para conservar el actual)" : ""}
+        <input value={token} onChange={(e) => setToken(e.target.value)} type="password" autoComplete="off" className={campo} placeholder="EAAB…" />
+      </label>
+      {error ? <p className="text-[12.5px] font-semibold text-[#b42318]">{error}</p> : null}
+      <span className="flex gap-1.5">
+        <button type="button" onClick={() => setAbierto(false)} className="rounded-full px-3 py-1 text-[12.5px] font-bold text-chat-tenue hover:bg-[#f5f7fa]">
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          disabled={guardando || !idMeta.trim() || (!tieneToken && !token.trim())}
+          className="rounded-full bg-marca-600 px-3 py-1 text-[12.5px] font-bold text-white disabled:opacity-50"
+        >
+          {guardando ? "Guardando…" : "Guardar"}
+        </button>
+      </span>
+    </form>
   );
 }

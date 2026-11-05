@@ -192,7 +192,7 @@ export interface Empresa {
   id: string;
   nombre: string;
   giro: string | null;
-  cuentas: { id: string; red: Red; identificador: string }[];
+  cuentas: { id: string; red: Red; identificador: string; idMeta: string | null; tieneToken: boolean }[];
 }
 
 /** Las empresas que atiende el equipo, cada una con sus cuentas. */
@@ -201,13 +201,13 @@ export async function empresas(db: D1Database): Promise<Empresa[]> {
     .prepare("SELECT id, nombre, giro FROM empresas ORDER BY nombre")
     .all<{ id: string; nombre: string; giro: string | null }>();
   const { results: cuentas } = await db
-    .prepare("SELECT id, empresa_id, red, identificador FROM cuentas ORDER BY red, identificador")
-    .all<{ id: string; empresa_id: string; red: Red; identificador: string }>();
+    .prepare("SELECT id, empresa_id, red, identificador, id_meta, token IS NOT NULL AS con_token FROM cuentas ORDER BY red, identificador")
+    .all<{ id: string; empresa_id: string; red: Red; identificador: string; id_meta: string | null; con_token: number }>();
   return filas.map((e) => ({
     ...e,
     cuentas: cuentas
       .filter((c) => c.empresa_id === e.id)
-      .map((c) => ({ id: c.id, red: c.red, identificador: c.identificador })),
+      .map((c) => ({ id: c.id, red: c.red, identificador: c.identificador, idMeta: c.id_meta, tieneToken: !!c.con_token })),
   }));
 }
 
@@ -275,6 +275,36 @@ export async function crearCuenta(
     .bind(cuentaId, datos.empresaId, datos.red, datos.identificador.trim().toLowerCase(), ahora.toISOString())
     .run();
   return { id: cuentaId };
+}
+
+/** Pega el número de la cuenta en Meta y su token. Con token vacío conserva el que ya había. */
+export async function guardarConexionMeta(
+  db: D1Database,
+  datos: { cuentaId: string; idMeta: string; token: string },
+): Promise<boolean> {
+  const r = await db
+    .prepare("UPDATE cuentas SET id_meta = ?, token = COALESCE(NULLIF(?, ''), token) WHERE id = ? AND red IN ('instagram', 'facebook')")
+    .bind(datos.idMeta, datos.token, datos.cuentaId)
+    .run();
+  return !!r.meta.changes;
+}
+
+/** La cuenta que recibió un aviso de Meta, y su token para pedir el nombre de quien escribió. */
+export async function cuentaDeMeta(
+  db: D1Database,
+  red: Red,
+  idMeta: string,
+): Promise<{ id: string; token: string | null } | null> {
+  return db
+    .prepare("SELECT id, token FROM cuentas WHERE red = ? AND id_meta = ?")
+    .bind(red, idMeta)
+    .first<{ id: string; token: string | null }>();
+}
+
+/** El token de una cuenta, para mandar una respuesta. */
+export async function tokenDeCuenta(db: D1Database, cuentaId: string): Promise<string | null> {
+  const fila = await db.prepare("SELECT token FROM cuentas WHERE id = ?").bind(cuentaId).first<{ token: string | null }>();
+  return fila?.token ?? null;
 }
 
 /** Qué cuenta de qué empresa es esa dirección o @usuario en esa red. */
@@ -406,18 +436,20 @@ export async function platicaParaResponder(
   usuario: string;
   hilo: string | null;
   ultimoDeEllosEn: string | null;
+  cuentaId: string;
   cuenta: string;
   empresa: string;
 } | null> {
   const fila = await db
     .prepare(
-      `SELECT c.id, c.red, c.usuario_externo, c.hilo_externo, c.ultimo_de_ellos_en,
+      `SELECT c.id, c.red, c.usuario_externo, c.hilo_externo, c.ultimo_de_ellos_en, c.cuenta_id,
               k.identificador AS cuenta, e.nombre AS empresa
        FROM conversaciones c JOIN cuentas k ON k.id = c.cuenta_id JOIN empresas e ON e.id = c.empresa_id
        WHERE c.id = ?`,
     )
     .bind(platicaId)
     .first<{
+      cuenta_id: string;
       cuenta: string;
       empresa: string;
       id: string;
@@ -433,6 +465,7 @@ export async function platicaParaResponder(
     usuario: fila.usuario_externo,
     hilo: fila.hilo_externo,
     ultimoDeEllosEn: fila.ultimo_de_ellos_en,
+    cuentaId: fila.cuenta_id,
     cuenta: fila.cuenta,
     empresa: fila.empresa,
   };

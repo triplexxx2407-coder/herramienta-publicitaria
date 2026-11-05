@@ -10,6 +10,9 @@ export interface CuentaCanal {
   /** Cómo se llama la cuenta en esa red: @usuario, número o correo. */
   identificador: string;
   /** Sólo con el servidor de verdad: si ya recibe y manda mensajes, y si no, qué le falta. */
+  /** Sólo Instagram y Facebook: el número de la cuenta en Meta, y si ya tiene su token (el token no sale del servidor). */
+  idMeta?: string | null;
+  tieneToken?: boolean;
   estado?: "conectada" | "falta";
   nota?: string;
 }

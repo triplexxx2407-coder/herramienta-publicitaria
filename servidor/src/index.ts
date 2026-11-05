@@ -19,12 +19,16 @@ import {
   crearEmpresa,
   editarEmpresa,
   empresas,
+  guardarConexionMeta,
   guardarSaliente,
+  marcarEntrega,
+  tokenDeCuenta,
   marcarLeida,
   platicaParaResponder,
   dentroDelPlazo,
 } from "./bandeja";
 import { CorreoSinEmpresa, entregarPorCorreo, revisarCorreo } from "./canal-correo";
+import { enviarPorMeta, firmaValida, guardarDeMeta } from "./meta";
 import { ORDEN_REDES } from "../../lib/redes";
 import type { Red } from "../../lib/tipos";
 import type { CuentaCorreo } from "./correo";
@@ -55,6 +59,9 @@ export interface Entorno {
   CORREO_NOMBRE?: string;
   /** Clave de un solo uso para crear al primer dueño. Después se borra. */
   CLAVE_ARRANQUE?: string;
+  /** Instagram y Facebook: la clave de la app de Meta (firma los avisos) y la palabra con que Meta verifica tu dirección. */
+  META_APP_SECRET?: string;
+  META_VERIFY_TOKEN?: string;
 }
 
 function json(datos: unknown, estado = 200, galleta?: string): Response {
@@ -72,8 +79,9 @@ function json(datos: unknown, estado = 200, galleta?: string): Response {
  * Por ahora sólo el correo está conectado; las demás redes se conectan después.
  */
 function estadoDeConexion(
-  cuenta: { red: Red; identificador: string },
+  cuenta: { red: Red; identificador: string; idMeta?: string | null; tieneToken?: boolean },
   correo: CuentaCorreo | null,
+  metaListo = false,
 ): { estado: "conectada" | "falta"; nota: string } {
   if (cuenta.red === "correo") {
     if (correo && correo.usuario === cuenta.identificador) {
@@ -81,6 +89,11 @@ function estadoDeConexion(
     }
     if (!correo) return { estado: "falta", nota: "Falta la contraseña de aplicación de Google de este correo." };
     return { estado: "falta", nota: `Por ahora NEXORA sólo tiene conectado el correo ${correo.usuario}.` };
+  }
+  if (cuenta.red === "instagram" || cuenta.red === "facebook") {
+    if (!metaListo) return { estado: "falta", nota: "Falta poner META_APP_SECRET y META_VERIFY_TOKEN en el servidor." };
+    if (!cuenta.idMeta || !cuenta.tieneToken) return { estado: "falta", nota: "Falta pegar el número de la cuenta en Meta y su token." };
+    return { estado: "conectada", nota: "Recibe y contesta por la API de Meta." };
   }
   if (cuenta.red === "tiktok") return { estado: "falta", nota: "Falta que TikTok apruebe el acceso a sus mensajes." };
   return { estado: "falta", nota: "Falta conectarla con Meta (la empresa dueña de Instagram, Facebook y WhatsApp)." };
@@ -116,6 +129,34 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
 
   if (ruta === "/api/salud") {
     return json({ bien: true, correoConectado: !!cuentaDeCorreo(entorno) });
+  }
+
+  // Los avisos de Instagram y Facebook entran sin sesión: Meta no tiene cuenta. Se protegen con la firma.
+  if (ruta === "/api/meta/webhook") {
+    if (metodo === "GET") {
+      // Meta pregunta una vez, al dar de alta la dirección, si de verdad es nuestra.
+      const palabra = entorno.META_VERIFY_TOKEN;
+      const manda = url.searchParams.get("hub.verify_token") ?? "";
+      if (palabra && url.searchParams.get("hub.mode") === "subscribe" && igualesSeguro(manda, palabra)) {
+        return new Response(url.searchParams.get("hub.challenge") ?? "", { status: 200 });
+      }
+      return new Response("no", { status: 403 });
+    }
+    if (metodo === "POST") {
+      const secreto = entorno.META_APP_SECRET;
+      if (!secreto) return json({ error: "falta META_APP_SECRET" }, 503);
+      const crudo = await peticion.text();
+      if (!(await firmaValida(crudo, peticion.headers.get("X-Hub-Signature-256"), secreto))) {
+        return json({ error: "firma incorrecta" }, 403);
+      }
+      try {
+        await guardarDeMeta(entorno.DB, JSON.parse(crudo));
+      } catch (falla) {
+        await apuntar(entorno.DB, "meta", "error", `no se pudo guardar un aviso: ${(falla as Error).message}`);
+      }
+      // Meta reintenta si no recibe 200, así que siempre se contesta bien aunque algo haya fallado.
+      return json({ bien: true });
+    }
   }
 
   // Crear al primer dueño. Sólo funciona si todavía no hay nadie y con la clave de arranque.
@@ -171,7 +212,14 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     return json({
       empresas: lista.map((e) => ({
         ...e,
-        cuentas: e.cuentas.map((k) => ({ ...k, ...estadoDeConexion(k, correo) })),
+        cuentas: e.cuentas.map((k) => ({
+          id: k.id,
+          red: k.red,
+          identificador: k.identificador,
+          idMeta: k.idMeta,
+          tieneToken: k.tieneToken,
+          ...estadoDeConexion(k, correo, !!entorno.META_APP_SECRET && !!entorno.META_VERIFY_TOKEN),
+        })),
       })),
     });
   }
@@ -239,6 +287,24 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     }
   }
 
+  // Pegar el número de la cuenta en Meta y su token (sólo el dueño). El token no vuelve a salir del servidor.
+  if (ruta === "/api/cuentas/meta" && metodo === "POST") {
+    if (quien.papel !== "dueño") return json({ error: "sólo el dueño puede conectar cuentas" }, 403);
+    const datos = await cuerpo(peticion);
+    const cuentaId = texto(datos.cuentaId, 60);
+    const idMeta = texto(datos.idMeta, 60);
+    const token = texto(datos.token, 1000);
+    if (!cuentaId || !/^\d{5,30}$/.test(idMeta)) return json({ error: "el número de la cuenta en Meta son sólo dígitos" }, 400);
+    try {
+      const hecho = await guardarConexionMeta(entorno.DB, { cuentaId, idMeta, token });
+      if (!hecho) return json({ error: "esa cuenta no existe o no es de Instagram ni de Facebook" }, 404);
+      await apuntar(entorno.DB, "meta", "info", `${quien.correo} conectó una cuenta con Meta`);
+      return json({ bien: true });
+    } catch {
+      return json({ error: "ese número de Meta ya está en otra cuenta" }, 409);
+    }
+  }
+
   if (ruta === "/api/bandeja" && metodo === "GET") {
     const platicas = await conversacionesGuardadas(entorno.DB, { empresaId: url.searchParams.get("empresa") });
     const ahora = new Date();
@@ -290,6 +356,17 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
         texto: mensaje,
         deNombre: entorno.CORREO_NOMBRE,
       });
+      return json({
+        mensaje: { ...guardado, entrega: salida.entregado ? "entregado" : "falló", error: salida.error ?? null },
+      });
+    }
+
+    if (platica.red === "instagram" || platica.red === "facebook") {
+      const token = await tokenDeCuenta(entorno.DB, platica.cuentaId);
+      if (!token) return json({ mensaje: { ...guardado, entrega: "pendiente" }, aviso: "falta conectar esa cuenta con Meta" });
+      const salida = await enviarPorMeta(platica.red, token, platica.usuario, mensaje);
+      await marcarEntrega(entorno.DB, guardado.id, salida.entregado ? "entregado" : "falló", salida.error);
+      if (!salida.entregado) await apuntar(entorno.DB, platica.red, "error", `no se pudo mandar: ${salida.error}`);
       return json({
         mensaje: { ...guardado, entrega: salida.entregado ? "entregado" : "falló", error: salida.error ?? null },
       });

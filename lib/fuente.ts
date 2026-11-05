@@ -300,6 +300,11 @@ export function agregarCuenta(empresaId: string, red: Red, identificador: string
   return cambiarYRecargar("/api/cuentas", { empresaId, red, identificador });
 }
 
+/** Pega el número de la cuenta en Meta y su token (Instagram y Facebook). */
+export function conectarMeta(cuentaId: string, idMeta: string, token: string) {
+  return cambiarYRecargar("/api/cuentas/meta", { cuentaId, idMeta, token });
+}
+
 export function quitarCuenta(id: string) {
   return cambiarYRecargar("/api/cuentas/borrar", { id });
 }
