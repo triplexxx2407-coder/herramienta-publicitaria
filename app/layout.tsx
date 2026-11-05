@@ -3,15 +3,16 @@ import { Marco } from "@/components/Marco";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Prospección · Demo",
-  description: "Demo de una herramienta de prospección comercial por correo. No envía correos; todos los datos son de ejemplo.",
+  title: "NEXORA · Demo",
+  description:
+    "NEXORA: demo de una herramienta de prospección comercial por correo. No envía correos; todos los datos son de ejemplo.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f1f3f8",
+  themeColor: "#0a1428",
 };
 
 const FUENTES =

@@ -29,17 +29,44 @@ export function useMiDesarrolloAbierto(): boolean {
   );
 }
 
-/** Qué plática abrir al llegar a «Chat» (por ejemplo, desde «Seguimiento»). */
-let chatPendiente: string | null = null;
+/**
+ * Qué abrir al llegar a otra pantalla: por ejemplo, el buscador de arriba o la campana piden abrir
+ * una plática y «Chat» la abre. Cada petición lleva un número, así la pantalla sabe cuándo es una
+ * petición nueva aunque sea el mismo negocio, y no hace falta borrar nada.
+ */
+export type Pedido = { id: string; numero: number };
 
-export function pedirChatCon(id: string) {
-  chatPendiente = id;
+const pendientes: Record<string, Pedido | undefined> = {};
+const oyentesPendientes = new Set<() => void>();
+let contador = 0;
+
+export function pedirAbrir(ruta: string, id: string) {
+  pendientes[ruta] = { id, numero: ++contador };
+  for (const o of oyentesPendientes) o();
 }
 
-export function chatPedido(): string | null {
-  return chatPendiente;
+/** La pantalla ya abrió lo que se le pidió, así que la petición se borra. */
+export function olvidarPedido(ruta: string) {
+  if (!pendientes[ruta]) return;
+  pendientes[ruta] = undefined;
+  for (const o of oyentesPendientes) o();
 }
 
-export function olvidarChatPedido() {
-  chatPendiente = null;
+/** Lo último que se pidió abrir en esta ruta, o null. */
+export function loPedido(ruta: string): Pedido | null {
+  return pendientes[ruta] ?? null;
+}
+
+/** Igual que `loPedido`, pero la pantalla se entera aunque ya estuviera abierta. */
+export function useLoPedido(ruta: string): Pedido | null {
+  return useSyncExternalStore(
+    (o) => {
+      oyentesPendientes.add(o);
+      return () => {
+        oyentesPendientes.delete(o);
+      };
+    },
+    () => loPedido(ruta),
+    () => null,
+  );
 }

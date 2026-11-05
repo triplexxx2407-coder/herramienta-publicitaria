@@ -1,14 +1,15 @@
 import { hashTexto } from "@/lib/azar";
 
-// Pares fondo / texto. Se evitan verde, ámbar, rojo y violeta: ya significan algo en la app.
+// Pares fondo / letra, para el fondo azul oscuro de la app.
+// Se evitan verde, ámbar, rojo y violeta: ya significan algo en la app.
 const COLORES: [string, string][] = [
-  ["#e7eeff", "#2451e6"],
-  ["#e3f5fb", "#0e7490"],
-  ["#fff0e5", "#c2410c"],
-  ["#fde9f2", "#be185d"],
-  ["#edf1f6", "#334155"],
-  ["#eceeff", "#4338ca"],
-  ["#e6f3ff", "#0369a1"],
+  ["#1d3a6b", "#9cc0ff"],
+  ["#14414f", "#86d8ec"],
+  ["#4a2e18", "#f6bb8c"],
+  ["#4a2040", "#f5a3cb"],
+  ["#2b3448", "#bccbdd"],
+  ["#272b60", "#adb0f8"],
+  ["#123b58", "#86cbf3"],
 ];
 
 const IGNORAR = new Set(["de", "del", "la", "el", "los", "las", "y", "e"]);
@@ -22,7 +23,7 @@ export function iniciales(nombre: string): string {
 }
 
 export function Avatar({ nombre, tamano = 40, apagado = false }: { nombre: string; tamano?: number; apagado?: boolean }) {
-  const [fondo, texto] = apagado ? ["#eef0f4", "#8b93a5"] : COLORES[hashTexto(nombre) % COLORES.length];
+  const [fondo, texto] = apagado ? ["#1b2a44", "#7488a6"] : COLORES[hashTexto(nombre) % COLORES.length];
   return (
     <span
       aria-hidden

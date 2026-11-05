@@ -1,6 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
-import { ChevronDown, CircleHelp, Lock } from "lucide-react";
+import { Building2, ChevronDown, CircleHelp, MapPin, Share2, SquarePen, Tag } from "lucide-react";
+import { avisar } from "./avisos";
+import { abrirMiDesarrollo } from "./ventanas";
+import { useEnNavegador, useEstado } from "@/lib/almacen";
+import { AJUSTES_EJEMPLO } from "@/lib/estado";
+import type { AjustesProyecto } from "@/lib/tipos";
 
 /** Une clases, ignorando las vacías. */
 export function cx(...clases: (string | false | null | undefined)[]): string {
@@ -8,19 +15,18 @@ export function cx(...clases: (string | false | null | undefined)[]): string {
 }
 
 export function Tarjeta({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cx("rounded-tarjeta border border-linea/80 bg-superficie shadow-tarjeta", className)}>{children}</div>;
+  return <div className={cx("rounded-tarjeta border border-linea bg-superficie shadow-tarjeta", className)}>{children}</div>;
 }
 
-type Variante = "primario" | "secundario" | "fantasma" | "exito" | "peligro" | "claro";
+type Variante = "primario" | "secundario" | "fantasma" | "exito" | "peligro";
 type Tamano = "sm" | "md" | "lg";
 
 const VARIANTES: Record<Variante, string> = {
-  primario: "bg-marca-600 text-white shadow-sm shadow-marca-600/30 hover:bg-marca-700",
-  secundario: "border border-linea bg-white text-tinta hover:border-tenue/60 hover:bg-fondo",
-  fantasma: "text-tinta-2 hover:bg-tinta/5",
-  exito: "bg-verde-500 text-white shadow-sm shadow-verde-500/30 hover:bg-verde-700",
-  peligro: "border border-rojo-500/25 bg-white text-rojo-700 hover:bg-rojo-50",
-  claro: "border border-white/30 bg-white/15 text-white backdrop-blur hover:bg-white/25",
+  primario: "bg-marca-600 text-white shadow-sm shadow-marca-900/50 hover:bg-marca-700",
+  secundario: "bg-panel text-white hover:bg-panel/75",
+  fantasma: "text-tinta-2 hover:bg-white/10 hover:text-tinta",
+  exito: "bg-verde-600 text-white hover:bg-verde-600/85",
+  peligro: "border border-rojo-500/40 bg-rojo-50 text-rojo-700 hover:bg-rojo-50/70",
 };
 
 const TAMANOS: Record<Tamano, string> = {
@@ -73,12 +79,11 @@ export function BotonEnlace({
 }
 
 const INSIGNIAS = {
-  ejemplo: "border border-dashed border-tenue/70 bg-white/80 text-suave",
-  simulado: "border border-violeta-200 bg-violeta-50 text-violeta-700",
-  proximamente: "border border-linea bg-fondo text-suave",
-  tusdatos: "bg-marca-50 text-marca-700",
+  ejemplo: "bg-marca-600/25 text-marca-400 ring-1 ring-marca-400/35",
+  simulado: "bg-violeta-50 text-violeta-700",
+  tusdatos: "bg-logo/35 text-[#a6dedc]",
 } as const;
-const TEXTO_INSIGNIA = { ejemplo: "Ejemplo", simulado: "Simulado", proximamente: "Próximamente", tusdatos: "Tus datos" } as const;
+const TEXTO_INSIGNIA = { ejemplo: "Ejemplo", simulado: "Simulado", tusdatos: "Tus datos" } as const;
 
 export function Insignia({
   tipo,
@@ -92,11 +97,10 @@ export function Insignia({
   return (
     <span
       className={cx(
-        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] leading-4 font-bold tracking-wide uppercase",
-        claro ? "border border-dashed border-white/70 bg-white/15 text-white backdrop-blur" : INSIGNIAS[tipo],
+        "inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11px] leading-4 font-bold tracking-wide uppercase",
+        claro ? "bg-white/20 text-white ring-1 ring-white/35 backdrop-blur" : INSIGNIAS[tipo],
       )}
     >
-      {tipo === "proximamente" ? <Lock size={11} aria-hidden /> : null}
       {children ?? TEXTO_INSIGNIA[tipo]}
     </span>
   );
@@ -115,7 +119,7 @@ export function EstadoVacio({
 }) {
   return (
     <Tarjeta className="entrada flex flex-col items-center px-6 py-12 text-center">
-      <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-marca-50 text-marca-600">{icono}</span>
+      <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-marca-600/20 text-marca-400">{icono}</span>
       <h2 className="mt-4 font-display text-xl font-bold text-tinta">{titulo}</h2>
       <p className="mt-1 max-w-sm text-suave">{texto}</p>
       {children ? <div className="mt-6 flex flex-wrap justify-center gap-2">{children}</div> : null}
@@ -127,52 +131,129 @@ export function EstadoVacio({
 export function AyudaPlegable({ children }: { children: ReactNode }) {
   return (
     <details className="group">
-      <summary className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-marca-100 bg-white px-3 py-1.5 text-sm font-semibold text-marca-700 select-none hover:border-marca-200">
+      <summary className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white/85 select-none hover:bg-white/20 hover:text-white">
         <CircleHelp size={16} aria-hidden />
         ¿Qué hace esto?
         <ChevronDown size={16} aria-hidden className="transition-transform group-open:rotate-180" />
       </summary>
-      <div className="entrada mt-3 max-w-3xl space-y-2 rounded-2xl border border-marca-100 bg-marca-50/80 px-4 py-3.5 text-[15px] leading-relaxed text-tinta-2">
+      <div className="entrada mt-3 max-w-3xl space-y-2 rounded-2xl bg-fondo/45 px-4 py-3.5 text-[15px] leading-relaxed text-white/85">
         {children}
       </div>
     </details>
   );
 }
 
+/** Copia los datos del desarrollo para pegarlos donde quieras (en la demo no se comparte con nadie). */
+async function compartirProyecto(texto: string) {
+  try {
+    await navigator.clipboard.writeText(texto);
+    avisar("Datos del proyecto copiados");
+  } catch {
+    avisar("Aquí no se pudo copiar");
+  }
+}
+
+/**
+ * Lo de arriba de cada pantalla: la tarjeta del proyecto activo y, a su lado, el panel con
+ * el paso en el que vas, qué hace la pantalla y los botones del proyecto.
+ */
 export function Encabezado({
   paso,
   titulo,
   subtitulo,
   ayuda,
-  acciones,
+  extra,
 }: {
   paso?: number;
   titulo: string;
   subtitulo?: string;
   ayuda: ReactNode;
-  acciones?: ReactNode;
+  /** Se ve dentro del panel azul (por ejemplo, con quién estás platicando). */
+  extra?: ReactNode;
 }) {
+  const estado = useEstado();
+  const enNavegador = useEnNavegador();
+  const ajustes = enNavegador ? estado.ajustes : AJUSTES_EJEMPLO;
+
   return (
-    <header className="entrada mb-5 space-y-3 lg:mb-7">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          {paso ? (
-            <p className="text-xs font-bold tracking-[0.14em] text-marca-600 uppercase">Paso {paso} de 5</p>
-          ) : null}
-          <h1 className="mt-0.5 font-display text-[1.7rem] leading-tight font-bold tracking-tight text-tinta sm:text-[2.1rem]">
-            {titulo}
-          </h1>
-          {subtitulo ? <p className="mt-1 max-w-2xl text-[15px] text-suave sm:text-base">{subtitulo}</p> : null}
+    <header className="entrada mb-4 grid grid-cols-1 gap-3 lg:mb-5 lg:grid-cols-[19rem_minmax(0,1fr)]">
+      <TarjetaProyecto ajustes={ajustes} />
+
+      <div className="rounded-tarjeta bg-panel px-4 py-3.5 sm:px-5 sm:py-4">
+        <div className="flex items-start justify-between gap-x-3 gap-y-3 sm:flex-wrap sm:gap-x-4">
+          <div className="min-w-0">
+            {paso ? <p className="text-xs font-bold tracking-[0.16em] text-marca-200 uppercase">Paso {paso} de 5</p> : null}
+            <h1 className="mt-0.5 font-display text-[1.6rem] leading-tight font-bold tracking-tight text-white sm:text-[1.9rem]">
+              {titulo}
+            </h1>
+            {subtitulo ? <p className="mt-1 max-w-2xl text-[15px] text-white/75">{subtitulo}</p> : null}
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Boton
+              variante="secundario"
+              tamano="sm"
+              className="bg-white/15 px-2.5 hover:bg-white/25 sm:px-3.5"
+              icono={<Share2 size={15} aria-hidden />}
+              onClick={() => compartirProyecto(`${ajustes.nombreDesarrollo} · ${ajustes.ciudad} · Desde ${ajustes.precioDesde}`)}
+              aria-label="Compartir el proyecto"
+            >
+              <span className="hidden sm:inline">Compartir</span>
+            </Boton>
+            <Boton
+              tamano="sm"
+              className="px-2.5 sm:px-3.5"
+              icono={<SquarePen size={15} aria-hidden />}
+              onClick={abrirMiDesarrollo}
+              aria-label="Editar el proyecto"
+            >
+              <span className="hidden sm:inline">Editar proyecto</span>
+            </Boton>
+          </div>
         </div>
-        {acciones ? <div className="flex flex-wrap items-center gap-2">{acciones}</div> : null}
+        {extra ? <div className="mt-3.5">{extra}</div> : null}
+        <div className="mt-3.5">
+          <AyudaPlegable>{ayuda}</AyudaPlegable>
+        </div>
       </div>
-      <AyudaPlegable>{ayuda}</AyudaPlegable>
     </header>
   );
 }
 
+/** La tarjeta roja del proyecto activo. Lleva al detalle del proyecto. */
+function TarjetaProyecto({ ajustes }: { ajustes: AjustesProyecto }) {
+  return (
+    <Link
+      href="/"
+      aria-label={`Ver el proyecto ${ajustes.nombreDesarrollo}`}
+      className="relative flex flex-col overflow-hidden rounded-tarjeta bg-linear-to-br from-proyecto-claro to-proyecto-oscuro px-4 py-3.5 text-white shadow-tarjeta transition-shadow hover:shadow-flotante sm:px-5"
+    >
+      <div aria-hidden className="absolute -top-20 -right-12 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+      <span className="relative flex flex-wrap items-center gap-1.5">
+        <Insignia tipo="ejemplo" claro />
+        <Insignia tipo="ejemplo" claro>
+          Preventa exclusiva
+        </Insignia>
+      </span>
+      <span className="relative mt-2 hidden items-center gap-1.5 text-[11px] font-bold tracking-wide text-white/75 uppercase sm:flex">
+        <Building2 size={13} aria-hidden /> Mi desarrollo inmobiliario
+      </span>
+      <span className="relative mt-1.5 font-display text-[1.25rem] leading-[1.15] font-bold tracking-tight sm:mt-0.5 sm:text-[1.45rem] lg:text-[1.55rem]">
+        {ajustes.nombreDesarrollo}
+      </span>
+      <span className="relative mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] font-semibold text-white/85 sm:mt-2.5">
+        <span className="inline-flex items-center gap-1.5">
+          <MapPin size={14} aria-hidden /> {ajustes.ciudad}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Tag size={14} aria-hidden /> Desde {ajustes.precioDesde}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
 const CLASE_CAMPO =
-  "w-full rounded-xl border border-linea bg-white px-3.5 text-[15px] text-tinta outline-none transition placeholder:text-tenue focus:border-marca-500 focus:ring-4 focus:ring-marca-100";
+  "w-full rounded-xl border border-linea bg-fondo px-3.5 text-[15px] text-tinta outline-none transition placeholder:text-tenue focus:border-marca-500 focus:ring-4 focus:ring-marca-600/25";
 
 export function Campo({
   etiqueta,
@@ -206,8 +287,8 @@ export function BarraAccion({
   return (
     <>
       <div aria-hidden className={cx("lg:hidden", nota ? "h-20" : "h-14")} />
-      <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] z-30 border-t border-linea/80 bg-white/95 pt-2.5 pr-[max(1rem,env(safe-area-inset-right,0px))] pb-2.5 pl-[max(1rem,env(safe-area-inset-left,0px))] backdrop-blur-md sm:pr-[max(1.5rem,env(safe-area-inset-right,0px))] sm:pl-[max(1.5rem,env(safe-area-inset-left,0px))] lg:sticky lg:bottom-5 lg:mt-8 lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
-        <div className="mx-auto flex max-w-xl flex-col gap-1.5 lg:max-w-none lg:flex-row lg:items-center lg:justify-end lg:gap-4 lg:rounded-2xl lg:border lg:border-linea lg:bg-white/90 lg:py-3 lg:pr-3 lg:pl-5 lg:shadow-flotante lg:backdrop-blur">
+      <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] z-30 border-t border-linea bg-superficie/95 pt-2.5 pr-[max(1rem,env(safe-area-inset-right,0px))] pb-2.5 pl-[max(1rem,env(safe-area-inset-left,0px))] backdrop-blur-md sm:pr-[max(1.5rem,env(safe-area-inset-right,0px))] sm:pl-[max(1.5rem,env(safe-area-inset-left,0px))] lg:sticky lg:bottom-5 lg:mt-7 lg:border-0 lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+        <div className="mx-auto flex max-w-xl flex-col gap-1.5 lg:max-w-none lg:flex-row lg:items-center lg:justify-end lg:gap-4 lg:rounded-2xl lg:border lg:border-linea lg:bg-superficie/95 lg:py-3 lg:pr-3 lg:pl-5 lg:shadow-flotante lg:backdrop-blur">
           {nota ? <div className="text-center text-sm font-semibold text-tinta-2 lg:mr-auto lg:text-left">{nota}</div> : null}
           {!nota && notaComputadora ? (
             <div className="mr-auto hidden text-sm font-semibold text-tinta-2 lg:block">{notaComputadora}</div>
@@ -225,11 +306,10 @@ export const BOTON_BARRA = "h-12 w-full rounded-2xl text-base lg:w-auto lg:min-w
 /** Lo que se ve mientras la página carga lo guardado en el navegador. */
 export function Cargando() {
   return (
-    <div className="animate-pulse space-y-4" aria-label="Cargando">
-      <div className="h-4 w-24 rounded-full bg-linea" />
-      <div className="h-9 w-64 rounded-xl bg-linea" />
-      <div className="h-40 rounded-tarjeta bg-linea/70" />
-      <div className="h-24 rounded-tarjeta bg-linea/60" />
+    <div className="animate-pulse space-y-3" aria-label="Cargando">
+      <div className="h-32 rounded-tarjeta bg-superficie" />
+      <div className="h-40 rounded-tarjeta bg-superficie/70" />
+      <div className="h-24 rounded-tarjeta bg-superficie/50" />
     </div>
   );
 }
@@ -253,15 +333,15 @@ export function Selector({
   return (
     <label className={cx("relative block min-w-0", className)}>
       <span className="sr-only">{etiqueta}</span>
-      <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-marca-600">{icono}</span>
+      <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-marca-400">{icono}</span>
       <select
         value={valor}
         onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full appearance-none truncate rounded-xl border border-linea bg-white pr-9 pl-9 text-[15px] font-semibold text-tinta outline-none focus:border-marca-500 focus:ring-4 focus:ring-marca-100"
+        className="h-11 w-full appearance-none truncate rounded-xl border border-linea bg-superficie-2 pr-9 pl-9 text-[15px] font-semibold text-tinta outline-none focus:border-marca-500 focus:ring-4 focus:ring-marca-600/25"
       >
         {children}
       </select>
-      <ChevronDown size={17} aria-hidden className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-tenue" />
+      <ChevronDown size={17} aria-hidden className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-suave" />
     </label>
   );
 }

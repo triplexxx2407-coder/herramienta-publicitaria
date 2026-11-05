@@ -14,19 +14,19 @@ import {
 } from "lucide-react";
 
 const GIROS: Record<string, { icono: LucideIcon; fondo: string; color: string }> = {
-  "consultorios-medicos": { icono: Stethoscope, fondo: "#e3f5fb", color: "#0e7490" },
-  "clinicas-dentales": { icono: Smile, fondo: "#e6f3ff", color: "#0369a1" },
-  "despachos-abogados": { icono: Scale, fondo: "#eceeff", color: "#4338ca" },
-  "despachos-contables": { icono: Calculator, fondo: "#e7eeff", color: "#2451e6" },
-  "agencias-aduanales": { icono: Container, fondo: "#fff0e5", color: "#c2410c" },
-  "agencias-autos": { icono: Car, fondo: "#edf1f6", color: "#334155" },
-  restaurantes: { icono: UtensilsCrossed, fondo: "#fde9f2", color: "#be185d" },
-  fabricas: { icono: Factory, fondo: "#f1efe9", color: "#57534e" },
-  hoteles: { icono: BedDouble, fondo: "#e4f6f4", color: "#0f766e" },
-  transporte: { icono: Truck, fondo: "#e8edff", color: "#1d4ed8" },
+  "consultorios-medicos": { icono: Stethoscope, fondo: "#14414f", color: "#86d8ec" },
+  "clinicas-dentales": { icono: Smile, fondo: "#123b58", color: "#86cbf3" },
+  "despachos-abogados": { icono: Scale, fondo: "#272b60", color: "#adb0f8" },
+  "despachos-contables": { icono: Calculator, fondo: "#1d3a6b", color: "#9cc0ff" },
+  "agencias-aduanales": { icono: Container, fondo: "#4a2e18", color: "#f6bb8c" },
+  "agencias-autos": { icono: Car, fondo: "#2b3448", color: "#bccbdd" },
+  restaurantes: { icono: UtensilsCrossed, fondo: "#4a2040", color: "#f5a3cb" },
+  fabricas: { icono: Factory, fondo: "#3a362c", color: "#d7cfbb" },
+  hoteles: { icono: BedDouble, fondo: "#13403c", color: "#84d7cd" },
+  transporte: { icono: Truck, fondo: "#1b2f66", color: "#9bb4ff" },
 };
 
-const OTRO = { icono: Building2, fondo: "#eef0f4", color: "#5a6478" };
+const OTRO = { icono: Building2, fondo: "#1b2a44", color: "#9fb3d1" };
 
 export function iconoDeGiro(giro: string): LucideIcon {
   return (GIROS[giro] ?? OTRO).icono;

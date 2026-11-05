@@ -6,7 +6,7 @@ import { useId, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/Avatar";
 import { Hoja } from "@/components/Hoja";
 import { VistaCorreo } from "@/components/VistaCorreo";
-import { pedirChatCon } from "@/components/ventanas";
+import { pedirAbrir } from "@/components/ventanas";
 import { BOTON_BARRA, BarraAccion, Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, Tarjeta, cx } from "@/components/ui";
 import { useEnNavegador, useEstado } from "@/lib/almacen";
 import { nombreVisible } from "@/lib/contactos";
@@ -26,7 +26,7 @@ export function PantallaSeguimiento() {
   const viendo = envios.find((e) => e.contacto.id === abierto);
 
   function abrirChat(id: string) {
-    pedirChatCon(id);
+    pedirAbrir("/chat", id);
     router.push("/chat");
   }
 
@@ -144,7 +144,7 @@ function Lista({
         aria-expanded={abierta}
         aria-controls={id}
         onClick={() => setAbierta((a) => !a)}
-        className="flex w-full items-center gap-3.5 px-4 py-4 text-left transition-colors hover:bg-fondo/70 sm:px-5"
+        className="flex w-full items-center gap-3.5 px-4 py-4 text-left transition-colors hover:bg-superficie-2/60 sm:px-5"
       >
         <span
           className={cx(
@@ -174,7 +174,7 @@ function Fila({ envio: e, detalle, cuando, onAbrir }: { envio: Envio; detalle: R
       <button
         type="button"
         onClick={onAbrir}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-fondo sm:px-5"
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-superficie-2/70 sm:px-5"
       >
         <Avatar nombre={e.contacto.nombre} tamano={40} />
         <span className="min-w-0 flex-1">

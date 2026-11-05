@@ -1,4 +1,4 @@
-# Prospección por correo (demo)
+# NEXORA · Prospección por correo (demo)
 
 Es una demo de una herramienta para conseguir clientes por correo: encuentras negocios en un directorio
 público, eliges a quién escribirle, preparas un correo personal para cada uno, lo envías y platicas con los que
@@ -27,8 +27,21 @@ dominio que existe sólo para ejemplos.
 En cada pantalla hay un solo botón grande abajo que dice qué sigue. Para presentarla rápido, en el inicio está
 **«O mira un ejemplo ya lleno»** (deja 9 correos listos para enviar), y «Borrar todo» la deja vacía otra vez.
 
-Se ve como una app: en el celular las pantallas van en pestañas abajo y en la computadora en una barra a la
-izquierda.
+## Cómo se ve
+
+El diseño es el que pidió el dueño del proyecto (archivo `NEXORA 1.pdf`): fondo azul oscuro, logo NEXORA y una
+tarjeta roja del desarrollo arriba de cada pantalla.
+
+- **Barra de arriba.** Logo, buscador de clientes y propiedades, campana con las pláticas que no has abierto y
+  un engrane que abre «Editar proyecto».
+- **Menú de la izquierda (computadora).** «Proyecto activo», los 5 pasos numerados con cuántos llevas en cada
+  uno, y «Resumen de campaña» con la tasa de respuesta, que se calcula con lo que llevas enviado y contestado.
+- **Celular.** El menú se convierte en pestañas abajo y la barra de arriba deja el buscador en una lupa.
+- **Chat.** Fondo claro y burbujas como en WhatsApp: las tuyas en verde a la derecha, las suyas en blanco a la
+  izquierda, con la hora.
+
+El buscador de arriba lleva a donde está cada cliente: a su plática si te contestó, al correo que le mandaste si
+ya se lo enviaste, a su borrador si está por escribir, o lo resalta en la lista de «Buscar».
 
 ## Qué es simulado
 
@@ -148,7 +161,7 @@ negocios.
 ```
 app/                 una carpeta por pantalla (buscar, redactar, envio, seguimiento, chat)
 app/api/empresas/    consulta de empresas del lado del servidor (aquí se lee el token)
-components/          piezas compartidas: marco con pestañas, botones, tarjetas, ventanas y etiquetas
+components/          piezas compartidas: barra de arriba, marco con menú y pestañas, botones y tarjetas
 lib/                 las reglas: selección, plantilla, pie legal, envío simulado y chat, expediente
 lib/datos/           capa de acceso a datos: BuscadorDeEmpresas, DatosDeEjemplo y DenueInegi
 datos/               archivos JSON de ejemplo

@@ -19,45 +19,66 @@
   --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: "Sora", "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
-  --color-tinta: #0b1324;
-  --color-tinta-2: #26324a;
-  --color-suave: #5a6478;
-  --color-tenue: #8b93a5;
-  --color-linea: #e3e7ef;
-  --color-fondo: #f1f3f8;
-  --color-superficie: #ffffff;
+  /* Texto sobre el azul oscuro */
+  --color-tinta: #eaf1ff;
+  --color-tinta-2: #c3d3ee;
+  --color-suave: #93a9c9;
+  --color-tenue: #6b81a4;
 
-  --color-marca-50: #eef3ff;
-  --color-marca-100: #dde6ff;
-  --color-marca-200: #bfd0ff;
-  --color-marca-400: #5f86ff;
-  --color-marca-500: #3b66f5;
-  --color-marca-600: #2451e6;
-  --color-marca-700: #1c40ba;
-  --color-marca-800: #172f86;
-  --color-marca-900: #101f57;
+  /* Superficies */
+  --color-fondo: #0a1428;
+  --color-superficie: #15264a;
+  --color-superficie-2: #1e3a5f;
+  --color-panel: #2b5080;
+  --color-linea: #243a63;
 
-  --color-verde-50: #e8f7ee;
-  --color-verde-500: #16a34a;
-  --color-verde-700: #147a3a;
-  --color-ambar-50: #fff3df;
-  --color-ambar-500: #e08700;
-  --color-ambar-700: #a85a00;
-  --color-rojo-50: #fdecec;
-  --color-rojo-500: #dc2626;
-  --color-rojo-700: #b11d1d;
-  --color-violeta-50: #f3efff;
-  --color-violeta-200: #ddd0ff;
-  --color-violeta-500: #7c3aed;
-  --color-violeta-700: #5b21b6;
+  --color-marca-50: #eff6ff;
+  --color-marca-100: #dbeafe;
+  --color-marca-200: #bfdbfe;
+  --color-marca-400: #60a5fa;
+  --color-marca-500: #3b82f6;
+  --color-marca-600: #2563eb;
+  --color-marca-700: #1d4ed8;
+  --color-marca-900: #172f86;
+
+  /* Verde azulado del logo */
+  --color-logo: #47807f;
+  --color-logo-claro: #5f9e9c;
+
+  /* Rojo de la tarjeta del proyecto */
+  --color-proyecto: #b91010;
+  --color-proyecto-claro: #d81b1b;
+  --color-proyecto-oscuro: #7d0a0a;
+
+  --color-verde-50: #123a26;
+  --color-verde-400: #4ade80;
+  --color-verde-500: #22c55e;
+  --color-verde-700: #86efac;
+  --color-ambar-50: #3a2c0c;
+  --color-ambar-500: #f59e0b;
+  --color-ambar-700: #fcd34d;
+  --color-rojo-50: #3d1218;
+  --color-rojo-500: #ef4444;
+  --color-rojo-700: #fca5a5;
+  --color-violeta-50: #241a4d;
+  --color-violeta-200: #4c3f8f;
+  --color-violeta-500: #8b5cf6;
+  --color-violeta-700: #c4b5fd;
+
+  /* Pantalla de la plática: clara, como la de un celular */
+  --color-chat-fondo: #e7e0d6;
+  --color-chat-mio: #d7f6c6;
+  --color-chat-suyo: #ffffff;
+  --color-chat-tinta: #0b1a14;
+  --color-chat-tenue: #5c7367;
 
   --radius-tarjeta: 1.25rem;
-  --shadow-tarjeta: 0 1px 2px rgb(16 24 40 / 0.04), 0 8px 24px -12px rgb(16 24 40 / 0.14);
-  --shadow-flotante: 0 18px 40px -12px rgb(11 19 36 / 0.35);
+  --shadow-tarjeta: 0 1px 2px rgb(0 0 0 / 0.25), 0 10px 28px -14px rgb(0 0 0 / 0.6);
+  --shadow-flotante: 0 18px 44px -12px rgb(0 0 0 / 0.75);
 }
 
 html {
-  color-scheme: light;
+  color-scheme: dark;
   -webkit-text-size-adjust: 100%;
   /* Deja libre la zona de la hora y la batería del teléfono, y la barrita de abajo. */
   padding-top: env(safe-area-inset-top, 0px);
@@ -79,7 +100,7 @@ body::before {
   inset: 0 0 auto;
   height: env(safe-area-inset-top, 0px);
   z-index: 10;
-  background: var(--color-fondo);
+  background: var(--color-superficie);
 }
 
 h1,
@@ -106,13 +127,19 @@ summary::-webkit-details-marker {
   display: none;
 }
 
-/* Rayas para marcar lo que es simulado. */
-.rayas-simulado {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    rgb(124 58 237 / 0.07) 0 10px,
-    transparent 10px 20px
-  );
+/* Fondo de la pantalla de la plática, con un tramado suave como el de un celular. */
+.fondo-platica {
+  background-color: var(--color-chat-fondo);
+  background-image:
+    radial-gradient(circle at 20% 30%, rgb(255 255 255 / 0.55) 0 2px, transparent 2px),
+    radial-gradient(circle at 70% 70%, rgb(0 0 0 / 0.04) 0 2px, transparent 2px);
+  background-size: 46px 46px, 64px 64px;
+}
+
+/* La lista de pasos y de pláticas se desplaza sin barra gruesa. */
+.barra-fina {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-superficie-2) transparent;
 }
 
 @keyframes aparecer {
@@ -165,4 +192,10 @@ summary::-webkit-details-marker {
 :focus-visible {
   outline: 3px solid var(--color-marca-400);
   outline-offset: 2px;
+}
+
+/* Las listas desplegables se dibujan con los colores del sistema: aquí se fuerzan los de la app. */
+select option {
+  background: var(--color-superficie);
+  color: var(--color-tinta);
 }

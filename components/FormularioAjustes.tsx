@@ -39,7 +39,7 @@ export function FormularioAjustes() {
         <h3 className="text-xs font-bold tracking-[0.12em] text-tenue uppercase">3 puntos fuertes</h3>
         {ajustes.puntosFuertes.map((p, i) => (
           <div key={i} className="flex items-center gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-marca-50 font-display text-sm font-bold text-marca-700">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-marca-600/20 font-display text-sm font-bold text-marca-400">
               {i + 1}
             </span>
             <input
@@ -51,7 +51,7 @@ export function FormularioAjustes() {
                 puntos[i] = e.target.value;
                 cambiar({ puntosFuertes: puntos });
               }}
-              className="h-11 w-full rounded-xl border border-linea bg-white px-3.5 text-[15px] outline-none focus:border-marca-500 focus:ring-4 focus:ring-marca-100"
+              className="h-11 w-full rounded-xl border border-linea bg-fondo px-3.5 text-[15px] text-tinta outline-none focus:border-marca-500 focus:ring-4 focus:ring-marca-600/25"
             />
           </div>
         ))}
@@ -68,14 +68,14 @@ export function FormularioAjustes() {
                 type="button"
                 aria-label={`Quitar ${f.nombre}`}
                 onClick={() => cambiar({ fotos: ajustes.fotos.filter((_, j) => j !== i) })}
-                className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-tinta/70 text-white hover:bg-tinta"
+                className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-fondo/80 text-tinta hover:bg-fondo"
               >
                 <X size={15} aria-hidden />
               </button>
             </li>
           ))}
           <li>
-            <label className="flex aspect-[4/3] w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-linea text-sm font-semibold text-suave hover:border-marca-200 hover:bg-marca-50 hover:text-marca-700">
+            <label className="flex aspect-[4/3] w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-linea text-sm font-semibold text-suave hover:border-marca-500 hover:bg-marca-600/15 hover:text-marca-400">
               <ImagePlus size={22} aria-hidden />
               Agregar
               <input

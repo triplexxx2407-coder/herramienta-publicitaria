@@ -1,11 +1,11 @@
 "use client";
 
 import { Check, CircleAlert, Lock, Paperclip, PenLine, RotateCcw, Search, Send } from "lucide-react";
-import { useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Avatar } from "@/components/Avatar";
 import { avisar } from "@/components/avisos";
 import { BOTON_BARRA, BarraAccion, Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, Tarjeta, cx } from "@/components/ui";
-import { abrirMiDesarrollo } from "@/components/ventanas";
+import { abrirMiDesarrollo, olvidarPedido, useLoPedido } from "@/components/ventanas";
 import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
 import { nombreVisible, porEscribir } from "@/lib/contactos";
 import { aprobar, armarCorreo, generarBorrador, validarAjustes, validarAsunto } from "@/lib/redaccion";
@@ -20,6 +20,18 @@ export function PantallaRedactar() {
   const enNavegador = useEnNavegador();
   const [actualId, setActualId] = useState<string | null>(null);
   const [errores, setErrores] = useState<Record<string, string[]>>({});
+
+  // Si otra pantalla pide abrir un correo (el buscador de arriba o la campana), se abre aunque ya
+  // estuvieras aquí. El número de la petición evita abrirlo dos veces.
+  const pedido = useLoPedido("/redactar");
+  const [pedidoVisto, setPedidoVisto] = useState(0);
+  if (pedido && pedido.numero !== pedidoVisto) {
+    setPedidoVisto(pedido.numero);
+    setActualId(pedido.id);
+  }
+  useEffect(() => {
+    if (pedido) olvidarPedido("/redactar");
+  }, [pedido]);
   const editorRef = useRef<HTMLDivElement>(null);
   const erroresRef = useRef<HTMLDivElement>(null);
   if (!enNavegador) return <Cargando />;
@@ -114,7 +126,7 @@ export function PantallaRedactar() {
                       aria-pressed={c.id === actual.id}
                       className={cx(
                         "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
-                        c.id === actual.id ? "bg-marca-50" : "hover:bg-fondo",
+                        c.id === actual.id ? "bg-marca-600/20" : "hover:bg-superficie-2/70",
                       )}
                     >
                       <Avatar nombre={c.nombre} tamano={34} />
@@ -149,7 +161,7 @@ export function PantallaRedactar() {
                     aria-pressed={activo}
                     className={cx(
                       "inline-flex h-11 max-w-[12rem] shrink-0 items-center gap-2 rounded-full border pr-3.5 pl-1.5 text-sm font-semibold transition-colors",
-                      activo ? "border-tinta bg-tinta text-white" : "border-linea bg-white text-tinta-2",
+                      activo ? "border-marca-500 bg-marca-600 text-white" : "border-linea bg-superficie text-tinta-2",
                     )}
                   >
                     <Avatar nombre={c.nombre} tamano={30} />
@@ -289,8 +301,8 @@ function Redactor({
             className={cx(
               "mt-1.5 h-12 w-full rounded-xl border px-3.5 text-[15px] font-semibold text-tinta outline-none focus:ring-4",
               erroresAsunto.length
-                ? "border-rojo-500/60 bg-rojo-50 focus:ring-rojo-50"
-                : "border-linea bg-white focus:border-marca-500 focus:ring-marca-100",
+                ? "border-rojo-500/60 bg-rojo-50 focus:ring-rojo-500/25"
+                : "border-linea bg-fondo focus:border-marca-500 focus:ring-marca-600/25",
             )}
           />
           {erroresAsunto.map((e) => (
@@ -309,7 +321,7 @@ function Redactor({
             value={borrador.cuerpo}
             onChange={(e) => editar({ cuerpo: e.target.value })}
             rows={14}
-            className="mt-1.5 w-full rounded-xl border border-linea bg-white px-3.5 py-3 text-[15px] leading-relaxed text-tinta outline-none focus:border-marca-500 focus:ring-4 focus:ring-marca-100"
+            className="mt-1.5 w-full rounded-xl border border-linea bg-fondo px-3.5 py-3 text-[15px] leading-relaxed text-tinta outline-none focus:border-marca-500 focus:ring-4 focus:ring-marca-600/25"
           />
         </div>
 
@@ -329,7 +341,7 @@ function Redactor({
           </div>
         ) : null}
 
-        <div className="rounded-2xl border border-dashed border-tenue/50 bg-fondo px-4 py-3">
+        <div className="rounded-2xl border border-dashed border-tenue/45 bg-fondo/50 px-4 py-3">
           <p className="flex items-center gap-1.5 text-xs font-bold tracking-wide text-suave uppercase">
             <Lock size={13} aria-hidden /> Pie legal: se agrega siempre y no se puede borrar
           </p>
@@ -344,7 +356,7 @@ function Redactor({
       </div>
 
       {cambiado ? (
-        <div className="border-t border-linea bg-fondo/60 px-4 py-2.5 sm:px-5">
+        <div className="border-t border-linea bg-fondo/40 px-4 py-2.5 sm:px-5">
           <Boton
             variante="fantasma"
             tamano="sm"

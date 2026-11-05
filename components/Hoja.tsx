@@ -44,9 +44,9 @@ export function Hoja({
       aria-labelledby={id}
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6"
     >
-      <div aria-hidden className="velo-entrada absolute inset-0 bg-tinta/55 backdrop-blur-[2px]" onClick={onCerrar} />
-      <div className="hoja-entrada relative flex max-h-[92dvh] w-full flex-col rounded-t-[28px] bg-superficie shadow-flotante sm:max-w-xl sm:rounded-[28px]">
-        <div aria-hidden className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-linea sm:hidden" />
+      <div aria-hidden className="velo-entrada absolute inset-0 bg-black/65 backdrop-blur-[2px]" onClick={onCerrar} />
+      <div className="hoja-entrada relative flex max-h-[92dvh] w-full flex-col rounded-t-[28px] border border-linea bg-superficie shadow-flotante sm:max-w-xl sm:rounded-[28px]">
+        <div aria-hidden className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-suave/50 sm:hidden" />
         <header className="flex shrink-0 items-start justify-between gap-4 px-5 pt-3 pb-3 sm:px-6 sm:pt-6">
           <div className="min-w-0">
             <h2 id={id} className="font-display text-xl font-bold text-tinta">
@@ -58,7 +58,7 @@ export function Hoja({
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar"
-            className="-mt-1 -mr-2 rounded-full p-2 text-suave hover:bg-fondo hover:text-tinta"
+            className="-mt-1 -mr-2 rounded-full p-2 text-suave hover:bg-white/10 hover:text-tinta"
           >
             <X size={22} aria-hidden />
           </button>

@@ -3,6 +3,7 @@
 import { Ban, Check, LayoutGrid, MailCheck, MapPin, PenLine, RefreshCw, SearchX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { avisar } from "@/components/avisos";
+import { olvidarPedido, useLoPedido } from "@/components/ventanas";
 import { IconoGiro } from "@/components/IconoGiro";
 import { BOTON_BARRA, BarraAccion, Boton, BotonEnlace, Encabezado, Insignia, Selector, Tarjeta, cx } from "@/components/ui";
 import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
@@ -32,6 +33,21 @@ export function PantallaBuscar() {
   const [buscando, setBuscando] = useState(true);
   const [error, setError] = useState("");
   const turno = useRef(0);
+
+  // Si el buscador de arriba pide ver un negocio, se resalta y la lista baja hasta él.
+  const [resaltado, setResaltado] = useState<string | null>(null);
+
+  // Si otra pantalla pide abrir un negocio de la lista (el buscador de arriba o la campana), se abre aunque ya
+  // estuvieras aquí. El número de la petición evita abrirlo dos veces.
+  const pedido = useLoPedido("/buscar");
+  const [pedidoVisto, setPedidoVisto] = useState(0);
+  if (pedido && pedido.numero !== pedidoVisto) {
+    setPedidoVisto(pedido.numero);
+    setResaltado(pedido.id);
+  }
+  useEffect(() => {
+    if (pedido) olvidarPedido("/buscar");
+  }, [pedido]);
 
   function buscar(f: FiltrosPantalla, alTerminar?: () => void) {
     setFiltros(f);
@@ -143,7 +159,7 @@ export function PantallaBuscar() {
         <Boton
           variante="fantasma"
           tamano="sm"
-          className="ml-auto text-marca-700"
+          className="ml-auto text-marca-400"
           onClick={() => buscar(filtros, () => avisar("Lista actualizada"))}
           disabled={buscando}
           icono={<RefreshCw size={16} aria-hidden className={buscando ? "animate-spin" : undefined} />}
@@ -186,6 +202,7 @@ export function PantallaBuscar() {
                 fila={f}
                 esEjemplo={resultado?.fuente.esEjemplo ?? true}
                 listo={enNavegador}
+                resaltada={f.empresa.id === resaltado}
                 onCambio={(elegir) => alternar([f.empresa], elegir)}
               />
             </li>
@@ -214,7 +231,7 @@ function Casilla({ marcada, apagada = false }: { marcada: boolean; apagada?: boo
       aria-hidden
       className={cx(
         "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 transition-colors",
-        marcada ? "border-marca-600 bg-marca-600 text-white" : apagada ? "border-linea bg-fondo" : "border-tenue/70 bg-white",
+        marcada ? "border-marca-500 bg-marca-600 text-white" : apagada ? "border-linea bg-fondo" : "border-suave/70 bg-fondo",
       )}
     >
       {marcada ? <Check size={16} strokeWidth={3.2} /> : null}
@@ -226,21 +243,29 @@ function FilaEmpresa({
   fila: { empresa: e, elegida, bloqueo },
   esEjemplo,
   listo,
+  resaltada = false,
   onCambio,
 }: {
   fila: Fila;
   esEjemplo: boolean;
   listo: boolean;
+  resaltada?: boolean;
   onCambio: (elegir: boolean) => void;
 }) {
   const nombre = nombreVisible(e.nombre, esEjemplo);
   const detalle = `${nombreGiro(e.giro)} · ${nombreCiudad(e.ciudad)}`;
+  const caja = useRef<HTMLLabelElement>(null);
+  useEffect(() => {
+    if (resaltada) caja.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [resaltada]);
   return (
     <label
+      ref={caja}
       className={cx(
         "flex min-h-16 items-center gap-3 px-4 py-2.5 sm:px-5",
-        bloqueo ? "cursor-default" : "cursor-pointer transition-colors hover:bg-fondo/70",
-        elegida && "bg-marca-50/60",
+        bloqueo ? "cursor-default" : "cursor-pointer transition-colors hover:bg-superficie-2/60",
+        elegida && "bg-marca-600/15",
+        resaltada && "bg-marca-600/25 ring-2 ring-marca-500 ring-inset",
       )}
     >
       <input

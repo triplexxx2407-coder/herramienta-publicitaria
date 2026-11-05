@@ -1,10 +1,11 @@
 "use client";
 
 import { ArrowRight, ChevronRight, FlaskConical, LoaderCircle, PenLine, Search, Send } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { avisar } from "@/components/avisos";
 import { Hoja } from "@/components/Hoja";
+import { olvidarPedido, useLoPedido } from "@/components/ventanas";
 import { VistaCorreo } from "@/components/VistaCorreo";
 import { BOTON_BARRA, BarraAccion, Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Tarjeta } from "@/components/ui";
 import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
@@ -17,6 +18,19 @@ export function PantallaEnvio() {
   const enNavegador = useEnNavegador();
   const [enviando, setEnviando] = useState(false);
   const [abierto, setAbierto] = useState<string | null>(null);
+
+  // Si otra pantalla pide abrir un correo enviado (el buscador de arriba o la campana), se abre aunque ya
+  // estuvieras aquí. El número de la petición evita abrirlo dos veces.
+  const pedido = useLoPedido("/envio");
+  const [pedidoVisto, setPedidoVisto] = useState(0);
+  if (pedido && pedido.numero !== pedidoVisto) {
+    setPedidoVisto(pedido.numero);
+    setAbierto(pedido.id);
+  }
+  useEffect(() => {
+    if (pedido) olvidarPedido("/envio");
+  }, [pedido]);
+
   if (!enNavegador) return <Cargando />;
 
   const listos = listosParaEnviar(estado);
@@ -52,7 +66,7 @@ export function PantallaEnvio() {
 
       {listos.length || envios.length ? (
         <>
-          <section className="entrada relative mb-3 overflow-hidden rounded-[28px] bg-tinta p-5 text-white shadow-tarjeta sm:p-6">
+          <section className="entrada relative mb-3 overflow-hidden rounded-tarjeta border border-linea bg-linear-to-br from-superficie-2 to-superficie p-5 text-white shadow-tarjeta sm:p-6">
             <div aria-hidden className="absolute -top-24 -right-16 h-64 w-64 rounded-full bg-marca-600/35 blur-3xl" />
             <div className="relative flex items-center gap-4">
               <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10">
@@ -103,7 +117,7 @@ export function PantallaEnvio() {
                       <button
                         type="button"
                         onClick={() => setAbierto(e.contacto.id)}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-fondo sm:px-5"
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-superficie-2/70 sm:px-5"
                       >
                         <Avatar nombre={e.contacto.nombre} tamano={40} />
                         <span className="min-w-0 flex-1">
