@@ -48,7 +48,7 @@ Rutas (todas piden sesión menos `salud`, `entrar` y `arrancar`):
 - `GET /api/empresas`, `POST /api/empresas`, `POST /api/cuentas` (dar de alta empresas y ligarles sus canales).
 - `GET /api/bandeja?empresa=…`, `POST /api/leida`, `POST /api/responder`.
 - `POST /api/invitar`: el dueño da acceso a alguien más del equipo.
-- `POST /api/revisar-correo`: lee el correo sin esperar al reloj (cada 2 minutos lo hace solo).
+- `POST /api/revisar-correo`: lee el correo sin esperar al reloj (cada minuto lo hace solo; con Nexora abierta, la pantalla lo pide cada 10 segundos).
 
 **Sin secretos en el código.** El repositorio es público: las claves van como secretos de
 Cloudflare (`npx wrangler secret put NOMBRE --config servidor/wrangler.jsonc`). Los nombres están

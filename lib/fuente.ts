@@ -89,12 +89,30 @@ export async function iniciarFuente(): Promise<void> {
   vigilar();
 }
 
-/** Cada 15 segundos revisa si llegó algo nuevo. */
+let revisando = false;
+
+/**
+ * Cada 10 segundos, con la pantalla a la vista, le pide al servidor que mire el buzón de correo
+ * y luego trae lo nuevo. Así lo que te escriben aparece casi al instante; el reloj del servidor
+ * (cada minuto) cubre cuando nadie tiene Nexora abierta.
+ */
 function vigilar() {
   if (reloj) clearInterval(reloj);
   reloj = setInterval(() => {
-    if (document.visibilityState === "visible") void cargar();
-  }, 15_000);
+    if (document.visibilityState !== "visible" || revisando) return;
+    revisando = true;
+    void (async () => {
+      try {
+        const hayCorreo = fuente.empresas.some((e) => e.cuentas.some((k) => k.red === "correo" && k.estado === "conectada"));
+        if (hayCorreo) await pedir("/api/revisar-correo", {});
+        await cargar();
+      } catch {
+        /* se vuelve a intentar en 10 segundos */
+      } finally {
+        revisando = false;
+      }
+    })();
+  }, 10_000);
 }
 
 interface ConversacionDelServidor {

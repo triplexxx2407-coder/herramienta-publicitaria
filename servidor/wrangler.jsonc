@@ -26,8 +26,8 @@
     "not_found_handling": "single-page-application"
   },
 
-  // Cada 2 minutos revisa el correo nuevo y limpia sesiones vencidas.
+  // Cada minuto revisa el correo nuevo y limpia sesiones vencidas.
   "triggers": {
-    "crons": ["*/2 * * * *"]
+    "crons": ["* * * * *"]
   }
 }
