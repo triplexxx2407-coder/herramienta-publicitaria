@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import bandejaJson from "@/datos/bandeja-ejemplo.json";
 import {
+  EMPRESAS,
   anclajeDeSesion,
   conversaciones,
+  cuentaYEmpresa,
+  elegirEmpresa,
   ficha,
   marcarLeidaRed,
   plazo,
   responderEnRed,
   sePuedeContestar,
   sinLeer,
+  sinLeerPorEmpresa,
   sinLeerPorRed,
 } from "@/lib/bandeja";
 import { estadoInicial, leerEstadoGuardado } from "@/lib/estado";
@@ -67,8 +71,9 @@ describe("conversaciones", () => {
 
   it("cuenta las nuevas por red", () => {
     const porRed = sinLeerPorRed(conversaciones(estadoInicial(), ANCLAJE));
-    expect(porRed.instagram).toBe(2);
-    expect(porRed.whatsapp).toBe(1);
+    // Instagram: Laura, Salvador (condominios) y Mario (autos). WhatsApp: Jorge y Elena.
+    expect(porRed.instagram).toBe(3);
+    expect(porRed.whatsapp).toBe(2);
   });
 
   it("los mensajes de cada plática quedan en orden", () => {
@@ -175,26 +180,78 @@ describe("ficha de la persona", () => {
   const lista = conversaciones(estadoInicial(), ANCLAJE);
 
   it("junta los canales de quien escribe por dos redes", () => {
-    const f = ficha(lista, "laura")!;
+    const f = ficha(lista, "laura", "condominios")!;
     expect(f.persona).toBe("Laura M.");
     expect(f.canales.map((c) => c.red).sort()).toEqual(["instagram", "whatsapp"]);
     expect(f.mensajes).toBe(3);
   });
 
   it("de quien escribe por una sola red, un solo canal", () => {
-    expect(ficha(lista, "jorge")!.canales).toHaveLength(1);
+    expect(ficha(lista, "jorge", "condominios")!.canales).toHaveLength(1);
   });
 
   it("de alguien que no está, nada", () => {
-    expect(ficha(lista, "nadie")).toBeNull();
+    expect(ficha(lista, "nadie", "condominios")).toBeNull();
+  });
+
+  it("nunca junta a una persona de otra empresa", () => {
+    expect(ficha(lista, "laura", "autos")).toBeNull();
+  });
+});
+
+describe("varias empresas", () => {
+  it("cada plática es de una cuenta dada de alta y de la misma red que esa cuenta", () => {
+    for (const e of EJEMPLOS) {
+      const origen = cuentaYEmpresa(e.cuentaId);
+      expect(origen, e.id).not.toBeNull();
+      expect(origen!.cuenta.red).toBe(e.red);
+    }
+  });
+
+  it("los ids de empresas y cuentas no se repiten", () => {
+    const empresas = EMPRESAS.map((e) => e.id);
+    const cuentas = EMPRESAS.flatMap((e) => e.cuentas.map((k) => k.id));
+    expect(new Set(empresas).size).toBe(empresas.length);
+    expect(new Set(cuentas).size).toBe(cuentas.length);
+  });
+
+  it("cada plática dice de qué empresa es y qué cuenta la recibió", () => {
+    const c = conversaciones(estadoInicial(), ANCLAJE).find((x) => x.id === "ig-laura")!;
+    expect(c.empresa).toBe("Condominios Ejemplo");
+    expect(c.cuenta).toBe("@condominios.ejemplo");
+  });
+
+  it("al elegir una empresa sólo se ven sus pláticas", () => {
+    const todas = conversaciones(estadoInicial(), ANCLAJE);
+    const autos = conversaciones(estadoInicial(), ANCLAJE, "autos");
+    expect(autos.length).toBeGreaterThan(0);
+    expect(autos.length).toBeLessThan(todas.length);
+    expect(autos.every((c) => c.empresaId === "autos")).toBe(true);
+  });
+
+  it("los sin leer se cuentan por empresa y suman el total", () => {
+    const todas = conversaciones(estadoInicial(), ANCLAJE);
+    const porEmpresa = sinLeerPorEmpresa(todas);
+    const suma = Object.values(porEmpresa).reduce((a, b) => a + b, 0);
+    expect(suma).toBe(sinLeer(todas));
+    expect(porEmpresa.autos).toBeGreaterThan(0);
+  });
+
+  it("elegir la misma empresa no cambia nada", () => {
+    const e = elegirEmpresa(estadoInicial(), "autos");
+    expect(e.empresaActiva).toBe("autos");
+    expect(elegirEmpresa(e, "autos")).toBe(e);
+    expect(elegirEmpresa(e, null).empresaActiva).toBeNull();
   });
 });
 
 describe("lo guardado en el navegador", () => {
   it("lo que guardaron versiones anteriores sigue sirviendo", () => {
-    const viejo = JSON.stringify({ version: 1, contactos: [], seleccionados: [] });
+    const viejo = JSON.stringify({ version: 1, contactos: [], seleccionados: [], respuestasRed: { "ig-laura": [] } });
     const estado = leerEstadoGuardado(viejo);
-    expect(estado.respuestasRed).toEqual({});
+    expect(estado.version).toBe(2);
+    expect(estado.empresaActiva).toBeNull();
+    expect(estado.respuestasRed).toEqual({ "ig-laura": [] });
     expect(estado.leidosRed).toEqual([]);
     expect(() => conversaciones(estado, ANCLAJE)).not.toThrow();
   });

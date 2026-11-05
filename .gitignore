@@ -43,3 +43,7 @@ next-env.d.ts
 
 # versión de un solo archivo
 /salida-archivo/
+
+# servidor local de Cloudflare
+.wrangler/
+.dev.vars*

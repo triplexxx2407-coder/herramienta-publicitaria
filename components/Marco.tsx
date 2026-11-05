@@ -1,254 +1,84 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
-import { Building2, ChartLine, ChevronDown, Inbox, MessageCircle, Search, Send, SquarePen, Tag, type LucideIcon } from "lucide-react";
-import { useEnNavegador, useEstado } from "@/lib/almacen";
-import { anclajeDeSesion, conversaciones as conversacionesRed, sinLeer as sinLeerRed } from "@/lib/bandeja";
-import { listosParaEnviar, porEscribir } from "@/lib/contactos";
-import { enviosHechos, platicas } from "@/lib/envio";
-import { AJUSTES_EJEMPLO } from "@/lib/estado";
-import { BANDEJA, PANTALLAS } from "@/lib/pantallas";
+import { type ReactNode } from "react";
+import { Building2, Inbox } from "lucide-react";
+import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
+import { EMPRESAS, anclajeDeSesion, conversaciones, elegirEmpresa, sinLeer, sinLeerPorEmpresa } from "@/lib/bandeja";
 import { ContenedorAvisos } from "./avisos";
 import { BarraSuperior } from "./BarraSuperior";
-import { FormularioAjustes } from "./FormularioAjustes";
-import { Hoja } from "./Hoja";
-import { Boton, cx } from "./ui";
-import { abrirMiDesarrollo, cerrarMiDesarrollo, useMiDesarrolloAbierto } from "./ventanas";
+import { cx } from "./ui";
 
-// Los mismos íconos del diseño: lupa, etiqueta, avión de papel, gráfica y globo de plática.
-const ICONOS: Record<string, LucideIcon> = {
-  "/buscar": Search,
-  "/redactar": Tag,
-  "/envio": Send,
-  "/seguimiento": ChartLine,
-  "/chat": MessageCircle,
-};
-
-/** Las pestañas de abajo en el celular: primero la bandeja, luego los cinco pasos del flujo. */
-const PESTANAS: { ruta: string; etiqueta: string; corto: string; icono: LucideIcon }[] = [
-  { ruta: BANDEJA.ruta, etiqueta: BANDEJA.nombre, corto: BANDEJA.corto, icono: Inbox },
-  ...PANTALLAS.map((p) => ({ ruta: p.ruta, etiqueta: `${p.numero}. ${p.nombre}`, corto: p.corto, icono: ICONOS[p.ruta] })),
-];
-
-/** Marco de la app: barra de arriba, menú a la izquierda en computadora y pestañas abajo en celular. */
+/**
+ * Marco de la app: barra de arriba y, en la computadora, el menú de la izquierda con las
+ * empresas que atiende el equipo. En el celular las empresas se eligen arriba de la bandeja.
+ */
 export function Marco({ children }: { children: ReactNode }) {
-  const ruta = usePathname();
-  const estado = useEstado();
-  const enNavegador = useEnNavegador();
-  const miDesarrolloAbierto = useMiDesarrolloAbierto();
-
-  // Números junto a cada paso: correos por aprobar, listos para enviar y pláticas sin leer.
-  const porAprobar = enNavegador ? porEscribir(estado).length - listosParaEnviar(estado).length : 0;
-  const listos = enNavegador ? listosParaEnviar(estado).length : 0;
-  const conversaciones = enNavegador ? platicas(estado) : [];
-  const sinLeer = conversaciones.filter((p) => p.noLeida).length;
-  // Mensajes sin leer de la bandeja (Instagram, WhatsApp, Facebook, TikTok y correo).
-  const nuevosBandeja = enNavegador ? sinLeerRed(conversacionesRed(estado, anclajeDeSesion())) : 0;
-  const cuentas: Record<string, number> = { "/redactar": porAprobar, "/envio": listos, "/chat": sinLeer, [BANDEJA.ruta]: nuevosBandeja };
-
-  const enviados = enNavegador ? enviosHechos(estado).length : 0;
-  const tasa = enviados ? (conversaciones.length / enviados) * 100 : null;
-  const nombreDesarrollo = enNavegador ? estado.ajustes.nombreDesarrollo : AJUSTES_EJEMPLO.nombreDesarrollo;
-
   return (
     <div className="flex min-h-dvh flex-col">
       <BarraSuperior />
 
       <div className="flex flex-1">
-        {/* Menú de la izquierda (computadora), como en el diseño */}
-        <aside className="hidden w-[230px] shrink-0 lg:sticky lg:top-[68px] lg:flex lg:h-[calc(100dvh-68px)] lg:flex-col lg:overflow-y-auto lg:pt-[43px] lg:pr-[57px] lg:pl-[18px]">
-          <ProyectoActivo nombre={nombreDesarrollo} />
-
-          <nav aria-label="Mensajes" className="mt-[33px]">
-            <p className="mb-[7px] text-[11px] leading-4 font-bold text-menu uppercase">Mensajes</p>
-            <Link
-              href={BANDEJA.ruta}
-              aria-current={ruta === BANDEJA.ruta ? "page" : undefined}
-              className={cx(
-                "flex h-[33px] items-center gap-2 rounded-[3px] pr-2.5 pl-2 text-[13px] transition-colors",
-                ruta === BANDEJA.ruta ? "bg-pildora font-bold text-marca-400" : "text-menu hover:bg-white/5 hover:text-tinta-2",
-              )}
-            >
-              <Inbox size={14} aria-hidden strokeWidth={2.4} className={ruta === BANDEJA.ruta ? "text-marca-400" : "text-menu-icono"} />
-              <span className="flex-1 truncate">{BANDEJA.nombre}</span>
-              {nuevosBandeja ? (
-                <span className="cifras flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-marca-600 px-1 text-[9.5px] leading-none font-bold text-white">
-                  {nuevosBandeja}
-                </span>
-              ) : null}
-            </Link>
-          </nav>
-
-          <nav aria-label="Flujo de trabajo" className="mt-[26px]">
-            <p className="mb-[7px] text-[11px] leading-4 font-bold text-menu uppercase">Flujo de trabajo</p>
-            <ul className="space-y-[6px]">
-              {PANTALLAS.map((p) => {
-                const Icono = ICONOS[p.ruta];
-                const activa = ruta === p.ruta;
-                const cuenta = cuentas[p.ruta] || null;
-                return (
-                  <li key={p.ruta}>
-                    <Link
-                      href={p.ruta}
-                      aria-current={activa ? "page" : undefined}
-                      className={cx(
-                        "flex h-[33px] items-center gap-2 rounded-[3px] pr-2.5 pl-2 text-[13px] transition-colors",
-                        activa ? "bg-pildora font-bold text-marca-400" : "text-menu hover:bg-white/5 hover:text-tinta-2",
-                      )}
-                    >
-                      <Icono size={14} aria-hidden strokeWidth={2.4} className={activa ? "text-marca-400" : "text-menu-icono"} />
-                      <span className="flex-1 truncate">
-                        {p.numero}. {p.nombre}
-                      </span>
-                      {cuenta ? (
-                        <span className="cifras flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-marca-600 px-1 text-[9.5px] leading-none font-bold text-white">
-                          {cuenta}
-                        </span>
-                      ) : null}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-
-          <section aria-labelledby="titulo-resumen" className="mt-[36px]">
-            <p id="titulo-resumen" className="text-[11px] leading-4 font-bold text-menu uppercase">
-              Resumen de campaña
-            </p>
-            <p className="mt-[7px] text-[12px] leading-4 text-menu">Tasa de respuesta</p>
-            <div className="mt-2 flex items-center gap-2.5">
-              <div
-                className="h-[7px] w-[117px] shrink-0 overflow-hidden rounded-full bg-pildora"
-                role="progressbar"
-                aria-label="Tasa de respuesta"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(tasa ?? 0)}
-              >
-                <div
-                  className="h-full rounded-full bg-linear-to-r from-[#2076d4] to-[#12ae8e] transition-all"
-                  style={{ width: `${tasa ?? 0}%` }}
-                />
-              </div>
-              <span data-testid="tasa-respuesta" className="cifras text-[12px] leading-4 font-bold whitespace-nowrap text-cifra">
-                {tasa === null ? "—" : `${tasa.toFixed(1)}%`}
-              </span>
-            </div>
-            <p className="mt-2 text-[11px] leading-snug text-menu">
-              {enviados === 0 ? "Todavía no envías correos." : `${conversaciones.length} de ${enviados} contestaron (ejemplo).`}
-            </p>
-          </section>
+        <aside className="hidden w-[230px] shrink-0 lg:sticky lg:top-[68px] lg:flex lg:h-[calc(100dvh-68px)] lg:flex-col lg:overflow-y-auto lg:pt-[43px] lg:pr-[14px] lg:pl-[18px]">
+          <MenuEmpresas />
         </aside>
 
-        <main className="w-full min-w-0 flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:pt-[5px] lg:pr-[31px] lg:pb-6 lg:pl-px">
-          {children}
-        </main>
+        <main className="w-full min-w-0 flex-1 pb-[env(safe-area-inset-bottom,0px)] lg:pt-[5px] lg:pr-[31px] lg:pb-6 lg:pl-px">{children}</main>
       </div>
-
-      {/* Pestañas abajo (celular y tableta) */}
-      <nav
-        aria-label="Pasos"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-linea bg-superficie/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md lg:hidden"
-      >
-        <ul className="mx-auto flex max-w-2xl pr-[max(0.25rem,env(safe-area-inset-right,0px))] pl-[max(0.25rem,env(safe-area-inset-left,0px))]">
-          {PESTANAS.map((p) => {
-            const Icono = p.icono;
-            const activa = ruta === p.ruta;
-            const cuenta = cuentas[p.ruta] || null;
-            return (
-              <li key={p.ruta} className="min-w-0 flex-1">
-                <Link
-                  href={p.ruta}
-                  aria-current={activa ? "page" : undefined}
-                  aria-label={cuenta ? `${p.etiqueta} (${cuenta})` : p.etiqueta}
-                  className="flex flex-col items-center gap-1 pt-2 pb-1.5"
-                >
-                  <span
-                    className={cx(
-                      "relative flex h-8 w-11 items-center justify-center rounded-full transition-colors",
-                      activa ? "bg-pildora text-marca-400" : "text-suave",
-                    )}
-                  >
-                    <Icono size={20} aria-hidden strokeWidth={activa ? 2.4 : 2} />
-                    {cuenta ? (
-                      <span
-                        aria-hidden
-                        className="cifras absolute -top-1 right-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-marca-600 px-1 text-[10.5px] leading-none font-bold text-white ring-2 ring-superficie"
-                      >
-                        {cuenta}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className={cx("max-w-full truncate text-[10.5px] leading-tight font-semibold", activa ? "text-marca-400" : "text-suave")}>
-                    {p.corto}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      <Hoja
-        abierta={miDesarrolloAbierto}
-        onCerrar={cerrarMiDesarrollo}
-        titulo="Editar proyecto"
-        descripcion="Estos datos se usan en todos los correos."
-        pie={
-          <Boton className="w-full" onClick={cerrarMiDesarrollo}>
-            Listo
-          </Boton>
-        }
-      >
-        <FormularioAjustes />
-      </Hoja>
 
       <ContenedorAvisos />
     </div>
   );
 }
 
-/** El proyecto en el que estás trabajando, arriba del menú. */
-function ProyectoActivo({ nombre }: { nombre: string }) {
-  const [abierto, setAbierto] = useState(false);
+/** Las empresas que atiende el equipo, con sus mensajes sin leer. Elegir una filtra la bandeja. */
+function MenuEmpresas() {
+  const estado = useEstado();
+  const enNavegador = useEnNavegador();
+  const todas = enNavegador ? conversaciones(estado, anclajeDeSesion()) : [];
+  const porEmpresa = sinLeerPorEmpresa(todas);
+  const activa = enNavegador ? estado.empresaActiva : null;
+
+  const opciones: { id: string | null; nombre: string; detalle: string; nuevos: number }[] = [
+    { id: null, nombre: "Todas las empresas", detalle: `${EMPRESAS.length} empresas`, nuevos: sinLeer(todas) },
+    ...EMPRESAS.map((e) => ({ id: e.id, nombre: e.nombre, detalle: e.giro, nuevos: porEmpresa[e.id] ?? 0 })),
+  ];
+
   return (
-    <div>
-      <button type="button" aria-expanded={abierto} onClick={() => setAbierto((v) => !v)} className="group w-full text-left">
-        <span className="flex items-center text-[12px] leading-4 font-medium text-menu">
-          <span className="flex-1">Proyecto activo</span>
-          <ChevronDown size={17} aria-hidden className={cx("-mr-px shrink-0 transition-transform", abierto && "rotate-180")} />
-        </span>
-        <span className="mt-[6px] flex items-center gap-[9px]">
-          <span className="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[2px] bg-pildora text-[#3b6fb0]">
-            <Building2 size={13} aria-hidden strokeWidth={2.4} />
-          </span>
-          <span className="min-w-0 flex-1 text-[12.5px] leading-[15px] font-bold text-white group-hover:underline">{nombre}</span>
-        </span>
-      </button>
-      {abierto ? (
-        <div className="entrada mt-2 space-y-0.5">
-          <Link
-            href="/"
-            onClick={() => setAbierto(false)}
-            className="flex items-center gap-2 rounded-[3px] px-2 py-2 text-[13px] font-semibold text-menu transition-colors hover:bg-white/5 hover:text-tinta-2"
-          >
-            <Building2 size={14} aria-hidden className="text-menu-icono" /> Ver el proyecto
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              setAbierto(false);
-              abrirMiDesarrollo();
-            }}
-            className="flex w-full items-center gap-2 rounded-[3px] px-2 py-2 text-[13px] font-semibold text-menu transition-colors hover:bg-white/5 hover:text-tinta-2"
-          >
-            <SquarePen size={14} aria-hidden className="text-menu-icono" /> Editar el proyecto
-          </button>
-        </div>
-      ) : null}
-    </div>
+    <nav aria-label="Empresas">
+      <p className="mb-[7px] flex items-center gap-1.5 text-[11px] leading-4 font-bold text-menu uppercase">
+        Empresas
+        <span className="rounded-[2px] bg-marca-600 px-1 text-[9px] leading-[13px] text-white">Ejemplo</span>
+      </p>
+      <ul className="space-y-[6px]">
+        {opciones.map((o) => {
+          const elegida = activa === o.id;
+          const Icono = o.id ? Building2 : Inbox;
+          return (
+            <li key={o.id ?? "todas"}>
+              <button
+                type="button"
+                aria-current={elegida ? "page" : undefined}
+                onClick={() => actualizarEstado((e) => elegirEmpresa(e, o.id))}
+                className={cx(
+                  "flex min-h-[38px] w-full items-center gap-2 rounded-[3px] py-1 pr-2.5 pl-2 text-left text-[13px] transition-colors",
+                  elegida ? "bg-pildora font-bold text-marca-400" : "text-menu hover:bg-white/5 hover:text-tinta-2",
+                )}
+              >
+                <Icono size={14} aria-hidden strokeWidth={2.4} className={elegida ? "text-marca-400" : "text-menu-icono"} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{o.nombre}</span>
+                  <span className="block truncate text-[11px] font-normal text-menu">{o.detalle}</span>
+                </span>
+                {o.nuevos ? (
+                  <span className="cifras flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-marca-600 px-1 text-[9.5px] leading-none font-bold text-white">
+                    {o.nuevos}
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }

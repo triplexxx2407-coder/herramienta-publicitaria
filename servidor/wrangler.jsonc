@@ -1,0 +1,33 @@
+{
+  // Configuración del servidor de Nexora en Cloudflare Workers.
+  // Para probar aquí mismo:  npx wrangler dev --local --config servidor/wrangler.jsonc
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nexora",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // nodejs_compat: hace falta para hablar IMAP (node:tls) con el correo.
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // La base donde viven de verdad los mensajes.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nexora",
+      // Lo llena `wrangler d1 create nexora` cuando se crea la base de verdad.
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+
+  // La pantalla: el mismo archivo que ya armamos con `npm run build:archivo`.
+  "assets": {
+    "directory": "../salida-archivo/sitio",
+    "binding": "PANTALLA",
+    "not_found_handling": "single-page-application"
+  },
+
+  // Cada 2 minutos revisa el correo nuevo y limpia sesiones vencidas.
+  "triggers": {
+    "crons": ["*/2 * * * *"]
+  }
+}

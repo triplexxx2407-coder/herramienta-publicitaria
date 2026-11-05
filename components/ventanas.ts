@@ -2,36 +2,9 @@
 
 import { useSyncExternalStore } from "react";
 
-/** Abre y cierra la hoja "Mi desarrollo" desde cualquier pantalla. */
-let abierta = false;
-const oyentes = new Set<() => void>();
-
-export function abrirMiDesarrollo() {
-  abierta = true;
-  for (const o of oyentes) o();
-}
-
-export function cerrarMiDesarrollo() {
-  abierta = false;
-  for (const o of oyentes) o();
-}
-
-export function useMiDesarrolloAbierto(): boolean {
-  return useSyncExternalStore(
-    (o) => {
-      oyentes.add(o);
-      return () => {
-        oyentes.delete(o);
-      };
-    },
-    () => abierta,
-    () => false,
-  );
-}
-
 /**
- * Qué abrir al llegar a otra pantalla: por ejemplo, el buscador de arriba o la campana piden abrir
- * una plática y «Chat» la abre. Cada petición lleva un número, así la pantalla sabe cuándo es una
+ * Qué abrir al llegar a otra pantalla: por ejemplo, la campana pide abrir una plática y la bandeja
+ * la abre. Cada petición lleva un número, así la pantalla sabe cuándo es una
  * petición nueva aunque sea el mismo negocio, y no hace falta borrar nada.
  */
 export type Pedido = { id: string; numero: number };

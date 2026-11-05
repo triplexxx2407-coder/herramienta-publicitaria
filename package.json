@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build:archivo": "vite build --config artefacto/vite.config.mts && node artefacto/unir.mjs"
+    "typecheck:servidor": "tsc --noEmit -p servidor/tsconfig.json",
+    "build:archivo": "vite build --config artefacto/vite.config.mts && node artefacto/unir.mjs",
+    "servidor": "wrangler dev --local --config servidor/wrangler.jsonc"
   },
   "dependencies": {
     "lucide-react": "^1.68.0",
@@ -18,6 +20,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261104.1",
     "@tailwindcss/turbopack": "^4",
     "@tailwindcss/vite": "^4.3.4",
     "@types/node": "^22.20.5",
@@ -28,6 +31,7 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vite": "^8.3.5",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "^4.158.0"
   }
 }

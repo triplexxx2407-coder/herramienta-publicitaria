@@ -1,82 +1,30 @@
-import proyectoJson from "@/datos/proyecto-ejemplo.json";
-import empresasJson from "@/datos/empresas-ejemplo.json";
-import { aprobar, generarBorrador } from "@/lib/redaccion";
-import { agregarContactos, contactoDesdeEmpresa, FUENTE_EJEMPLO, puedeRedactar } from "@/lib/contactos";
-import type { AjustesProyecto, Borrador, Empresa, EstadoDemo } from "@/lib/tipos";
-
-export const AJUSTES_EJEMPLO: AjustesProyecto = {
-  ...proyectoJson,
-  puntosFuertes: proyectoJson.puntosFuertes as [string, string, string],
-};
-
-/** Copia nueva de los ajustes de ejemplo (sin structuredClone, para teléfonos viejos). */
-export function copiaAjustesEjemplo(): AjustesProyecto {
-  return JSON.parse(JSON.stringify(AJUSTES_EJEMPLO)) as AjustesProyecto;
-}
+import type { EstadoDemo } from "@/lib/tipos";
 
 export function estadoInicial(): EstadoDemo {
-  return {
-    version: 1,
-    contactos: [],
-    seleccionados: [],
-    supresion: [],
-    ajustes: copiaAjustesEjemplo(),
-    borradores: {},
-    enviados: {},
-    chats: {},
-    leidos: {},
-    respuestasRed: {},
-    leidosRed: [],
-  };
+  return { version: 2, respuestasRed: {}, leidosRed: [], empresaActiva: null };
 }
 
 function esObjeto(v: unknown): v is object {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
-/** Revisa que lo leído del navegador tenga la forma esperada; si no, empieza de cero. */
+/**
+ * Revisa que lo leído del navegador tenga la forma esperada; si no, empieza de cero.
+ * Lo guardado por la versión anterior (con el flujo de correos) se aprovecha: se quedan
+ * tus respuestas de la bandeja y lo demás se tira.
+ */
 export function leerEstadoGuardado(texto: string | null): EstadoDemo {
   if (!texto) return estadoInicial();
   try {
-    const e = JSON.parse(texto) as Partial<EstadoDemo>;
-    if (e?.version !== 1 || !Array.isArray(e.contactos)) return estadoInicial();
-    const base = estadoInicial();
+    const e = JSON.parse(texto) as Partial<Omit<EstadoDemo, "version">> & { version?: number };
+    if (e?.version !== 1 && e?.version !== 2) return estadoInicial();
     return {
-      version: 1,
-      contactos: e.contactos,
-      seleccionados: Array.isArray(e.seleccionados) ? e.seleccionados : [],
-      supresion: Array.isArray(e.supresion) ? e.supresion : [],
-      ajustes: { ...base.ajustes, ...(e.ajustes ?? {}) },
-      borradores: esObjeto(e.borradores) ? e.borradores : {},
-      // Lo guardado por versiones anteriores de la demo no traía envíos, pláticas ni bandeja.
-      enviados: esObjeto(e.enviados) ? e.enviados : {},
-      chats: esObjeto(e.chats) ? e.chats : {},
-      leidos: esObjeto(e.leidos) ? e.leidos : {},
-      respuestasRed: esObjeto(e.respuestasRed) ? e.respuestasRed : {},
+      version: 2,
+      respuestasRed: esObjeto(e.respuestasRed) ? (e.respuestasRed as EstadoDemo["respuestasRed"]) : {},
       leidosRed: Array.isArray(e.leidosRed) ? e.leidosRed : [],
+      empresaActiva: typeof e.empresaActiva === "string" ? e.empresaActiva : null,
     };
   } catch {
     return estadoInicial();
   }
-}
-
-/**
- * "Recorrido de ejemplo": llena la demo de un solo clic para presentarla.
- * Agrega las empresas de ejemplo de Tijuana, elige las que tienen correo
- * y aprueba sus borradores con la plantilla.
- */
-export function estadoDeRecorrido(ahora = new Date()): EstadoDemo {
-  const empresas = (empresasJson as Empresa[]).filter((e) => e.ciudad === "tijuana");
-  let estado = agregarContactos(
-    estadoInicial(),
-    empresas.map((e) => contactoDesdeEmpresa(e, FUENTE_EJEMPLO, true, ahora)),
-  );
-  const elegibles = estado.contactos.filter((c) => puedeRedactar(c, estado));
-  const borradores: Record<string, Borrador> = {};
-  for (const c of elegibles) {
-    const r = aprobar(generarBorrador(c, estado.ajustes), estado.ajustes, ahora);
-    if ("estado" in r) borradores[c.id] = r;
-  }
-  estado = { ...estado, seleccionados: elegibles.map((c) => c.id), borradores };
-  return estado;
 }

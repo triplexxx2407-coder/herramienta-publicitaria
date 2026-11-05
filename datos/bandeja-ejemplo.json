@@ -1,67 +1,102 @@
 [
   {
     "id": "ig-laura",
+    "cuentaId": "condo-ig",
     "red": "instagram",
     "personaId": "laura",
     "persona": "Laura M.",
     "usuario": "@laura.mrz",
     "mensajes": [
-      { "de": "ellos", "texto": "Hola, vi el video del desarrollo. ¿Todavía tienen de dos recámaras?", "haceMinutos": 4 }
+      {
+        "de": "ellos",
+        "texto": "Hola, vi el video del desarrollo. ¿Todavía tienen de dos recámaras?",
+        "haceMinutos": 4
+      }
     ]
   },
   {
     "id": "wa-jorge",
+    "cuentaId": "condo-wa",
     "red": "whatsapp",
     "personaId": "jorge",
     "persona": "Jorge Treviño",
     "usuario": "+52 664 555 0142",
     "mensajes": [
-      { "de": "ellos", "texto": "Buenas tardes, me pasaron su número. ¿Me manda precios y formas de pago?", "haceMinutos": 25 }
+      {
+        "de": "ellos",
+        "texto": "Buenas tardes, me pasaron su número. ¿Me manda precios y formas de pago?",
+        "haceMinutos": 25
+      }
     ]
   },
   {
     "id": "tt-diana",
+    "cuentaId": "condo-tt",
     "red": "tiktok",
     "personaId": "diana",
     "persona": "Diana R.",
     "usuario": "@diana.rl",
     "mensajes": [
-      { "de": "ellos", "texto": "oye y dónde queda exactamente?", "haceMinutos": 118 }
+      {
+        "de": "ellos",
+        "texto": "oye y dónde queda exactamente?",
+        "haceMinutos": 118
+      }
     ]
   },
   {
     "id": "wa-laura",
+    "cuentaId": "condo-wa",
     "red": "whatsapp",
     "personaId": "laura",
     "persona": "Laura M.",
     "usuario": "+52 664 555 0188",
     "mensajes": [
-      { "de": "ellos", "texto": "Le escribo por aquí mejor. ¿Manejan crédito bancario?", "haceMinutos": 200 },
-      { "de": "yo", "texto": "Claro que sí, Laura. Trabajamos con banco e Infonavit. ¿Le late que le mande los dos escenarios?", "haceMinutos": 180 }
+      {
+        "de": "ellos",
+        "texto": "Le escribo por aquí mejor. ¿Manejan crédito bancario?",
+        "haceMinutos": 200
+      },
+      {
+        "de": "yo",
+        "texto": "Claro que sí, Laura. Trabajamos con banco e Infonavit. ¿Le late que le mande los dos escenarios?",
+        "haceMinutos": 180
+      }
     ]
   },
   {
     "id": "fb-ramiro",
+    "cuentaId": "condo-fb",
     "red": "facebook",
     "personaId": "ramiro",
     "persona": "Ramiro Sández",
     "usuario": "Ramiro Sández",
     "mensajes": [
-      { "de": "ellos", "texto": "Buen día. ¿Cuánto piden de enganche?", "haceMinutos": 300 }
+      {
+        "de": "ellos",
+        "texto": "Buen día. ¿Cuánto piden de enganche?",
+        "haceMinutos": 300
+      }
     ]
   },
   {
     "id": "ig-chava",
+    "cuentaId": "condo-ig",
     "red": "instagram",
     "personaId": "chava",
     "persona": "Salvador G.",
     "usuario": "@el_chava_tj",
     "mensajes": [
-      { "de": "ellos", "texto": "info", "haceMinutos": 1320 }
+      {
+        "de": "ellos",
+        "texto": "info",
+        "haceMinutos": 1320
+      }
     ]
   },
   {
     "id": "co-patricia",
+    "cuentaId": "condo-co",
     "red": "correo",
     "personaId": "patricia",
     "persona": "Patricia Guzmán",
@@ -76,12 +111,72 @@
   },
   {
     "id": "tt-carlos",
+    "cuentaId": "condo-tt",
     "red": "tiktok",
     "personaId": "carlos",
     "persona": "Carlos B.",
     "usuario": "@carlosbc",
     "mensajes": [
-      { "de": "ellos", "texto": "sigue disponible?", "haceMinutos": 3000 }
+      {
+        "de": "ellos",
+        "texto": "sigue disponible?",
+        "haceMinutos": 3000
+      }
+    ]
+  },
+  {
+    "id": "au-ig-mario",
+    "cuentaId": "autos-ig",
+    "red": "instagram",
+    "personaId": "mario",
+    "persona": "Mario C.",
+    "usuario": "@mario.cz",
+    "mensajes": [
+      {
+        "de": "ellos",
+        "texto": "¿Todavía tienen la camioneta blanca del video?",
+        "haceMinutos": 9
+      }
+    ]
+  },
+  {
+    "id": "au-wa-elena",
+    "cuentaId": "autos-wa",
+    "red": "whatsapp",
+    "personaId": "elena",
+    "persona": "Elena Robles",
+    "usuario": "+52 664 555 0231",
+    "mensajes": [
+      {
+        "de": "ellos",
+        "texto": "Hola, ¿en cuánto queda la mensualidad a 48 meses?",
+        "haceMinutos": 60
+      },
+      {
+        "de": "yo",
+        "texto": "Hola Elena, depende del enganche. ¿Con cuánto le gustaría empezar?",
+        "haceMinutos": 52
+      },
+      {
+        "de": "ellos",
+        "texto": "Como con el 20%",
+        "haceMinutos": 40
+      }
+    ]
+  },
+  {
+    "id": "au-fb-tomas",
+    "cuentaId": "autos-fb",
+    "red": "facebook",
+    "personaId": "tomas",
+    "persona": "Tomás Ibarra",
+    "usuario": "Tomás Ibarra",
+    "mensajes": [
+      {
+        "de": "ellos",
+        "texto": "¿Reciben mi carro a cuenta?",
+        "haceMinutos": 410
+      }
     ]
   }
 ]

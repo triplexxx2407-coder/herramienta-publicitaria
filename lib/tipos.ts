@@ -1,109 +1,25 @@
-// Tipos compartidos por toda la demo.
-
-/** Una empresa tal como la devuelve un buscador (ejemplo o DENUE). */
-export interface Empresa {
-  id: string;
-  nombre: string;
-  /** Id del giro (ver datos/giros.json) o texto libre si viene del DENUE. */
-  giro: string;
-  /** Id de la ciudad (ver datos/ciudades.json) o texto libre si viene del DENUE. */
-  ciudad: string;
-  /** Estrato de personal ocupado según el DENUE: 1 (0 a 5) … 7 (251 o más). */
-  estrato: number | null;
-  telefono: string | null;
-  correo: string | null;
-  sitioWeb: string | null;
-}
-
-/** De dónde salió un contacto. */
-export type TipoOrigen =
-  | "directorio_publico"
-  | "formulario_propio"
-  | "cliente_actual"
-  | "declarado"
-  | "desconocido";
-
-export interface Origen {
-  tipo: TipoOrigen;
-  /** Nombre de la fuente, por ejemplo "Datos de ejemplo (simula el DENUE de INEGI)". */
-  fuente: string;
-  /** Nota del usuario: de dónde lo sacó. Obligatoria para el semáforo ámbar. */
-  nota?: string;
-  /** Fecha en que se agregó (ISO 8601). */
-  fecha: string;
-}
-
-export type Semaforo = "verde" | "ambar" | "rojo";
-
-export interface Contacto {
-  id: string;
-  nombre: string;
-  giro: string;
-  ciudad: string;
-  telefono: string | null;
-  correo: string | null;
-  sitioWeb: string | null;
-  origen: Origen;
-  /** true si es un dato inventado de la demo. */
-  esEjemplo: boolean;
-}
-
-export interface Foto {
-  nombre: string;
-  url: string;
-}
-
-export interface AjustesProyecto {
-  nombreDesarrollo: string;
-  ciudad: string;
-  precioDesde: string;
-  puntosFuertes: [string, string, string];
-  fotos: Foto[];
-  /** Datos del pie legal. */
-  asesorNombre: string;
-  empresa: string;
-  telefono: string;
-}
-
-export type EstadoBorrador = "pendiente" | "aprobado";
-
-/**
- * Borrador de un correo. Ojo: aquí NO se guarda el pie legal.
- * El pie se agrega siempre al armar el correo (ver lib/redaccion.ts),
- * así no hay forma de borrarlo editando el borrador.
- */
-export interface Borrador {
-  contactoId: string;
-  asunto: string;
-  cuerpo: string;
-  estado: EstadoBorrador;
-  fechaAprobado?: string;
-}
-
-/**
- * Un correo "enviado" en la SIMULACIÓN (en la demo no sale nada).
- * Guarda el texto tal como habría salido, con el pie legal, para poder verlo después.
- */
-export interface CorreoEnviado {
-  contactoId: string;
-  para: string;
-  asunto: string;
-  /** Mensaje + pie legal. */
-  texto: string;
-  /** Fecha y hora del envío simulado (ISO 8601). */
-  fecha: string;
-}
-
-/** Un mensaje del chat con un negocio. "ellos" son respuestas de ejemplo que inventa la demo. */
-export interface MensajeChat {
-  id: string;
-  de: "yo" | "ellos";
-  texto: string;
-  fecha: string;
-}
+// Tipos compartidos por NEXORA (pantalla y servidor).
 
 /** Las redes por las que llegan mensajes a la bandeja (ver lib/redes.ts). */
 export type Red = "instagram" | "whatsapp" | "facebook" | "tiktok" | "correo";
+
+/** Un canal de una empresa que administra el equipo: su Instagram, su WhatsApp, su correo… */
+export interface CuentaCanal {
+  id: string;
+  red: Red;
+  /** Cómo se llama la cuenta en esa red: @usuario, número o correo. */
+  identificador: string;
+}
+
+/** Una empresa que el equipo atiende. Cada una es una operación aparte. */
+export interface EmpresaCliente {
+  id: string;
+  nombre: string;
+  giro: string;
+  /** Qué vende. */
+  producto: string;
+  cuentas: CuentaCanal[];
+}
 
 /** Un mensaje de la bandeja, ya con su fecha calculada. */
 export interface MensajeRed {
@@ -116,6 +32,8 @@ export interface MensajeRed {
 /** Una plática de ejemplo de la bandeja, tal como viene en datos/bandeja-ejemplo.json. */
 export interface ConversacionEjemplo {
   id: string;
+  /** La cuenta de la empresa que recibió el mensaje (ver datos/empresas-clientes.json). */
+  cuentaId: string;
   red: Red;
   /** Dos pláticas con el mismo personaId son la misma persona por dos redes. */
   personaId: string;
@@ -138,22 +56,11 @@ export interface RespuestaRed {
 
 /** Todo lo que la demo guarda en el navegador. */
 export interface EstadoDemo {
-  version: 1;
-  contactos: Contacto[];
-  /** Ids de contactos elegidos para redactar. */
-  seleccionados: string[];
-  /** Correos marcados "No contactar" (en minúsculas). */
-  supresion: { correo: string; fecha: string }[];
-  ajustes: AjustesProyecto;
-  borradores: Record<string, Borrador>;
-  /** Correos ya enviados (simulación), por id de contacto. */
-  enviados: Record<string, CorreoEnviado>;
-  /** Plática con cada negocio después del correo, por id de contacto. */
-  chats: Record<string, MensajeChat[]>;
-  /** Hasta qué fecha leíste cada plática (para marcar las nuevas). */
-  leidos: Record<string, string>;
-  /** Tus respuestas en la bandeja de redes, por id de plática (simulación). */
+  version: 2;
+  /** Tus respuestas en la bandeja, por id de plática (simulación). */
   respuestasRed: Record<string, RespuestaRed[]>;
   /** Ids de las pláticas de la bandeja que ya abriste. */
   leidosRed: string[];
+  /** La empresa que estás viendo; null es «todas». */
+  empresaActiva: string | null;
 }

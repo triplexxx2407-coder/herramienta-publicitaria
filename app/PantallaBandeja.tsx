@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCheck, Clock, FlaskConical, Inbox, SendHorizontal, TriangleAlert } from "lucide-react";
+import { Building2, CheckCheck, Clock, FlaskConical, Inbox, SendHorizontal, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   BotonPildora,
@@ -9,15 +9,19 @@ import {
   PanelNexora,
   PastillaCliente,
   PildoraLista,
+  SelectorPildora,
   VacioClaro,
   useEsComputadora,
 } from "@/components/PanelNexora";
 import { CirculoRed, IconoRed } from "@/components/IconoRed";
 import { cx } from "@/components/ui";
+import { useLoPedido } from "@/components/ventanas";
 import { actualizarEstado, useEnNavegador, useEstado } from "@/lib/almacen";
 import {
+  EMPRESAS,
   anclajeDeSesion,
   conversaciones,
+  elegirEmpresa,
   ficha,
   marcarLeidaRed,
   plazo,
@@ -49,8 +53,21 @@ export function PantallaBandeja() {
   const [abiertaId, setAbiertaId] = useState<string | null>(null);
   useMinuto();
 
-  const todas = enNavegador ? conversaciones(estado, anclajeDeSesion()) : [];
-  const lista = filtro === "todas" ? todas : todas.filter((c) => c.red === filtro);
+  // La campana de arriba pide abrir una plática: se abre aquí.
+  const pedido = useLoPedido("/");
+  const [pedidoVisto, setPedidoVisto] = useState(0);
+  if (pedido && pedido.numero !== pedidoVisto) {
+    setPedidoVisto(pedido.numero);
+    setAbiertaId(pedido.id);
+  }
+
+  const empresaActiva = enNavegador ? estado.empresaActiva : null;
+  const todas = enNavegador ? conversaciones(estado, anclajeDeSesion(), empresaActiva) : [];
+  // Sólo los botones de las redes que la empresa sí tiene.
+  const empresa = EMPRESAS.find((e) => e.id === empresaActiva);
+  const redesVisibles = empresa ? ORDEN_REDES.filter((r) => empresa.cuentas.some((k) => k.red === r)) : ORDEN_REDES;
+  const filtroValido = filtro === "todas" || redesVisibles.includes(filtro) ? filtro : "todas";
+  const lista = filtroValido === "todas" ? todas : todas.filter((c) => c.red === filtroValido);
 
   // En la computadora siempre se ve una plática; en el celular, sólo la que tocas.
   const actual = todas.find((c) => c.id === abiertaId) ?? (esComputadora ? lista[0] : undefined);
@@ -74,9 +91,9 @@ export function PantallaBandeja() {
       titulo="Bandeja"
       ayuda={
         <>
-          <p>Aquí llegan juntos los mensajes de Instagram, WhatsApp, Facebook, TikTok y correo. Contestas desde aquí y Nexora lo entrega por donde te escribieron.</p>
-          <p>Cada plática avisa cuánto te queda para contestar: las redes dan 24 horas, TikTok 48.</p>
-          <p>Es de ejemplo: estas pláticas son inventadas y nada se manda de verdad.</p>
+          <p>Aquí llegan juntos los mensajes de las cuentas de cada empresa que atienden: Instagram, WhatsApp, Facebook, TikTok y correo. Cada plática dice de qué empresa es y qué cuenta lo recibió.</p>
+          <p>Contestas desde aquí y Nexora lo entrega por la misma red donde te escribieron. Cada plática avisa cuánto te queda para contestar: las redes dan 24 horas, TikTok 48.</p>
+          <p>Es de ejemplo: las empresas y las pláticas son inventadas y nada se manda de verdad.</p>
         </>
       }
       pastilla={
@@ -92,16 +109,34 @@ export function PantallaBandeja() {
       etiquetaLista="Mensajes de todas las redes"
       lista={
         <>
+          {/* En el celular la empresa se elige aquí; en la computadora, en el menú de la izquierda. */}
+          <SelectorPildora
+            etiqueta="Empresa"
+            icono={<Building2 size={15} aria-hidden />}
+            valor={empresaActiva ?? ""}
+            onChange={(v) => {
+              setAbiertaId(null);
+              actualizarEstado((e) => elegirEmpresa(e, v || null));
+            }}
+            className="mb-2.5 lg:hidden"
+          >
+            <option value="">Todas las empresas</option>
+            {EMPRESAS.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.nombre}
+              </option>
+            ))}
+          </SelectorPildora>
           {/* En el celular los filtros se deslizan de lado, como en las apps; en computadora caben en dos renglones. */}
           <div className="barra-fina mb-3 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0">
-            <BotonPildora className="shrink-0" activo={filtro === "todas"} onClick={() => setFiltro("todas")}>
+            <BotonPildora className="shrink-0" activo={filtroValido === "todas"} onClick={() => setFiltro("todas")}>
               Todas
             </BotonPildora>
-            {ORDEN_REDES.map((r) => (
+            {redesVisibles.map((r) => (
               <BotonPildora
                 key={r}
                 className="shrink-0"
-                activo={filtro === r}
+                activo={filtroValido === r}
                 onClick={() => setFiltro(r)}
                 icono={<IconoRed red={r} tamano={14} />}
                 aria-label={porRed[r] ? `${nombreRed(r)} (${porRed[r]} sin leer)` : nombreRed(r)}
@@ -115,12 +150,20 @@ export function PantallaBandeja() {
             <ul className="space-y-[11px]">
               {lista.map((c) => (
                 <li key={c.id}>
-                  <Fila conversacion={c} ahora={ahora} activa={c.id === actual?.id} onAbrir={() => setAbiertaId(c.id)} />
+                  <Fila
+                    conversacion={c}
+                    ahora={ahora}
+                    activa={c.id === actual?.id}
+                    conEmpresa={!empresaActiva}
+                    onAbrir={() => setAbiertaId(c.id)}
+                  />
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="px-2 py-3 text-sm text-tinta-2">No hay mensajes de {nombreRed(filtro as Red)}.</p>
+            <p className="px-2 py-3 text-sm text-tinta-2">
+              {filtroValido === "todas" ? "Esta empresa no tiene mensajes todavía." : `No hay mensajes de ${nombreRed(filtroValido)}.`}
+            </p>
           )}
         </>
       }
@@ -155,11 +198,14 @@ function Fila({
   conversacion: c,
   ahora,
   activa,
+  conEmpresa,
   onAbrir,
 }: {
   conversacion: Conversacion;
   ahora: Date;
   activa: boolean;
+  /** Viendo todas las empresas, cada renglón dice de cuál es. */
+  conEmpresa: boolean;
   onAbrir: () => void;
 }) {
   const p = plazo(c, ahora);
@@ -168,9 +214,9 @@ function Fila({
     <PildoraLista
       activa={activa}
       titulo={c.persona}
-      detalle={adelanto}
+      detalle={conEmpresa ? `${c.empresa} · ${adelanto}` : adelanto}
       icono={<CirculoRed red={c.red} activa={activa} />}
-      etiqueta={`${c.persona}, ${nombreRed(c.red)}${c.noLeida ? ", mensaje nuevo" : ""}${p?.vencido ? ", se pasó el plazo" : ""}`}
+      etiqueta={`${c.persona}, ${nombreRed(c.red)} de ${c.empresa}${c.noLeida ? ", mensaje nuevo" : ""}${p?.vencido ? ", se pasó el plazo" : ""}`}
       apagada={!!p?.vencido}
       onClick={onAbrir}
       extra={
@@ -203,7 +249,7 @@ function Platica({
   const cuantos = c.mensajes.length;
   const p = plazo(c, ahora);
   const sePuede = sePuedeContestar(c, ahora);
-  const f = ficha(todas, c.personaId);
+  const f = ficha(todas, c.personaId, c.empresaId);
   const otros = f?.canales.filter((x) => x.conversacionId !== c.id) ?? [];
 
   useEffect(() => {
@@ -226,8 +272,12 @@ function Platica({
         </p>
 
         <Tarjeta>
-          <p className="flex items-center gap-1.5 text-[13px] font-bold text-chat-tinta">
+          <p className="flex items-center justify-center gap-1.5 text-[13px] font-bold text-chat-tinta">
             <IconoRed red={c.red} tamano={15} /> {c.usuario}
+          </p>
+          <p className="mt-0.5 text-[12.5px] text-chat-tenue">
+            Le escribió a <b className="text-chat-tinta">{c.cuenta}</b>, el {nombreRed(c.red)} de{" "}
+            <b className="text-chat-tinta">{c.empresa}</b>
           </p>
           {otros.length ? (
             <p className="mt-1 text-[12.5px] text-chat-tenue">

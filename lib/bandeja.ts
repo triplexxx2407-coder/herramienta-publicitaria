@@ -1,19 +1,38 @@
 /**
- * La bandeja única: los mensajes que llegan por Instagram, WhatsApp, Facebook, TikTok y correo,
- * todos en un mismo lugar.
+ * La bandeja única: los mensajes que les llegan a las cuentas de cada empresa que atiende el
+ * equipo (Instagram, WhatsApp, Facebook, TikTok y correo), todos en un mismo lugar. Cada plática
+ * sabe de qué empresa es y qué cuenta recibió el mensaje.
  *
- * TODO ES SIMULACIÓN. Las pláticas son inventadas (datos/bandeja-ejemplo.json) y lo que escribes
- * se queda en este navegador: no hay ninguna conexión con las redes, ni se manda nada a nadie.
+ * TODO ES SIMULACIÓN. Las empresas y las pláticas son inventadas (datos/empresas-clientes.json y
+ * datos/bandeja-ejemplo.json) y lo que escribes se queda en este navegador: no hay ninguna
+ * conexión con las redes, ni se manda nada a nadie.
  *
  * Las horas de los mensajes de ejemplo se cuentan desde que se abrió la bandeja ("el anclaje"),
  * para que se vean recién llegados y para que no se muevan de orden mientras contestas.
  */
 
 import bandejaJson from "@/datos/bandeja-ejemplo.json";
+import empresasJson from "@/datos/empresas-clientes.json";
 import { REDES } from "@/lib/redes";
-import type { ConversacionEjemplo, EstadoDemo, MensajeRed, Red, RespuestaRed } from "@/lib/tipos";
+import type { ConversacionEjemplo, CuentaCanal, EmpresaCliente, EstadoDemo, MensajeRed, Red, RespuestaRed } from "@/lib/tipos";
 
 const EJEMPLOS = bandejaJson as ConversacionEjemplo[];
+
+/** Las empresas que atiende el equipo (de ejemplo). */
+export const EMPRESAS = empresasJson as EmpresaCliente[];
+
+/** De qué empresa es una cuenta, y la cuenta misma. */
+export function cuentaYEmpresa(cuentaId: string): { empresa: EmpresaCliente; cuenta: CuentaCanal } | null {
+  for (const empresa of EMPRESAS) {
+    const cuenta = empresa.cuentas.find((k) => k.id === cuentaId);
+    if (cuenta) return { empresa, cuenta };
+  }
+  return null;
+}
+
+export function empresaPorId(id: string | null): EmpresaCliente | null {
+  return EMPRESAS.find((e) => e.id === id) ?? null;
+}
 const MINUTO = 60_000;
 
 let anclajeSesion: number | null = null;
@@ -29,6 +48,11 @@ export function anclajeDeSesion(ahora: number = Date.now()): number {
 
 export interface Conversacion {
   id: string;
+  empresaId: string;
+  empresa: string;
+  cuentaId: string;
+  /** La cuenta de la empresa que recibió el mensaje: @usuario, número o correo. */
+  cuenta: string;
   red: Red;
   personaId: string;
   persona: string;
@@ -44,10 +68,16 @@ function fechaDesde(anclaje: number, minutosAntes: number): string {
   return new Date(anclaje - minutosAntes * MINUTO).toISOString();
 }
 
-/** Las pláticas de la bandeja, de la más reciente a la más vieja. */
-export function conversaciones(estado: EstadoDemo, anclaje: number): Conversacion[] {
+/**
+ * Las pláticas de la bandeja, de la más reciente a la más vieja.
+ * Con `empresaId` sólo las de esa empresa; sin él, las de todas.
+ */
+export function conversaciones(estado: EstadoDemo, anclaje: number, empresaId: string | null = null): Conversacion[] {
   const leidas = new Set(estado.leidosRed);
-  const lista = EJEMPLOS.map((e) => {
+  const lista = EJEMPLOS.flatMap((e) => {
+    const origen = cuentaYEmpresa(e.cuentaId);
+    if (!origen) return [];
+    if (empresaId && origen.empresa.id !== empresaId) return [];
     const deEjemplo: MensajeRed[] = e.mensajes.map((m, i) => ({
       id: `${e.id}-${i}`,
       de: m.de,
@@ -63,8 +93,12 @@ export function conversaciones(estado: EstadoDemo, anclaje: number): Conversacio
     const mensajes = [...deEjemplo, ...mias].sort((a, b) => a.fecha.localeCompare(b.fecha));
     const deEllos = mensajes.filter((m) => m.de === "ellos");
     const ultimo = mensajes[mensajes.length - 1];
-    return {
+    return [{
       id: e.id,
+      empresaId: origen.empresa.id,
+      empresa: origen.empresa.nombre,
+      cuentaId: origen.cuenta.id,
+      cuenta: origen.cuenta.identificador,
       red: e.red,
       personaId: e.personaId,
       persona: e.persona,
@@ -73,7 +107,7 @@ export function conversaciones(estado: EstadoDemo, anclaje: number): Conversacio
       ultimo,
       ultimoDeEllos: deEllos[deEllos.length - 1] ?? null,
       noLeida: ultimo.de === "ellos" && !leidas.has(e.id),
-    };
+    }];
   });
   return lista.sort((a, b) => b.ultimo.fecha.localeCompare(a.ultimo.fecha));
 }
@@ -127,19 +161,29 @@ export function sinLeerPorRed(lista: Conversacion[]): Record<string, number> {
   return cuenta;
 }
 
+/** Cuántas pláticas sin leer tiene cada empresa. */
+export function sinLeerPorEmpresa(lista: Conversacion[]): Record<string, number> {
+  const cuenta: Record<string, number> = {};
+  for (const c of lista) if (c.noLeida) cuenta[c.empresaId] = (cuenta[c.empresaId] ?? 0) + 1;
+  return cuenta;
+}
+
 export function sinLeer(lista: Conversacion[]): number {
   return lista.filter((c) => c.noLeida).length;
 }
 
-/** La ficha de una persona: todos sus canales juntos, aunque te escriba por dos redes. */
+/**
+ * La ficha de una persona: todos sus canales juntos, aunque te escriba por dos redes.
+ * Nunca mezcla empresas: el mismo interesado de dos empresas son dos fichas.
+ */
 export interface Ficha {
   persona: string;
   canales: { red: Red; usuario: string; conversacionId: string }[];
   mensajes: number;
 }
 
-export function ficha(lista: Conversacion[], personaId: string): Ficha | null {
-  const suyas = lista.filter((c) => c.personaId === personaId);
+export function ficha(lista: Conversacion[], personaId: string, empresaId: string): Ficha | null {
+  const suyas = lista.filter((c) => c.personaId === personaId && c.empresaId === empresaId);
   if (!suyas.length) return null;
   return {
     persona: suyas[0].persona,
@@ -163,6 +207,12 @@ export function responderEnRed(estado: EstadoDemo, id: string, texto: string, an
     respuestasRed: { ...estado.respuestasRed, [id]: [...previas, nueva] },
     leidosRed: estado.leidosRed.includes(id) ? estado.leidosRed : [...estado.leidosRed, id],
   };
+}
+
+/** Cambia la empresa que estás viendo (null = todas). */
+export function elegirEmpresa(estado: EstadoDemo, empresaId: string | null): EstadoDemo {
+  if (estado.empresaActiva === empresaId) return estado;
+  return { ...estado, empresaActiva: empresaId };
 }
 
 export function marcarLeidaRed(estado: EstadoDemo, id: string): EstadoDemo {

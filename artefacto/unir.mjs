@@ -24,3 +24,9 @@ const guiones = [...html.matchAll(/<script type="module">[\s\S]*?<\/script>/g)].
 const pagina = [titulo, metaLados, fuentes, estilos, '<div id="app"></div>', guiones].filter(Boolean).join("\n") + "\n";
 fs.writeFileSync(path.join(dir, "demo-prospeccion-pagina.html"), pagina);
 console.log("Listo:", path.join(dir, "demo-prospeccion-pagina.html"));
+
+// Carpeta que publica el servidor de Cloudflare: un solo archivo, la pantalla completa.
+const sitio = path.join(dir, "sitio");
+fs.mkdirSync(sitio, { recursive: true });
+fs.writeFileSync(path.join(sitio, "index.html"), html);
+console.log("Listo:", path.join(sitio, "index.html"));

@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Building2, ChevronDown, CircleHelp, FlaskConical, MapPin, Share2, SquarePen, X } from "lucide-react";
+import { ArrowLeft, Building2, ChevronDown, CircleHelp, FlaskConical, Tag, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ButtonHTMLAttributes, type ReactNode } from "react";
-import { avisar } from "./avisos";
 import { cx } from "./ui";
-import { abrirMiDesarrollo } from "./ventanas";
 import { useEnNavegador, useEstado } from "@/lib/almacen";
-import { AJUSTES_EJEMPLO } from "@/lib/estado";
+import { EMPRESAS, empresaPorId } from "@/lib/bandeja";
+import { nombreRed } from "@/lib/redes";
 
 /*
  * El marco de cada pantalla, copiado del diseño NEXORA (1440×810):
@@ -119,59 +118,47 @@ export function TituloLista({ children, className }: { children: ReactNode; clas
   return <p className={cx("px-1.5 text-[11px] font-bold tracking-[0.08em] text-marca-200/80 uppercase", className)}>{children}</p>;
 }
 
-/** Copia los datos del desarrollo para pegarlos donde quieras (en la demo no se comparte con nadie). */
-async function compartirProyecto(texto: string) {
-  try {
-    await navigator.clipboard.writeText(texto);
-    avisar("Datos del proyecto copiados");
-  } catch {
-    avisar("Aquí no se pudo copiar");
-  }
-}
-
-/** La tarjeta roja del proyecto activo, arriba a la izquierda. Lleva al inicio del proyecto. */
+/** La tarjeta roja de arriba a la izquierda: la empresa que estás viendo, o todas. */
 function TarjetaRoja() {
   const estado = useEstado();
   const enNavegador = useEnNavegador();
-  const a = enNavegador ? estado.ajustes : AJUSTES_EJEMPLO;
+  const empresa = enNavegador ? empresaPorId(estado.empresaActiva) : null;
+  const cuentas = empresa ? empresa.cuentas : EMPRESAS.flatMap((e) => e.cuentas);
+  const redes = [...new Set(cuentas.map((k) => k.red))];
   return (
-    <Link
-      href="/"
-      aria-label={`Ver el proyecto ${a.nombreDesarrollo}`}
-      className="flex flex-col bg-proyecto px-4 pt-3 pb-3 text-white transition-[filter] hover:brightness-110 lg:h-full lg:overflow-hidden lg:px-[9px] lg:pt-[11px] lg:pb-[7px]"
-    >
+    <div className="flex flex-col bg-proyecto px-4 pt-3 pb-3 text-white lg:h-full lg:overflow-hidden lg:px-[9px] lg:pt-[11px] lg:pb-[7px]">
       <span className="flex flex-wrap items-center gap-1.5">
         <span className="rounded-[2px] bg-marca-600 px-1.5 text-[9px] leading-[13px] font-bold text-white uppercase">Ejemplo</span>
-        <span className="rounded-[2px] bg-pildora px-1.5 text-[9px] leading-[13px] font-bold text-marca-200 uppercase">Preventa exclusiva</span>
+        <span className="rounded-[2px] bg-pildora px-1.5 text-[9px] leading-[13px] font-bold text-marca-200 uppercase">
+          {empresa ? empresa.giro : "Equipo"}
+        </span>
       </span>
       <span className="mt-2 flex items-center gap-1 text-[10px] leading-3 text-white/50 lg:mt-[4px]">
-        <Building2 size={11} aria-hidden /> Mi Desarrollo Inmobiliario
+        <Building2 size={11} aria-hidden /> {empresa ? "Empresa" : "Todas las empresas"}
       </span>
       <span className="mt-0.5 line-clamp-2 text-[20px] leading-[1.25] font-bold lg:mt-0 lg:pl-[3px] lg:text-[23px] lg:leading-[33px]">
-        {a.nombreDesarrollo}
+        {empresa ? empresa.nombre : `${EMPRESAS.length} empresas`}
       </span>
       <span className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-0.5 text-[10px] leading-3 font-bold lg:mt-auto">
-        <span className="inline-flex items-center gap-1">
-          <MapPin size={11} aria-hidden className="text-[#9fb0c2]" /> {a.ciudad}
-        </span>
+        {empresa ? (
+          <span className="inline-flex items-center gap-1">
+            <Tag size={11} aria-hidden className="text-[#9fb0c2]" /> {empresa.producto}
+          </span>
+        ) : null}
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-cifra" /> Desde {a.precioDesde}
+          <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-cifra" /> {cuentas.length} cuentas:{" "}
+          {redes.map(nombreRed).join(", ")}
         </span>
       </span>
-    </Link>
+    </div>
   );
 }
 
 const BOTON_BARRA_AZUL =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-[3px] text-[12.5px] font-bold whitespace-nowrap transition-colors lg:h-[27px] lg:text-[11px] [&>svg]:shrink-0 [&>svg]:lg:h-[12px] [&>svg]:lg:w-[12px]";
-/** Los botones con letra; el de la ayuda es sólo el ícono. */
-const CON_LETRA = "px-2.5 lg:px-3";
 
-/** La barra azul, arriba a la derecha: la pastilla y los botones del proyecto. */
+/** La barra azul, arriba a la derecha: la pastilla y el botón de ayuda. */
 function BarraAzul({ pastilla, ayuda }: { pastilla?: ReactNode; ayuda: ReactNode }) {
-  const estado = useEstado();
-  const enNavegador = useEnNavegador();
-  const a = enNavegador ? estado.ajustes : AJUSTES_EJEMPLO;
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
   const idAyuda = useId();
 
@@ -189,24 +176,6 @@ function BarraAzul({ pastilla, ayuda }: { pastilla?: ReactNode; ayuda: ReactNode
           className={cx(BOTON_BARRA_AZUL, "w-9 lg:w-[27px] [&>svg]:lg:h-[14px] [&>svg]:lg:w-[14px]", ayudaAbierta ? "bg-marca-600 text-white" : "bg-pildora text-marca-400 hover:bg-[#24466f]")}
         >
           <CircleHelp size={16} aria-hidden />
-        </button>
-        <button
-          type="button"
-          aria-label="Compartir el proyecto"
-          onClick={() => compartirProyecto(`${a.nombreDesarrollo} · ${a.ciudad} · Desde ${a.precioDesde}`)}
-          className={cx(BOTON_BARRA_AZUL, CON_LETRA, "bg-pildora text-marca-400 hover:bg-[#24466f]")}
-        >
-          <Share2 size={15} aria-hidden />
-          <span className="hidden sm:inline">Compartir</span>
-        </button>
-        <button
-          type="button"
-          aria-label="Editar el proyecto"
-          onClick={abrirMiDesarrollo}
-          className={cx(BOTON_BARRA_AZUL, CON_LETRA, "bg-marca-600 text-white hover:bg-marca-700")}
-        >
-          <SquarePen size={15} aria-hidden />
-          <span className="hidden sm:inline">Editar Proyecto</span>
         </button>
       </div>
 
@@ -250,11 +219,11 @@ function Pie({ nota, children, fijo }: { nota?: ReactNode; children: ReactNode; 
       </div>
     );
   }
-  // En el celular queda fijo abajo, arriba de las pestañas. El hueco evita que tape lo último de la página.
+  // En el celular queda fijo abajo. El hueco evita que tape lo último de la página.
   return (
     <>
       <div aria-hidden className={nota ? "h-24" : "h-[4.5rem]"} />
-      <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] z-30 border-t border-linea bg-superficie/95 pt-2.5 pr-[max(1rem,env(safe-area-inset-right,0px))] pb-2.5 pl-[max(1rem,env(safe-area-inset-left,0px))] backdrop-blur-md">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-linea bg-superficie/95 pt-2.5 pr-[max(1rem,env(safe-area-inset-right,0px))] pb-[max(0.625rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))] backdrop-blur-md">
         {contenido}
       </div>
     </>
@@ -378,7 +347,7 @@ const TONOS_PIE = {
   verde: "bg-verde-600 text-white hover:bg-[#15803d]",
 } as const;
 
-/** El botón grande del paso que sigue (el azul de «Editar Proyecto» del diseño). */
+/** El botón grande azul del diseño. */
 export function BotonPie({
   tono = "azul",
   icono,

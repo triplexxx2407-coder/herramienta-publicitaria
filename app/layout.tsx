@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "NEXORA · Demo",
   description:
-    "NEXORA: demo de una herramienta de prospección comercial por correo. No envía correos; todos los datos son de ejemplo.",
+    "NEXORA: herramienta privada del equipo para atender los mensajes de las empresas que representan, desde una sola bandeja. Demo: todos los datos son de ejemplo.",
 };
 
 export const viewport: Viewport = {
