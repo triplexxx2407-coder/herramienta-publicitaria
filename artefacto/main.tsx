@@ -1,6 +1,7 @@
 import { useEffect, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import Inicio from "@/app/page";
+import { PantallaBandeja } from "@/app/bandeja/PantallaBandeja";
 import { PantallaBuscar } from "@/app/buscar/PantallaBuscar";
 import { PantallaRedactar } from "@/app/redactar/PantallaRedactar";
 import { PantallaEnvio } from "@/app/envio/PantallaEnvio";
@@ -12,6 +13,7 @@ import "@/app/globals.css";
 
 const PANTALLAS: Record<string, ComponentType> = {
   "/": Inicio,
+  "/bandeja": PantallaBandeja,
   "/buscar": PantallaBuscar,
   "/redactar": PantallaRedactar,
   "/envio": PantallaEnvio,

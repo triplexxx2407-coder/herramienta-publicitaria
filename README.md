@@ -34,8 +34,9 @@ colores salieron de medir ese archivo. Todas las pantallas usan el mismo marco (
 
 - **Barra de arriba.** Logo NEXORA con la marca «Demo», buscador de clientes y propiedades, campana con las
   pláticas que no has abierto y un engrane que abre «Editar proyecto».
-- **Menú de la izquierda (computadora).** «Proyecto activo», los 5 pasos numerados con cuántos llevas en cada
-  uno, y «Resumen de campaña» con la tasa de respuesta, que se calcula con lo que llevas enviado y contestado.
+- **Menú de la izquierda (computadora).** «Proyecto activo», la **Bandeja** con los mensajes nuevos, los 5 pasos
+  numerados con cuántos llevas en cada uno, y «Resumen de campaña» con la tasa de respuesta, que se calcula con
+  lo que llevas enviado y contestado.
 - **Tarjeta roja** del desarrollo (lleva al inicio) y, a su lado, la **barra azul** con la pastilla verde (con
   quién estás o de qué trata la pantalla), «¿Qué hace esto?», «Compartir» y «Editar Proyecto».
 - **Lista de pastillas** a la izquierda: la elegida va en azul claro.
@@ -47,11 +48,26 @@ colores salieron de medir ese archivo. Todas las pantallas usan el mismo marco (
 El buscador de arriba lleva a donde está cada cliente: a su plática si te contestó, al correo que le mandaste si
 ya se lo enviaste, a su borrador si está por escribir, o lo resalta en la lista de «Buscar».
 
+### Bandeja (`/bandeja`)
+
+Todos los mensajes en un solo lugar: Instagram, WhatsApp, Facebook, TikTok y correo. Se contesta desde ahí y
+cada respuesta dice por dónde se entregó. Tres cosas que la hacen distinta de la pantalla de Chat:
+
+- **Reloj de plazo.** Cada plática avisa cuánto queda para contestar, con las reglas reales de cada red
+  (`lib/redes.ts`): 24 horas en Instagram, WhatsApp y Facebook; 48 en TikTok; el correo no tiene plazo. El
+  plazo corre desde el último mensaje de la persona, no desde tu respuesta. Si se pasa, el cuadro para escribir
+  se bloquea, porque la red ya no entregaría el mensaje.
+- **Una sola ficha por persona.** Si alguien escribe por dos redes (en el ejemplo, Laura por Instagram y por
+  WhatsApp), cada plática dice que es la misma persona y lleva a la otra.
+- **Filtros por red**, con cuántos mensajes nuevos hay en cada una.
+
 ## Qué es simulado
 
 | Parte | Estado |
 |---|---|
 | Negocios, correos y teléfonos | Inventados (archivos en `datos/`) |
+| Mensajes de la bandeja | Inventados (`datos/bandeja-ejemplo.json`). No hay ninguna conexión con Instagram, WhatsApp, Facebook ni TikTok |
+| Lo que contestas en la bandeja | Se queda en tu navegador; no sale a ninguna red (`lib/bandeja.ts`) |
 | Textos del desarrollo (nombre, precio, puntos fuertes, fotos) | De ejemplo, y los puedes editar |
 | Pie legal | Texto de ejemplo. Antes de usarlo de verdad, que lo revise un abogado |
 | Botón «Enviar» | Simulación: no hay ninguna conexión a un servicio de correo (`lib/envio.ts`) |

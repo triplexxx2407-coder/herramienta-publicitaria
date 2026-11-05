@@ -25,6 +25,8 @@ export function estadoInicial(): EstadoDemo {
     enviados: {},
     chats: {},
     leidos: {},
+    respuestasRed: {},
+    leidosRed: [],
   };
 }
 
@@ -46,10 +48,12 @@ export function leerEstadoGuardado(texto: string | null): EstadoDemo {
       supresion: Array.isArray(e.supresion) ? e.supresion : [],
       ajustes: { ...base.ajustes, ...(e.ajustes ?? {}) },
       borradores: esObjeto(e.borradores) ? e.borradores : {},
-      // Lo guardado por versiones anteriores de la demo no traía envíos ni pláticas.
+      // Lo guardado por versiones anteriores de la demo no traía envíos, pláticas ni bandeja.
       enviados: esObjeto(e.enviados) ? e.enviados : {},
       chats: esObjeto(e.chats) ? e.chats : {},
       leidos: esObjeto(e.leidos) ? e.leidos : {},
+      respuestasRed: esObjeto(e.respuestasRed) ? e.respuestasRed : {},
+      leidosRed: Array.isArray(e.leidosRed) ? e.leidosRed : [],
     };
   } catch {
     return estadoInicial();

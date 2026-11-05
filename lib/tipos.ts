@@ -102,6 +102,40 @@ export interface MensajeChat {
   fecha: string;
 }
 
+/** Las redes por las que llegan mensajes a la bandeja (ver lib/redes.ts). */
+export type Red = "instagram" | "whatsapp" | "facebook" | "tiktok" | "correo";
+
+/** Un mensaje de la bandeja, ya con su fecha calculada. */
+export interface MensajeRed {
+  id: string;
+  de: "yo" | "ellos";
+  texto: string;
+  fecha: string;
+}
+
+/** Una plática de ejemplo de la bandeja, tal como viene en datos/bandeja-ejemplo.json. */
+export interface ConversacionEjemplo {
+  id: string;
+  red: Red;
+  /** Dos pláticas con el mismo personaId son la misma persona por dos redes. */
+  personaId: string;
+  persona: string;
+  /** Cómo se le ve en esa red: @usuario, teléfono o correo. */
+  usuario: string;
+  mensajes: { de: "yo" | "ellos"; texto: string; haceMinutos: number }[];
+}
+
+/**
+ * Una respuesta tuya en la bandeja (simulación).
+ * La hora se guarda como minutos desde que se abrió la bandeja, no como fecha,
+ * para que al recargar no se desordene con los mensajes de ejemplo.
+ */
+export interface RespuestaRed {
+  id: string;
+  texto: string;
+  minutos: number;
+}
+
 /** Todo lo que la demo guarda en el navegador. */
 export interface EstadoDemo {
   version: 1;
@@ -118,4 +152,8 @@ export interface EstadoDemo {
   chats: Record<string, MensajeChat[]>;
   /** Hasta qué fecha leíste cada plática (para marcar las nuevas). */
   leidos: Record<string, string>;
+  /** Tus respuestas en la bandeja de redes, por id de plática (simulación). */
+  respuestasRed: Record<string, RespuestaRed[]>;
+  /** Ids de las pláticas de la bandeja que ya abriste. */
+  leidosRed: string[];
 }

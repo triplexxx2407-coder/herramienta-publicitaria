@@ -1,0 +1,87 @@
+[
+  {
+    "id": "ig-laura",
+    "red": "instagram",
+    "personaId": "laura",
+    "persona": "Laura M.",
+    "usuario": "@laura.mrz",
+    "mensajes": [
+      { "de": "ellos", "texto": "Hola, vi el video del desarrollo. ¿Todavía tienen de dos recámaras?", "haceMinutos": 4 }
+    ]
+  },
+  {
+    "id": "wa-jorge",
+    "red": "whatsapp",
+    "personaId": "jorge",
+    "persona": "Jorge Treviño",
+    "usuario": "+52 664 555 0142",
+    "mensajes": [
+      { "de": "ellos", "texto": "Buenas tardes, me pasaron su número. ¿Me manda precios y formas de pago?", "haceMinutos": 25 }
+    ]
+  },
+  {
+    "id": "tt-diana",
+    "red": "tiktok",
+    "personaId": "diana",
+    "persona": "Diana R.",
+    "usuario": "@diana.rl",
+    "mensajes": [
+      { "de": "ellos", "texto": "oye y dónde queda exactamente?", "haceMinutos": 118 }
+    ]
+  },
+  {
+    "id": "wa-laura",
+    "red": "whatsapp",
+    "personaId": "laura",
+    "persona": "Laura M.",
+    "usuario": "+52 664 555 0188",
+    "mensajes": [
+      { "de": "ellos", "texto": "Le escribo por aquí mejor. ¿Manejan crédito bancario?", "haceMinutos": 200 },
+      { "de": "yo", "texto": "Claro que sí, Laura. Trabajamos con banco e Infonavit. ¿Le late que le mande los dos escenarios?", "haceMinutos": 180 }
+    ]
+  },
+  {
+    "id": "fb-ramiro",
+    "red": "facebook",
+    "personaId": "ramiro",
+    "persona": "Ramiro Sández",
+    "usuario": "Ramiro Sández",
+    "mensajes": [
+      { "de": "ellos", "texto": "Buen día. ¿Cuánto piden de enganche?", "haceMinutos": 300 }
+    ]
+  },
+  {
+    "id": "ig-chava",
+    "red": "instagram",
+    "personaId": "chava",
+    "persona": "Salvador G.",
+    "usuario": "@el_chava_tj",
+    "mensajes": [
+      { "de": "ellos", "texto": "info", "haceMinutos": 1320 }
+    ]
+  },
+  {
+    "id": "co-patricia",
+    "red": "correo",
+    "personaId": "patricia",
+    "persona": "Patricia Guzmán",
+    "usuario": "patricia.guzman@example.com",
+    "mensajes": [
+      {
+        "de": "ellos",
+        "texto": "Buenas tardes:\n\nMe interesa conocer el desarrollo. ¿Me puede enviar el folleto y la ficha técnica?\n\nGracias.",
+        "haceMinutos": 1500
+      }
+    ]
+  },
+  {
+    "id": "tt-carlos",
+    "red": "tiktok",
+    "personaId": "carlos",
+    "persona": "Carlos B.",
+    "usuario": "@carlosbc",
+    "mensajes": [
+      { "de": "ellos", "texto": "sigue disponible?", "haceMinutos": 3000 }
+    ]
+  }
+]

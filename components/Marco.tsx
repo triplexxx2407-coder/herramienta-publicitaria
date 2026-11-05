@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { Building2, ChartLine, ChevronDown, MessageCircle, Search, Send, SquarePen, Tag, type LucideIcon } from "lucide-react";
+import { Building2, ChartLine, ChevronDown, Inbox, MessageCircle, Search, Send, SquarePen, Tag, type LucideIcon } from "lucide-react";
 import { useEnNavegador, useEstado } from "@/lib/almacen";
+import { anclajeDeSesion, conversaciones as conversacionesRed, sinLeer as sinLeerRed } from "@/lib/bandeja";
 import { listosParaEnviar, porEscribir } from "@/lib/contactos";
 import { enviosHechos, platicas } from "@/lib/envio";
 import { AJUSTES_EJEMPLO } from "@/lib/estado";
-import { PANTALLAS } from "@/lib/pantallas";
+import { BANDEJA, PANTALLAS } from "@/lib/pantallas";
 import { ContenedorAvisos } from "./avisos";
 import { BarraSuperior } from "./BarraSuperior";
 import { FormularioAjustes } from "./FormularioAjustes";
@@ -25,6 +26,12 @@ const ICONOS: Record<string, LucideIcon> = {
   "/chat": MessageCircle,
 };
 
+/** Las pestañas de abajo en el celular: primero la bandeja, luego los cinco pasos del flujo. */
+const PESTANAS: { ruta: string; etiqueta: string; corto: string; icono: LucideIcon }[] = [
+  { ruta: BANDEJA.ruta, etiqueta: BANDEJA.nombre, corto: BANDEJA.corto, icono: Inbox },
+  ...PANTALLAS.map((p) => ({ ruta: p.ruta, etiqueta: `${p.numero}. ${p.nombre}`, corto: p.corto, icono: ICONOS[p.ruta] })),
+];
+
 /** Marco de la app: barra de arriba, menú a la izquierda en computadora y pestañas abajo en celular. */
 export function Marco({ children }: { children: ReactNode }) {
   const ruta = usePathname();
@@ -37,7 +44,9 @@ export function Marco({ children }: { children: ReactNode }) {
   const listos = enNavegador ? listosParaEnviar(estado).length : 0;
   const conversaciones = enNavegador ? platicas(estado) : [];
   const sinLeer = conversaciones.filter((p) => p.noLeida).length;
-  const cuentas: Record<string, number> = { "/redactar": porAprobar, "/envio": listos, "/chat": sinLeer };
+  // Mensajes sin leer de la bandeja (Instagram, WhatsApp, Facebook, TikTok y correo).
+  const nuevosBandeja = enNavegador ? sinLeerRed(conversacionesRed(estado, anclajeDeSesion())) : 0;
+  const cuentas: Record<string, number> = { "/redactar": porAprobar, "/envio": listos, "/chat": sinLeer, [BANDEJA.ruta]: nuevosBandeja };
 
   const enviados = enNavegador ? enviosHechos(estado).length : 0;
   const tasa = enviados ? (conversaciones.length / enviados) * 100 : null;
@@ -52,7 +61,27 @@ export function Marco({ children }: { children: ReactNode }) {
         <aside className="hidden w-[230px] shrink-0 lg:sticky lg:top-[68px] lg:flex lg:h-[calc(100dvh-68px)] lg:flex-col lg:overflow-y-auto lg:pt-[43px] lg:pr-[57px] lg:pl-[18px]">
           <ProyectoActivo nombre={nombreDesarrollo} />
 
-          <nav aria-label="Flujo de trabajo" className="mt-[33px]">
+          <nav aria-label="Mensajes" className="mt-[33px]">
+            <p className="mb-[7px] text-[11px] leading-4 font-bold text-menu uppercase">Mensajes</p>
+            <Link
+              href={BANDEJA.ruta}
+              aria-current={ruta === BANDEJA.ruta ? "page" : undefined}
+              className={cx(
+                "flex h-[33px] items-center gap-2 rounded-[3px] pr-2.5 pl-2 text-[13px] transition-colors",
+                ruta === BANDEJA.ruta ? "bg-pildora font-bold text-marca-400" : "text-menu hover:bg-white/5 hover:text-tinta-2",
+              )}
+            >
+              <Inbox size={14} aria-hidden strokeWidth={2.4} className={ruta === BANDEJA.ruta ? "text-marca-400" : "text-menu-icono"} />
+              <span className="flex-1 truncate">{BANDEJA.nombre}</span>
+              {nuevosBandeja ? (
+                <span className="cifras flex h-[15px] min-w-[15px] items-center justify-center rounded-full bg-marca-600 px-1 text-[9.5px] leading-none font-bold text-white">
+                  {nuevosBandeja}
+                </span>
+              ) : null}
+            </Link>
+          </nav>
+
+          <nav aria-label="Flujo de trabajo" className="mt-[26px]">
             <p className="mb-[7px] text-[11px] leading-4 font-bold text-menu uppercase">Flujo de trabajo</p>
             <ul className="space-y-[6px]">
               {PANTALLAS.map((p) => {
@@ -125,8 +154,8 @@ export function Marco({ children }: { children: ReactNode }) {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-linea bg-superficie/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md lg:hidden"
       >
         <ul className="mx-auto flex max-w-2xl pr-[max(0.25rem,env(safe-area-inset-right,0px))] pl-[max(0.25rem,env(safe-area-inset-left,0px))]">
-          {PANTALLAS.map((p) => {
-            const Icono = ICONOS[p.ruta];
+          {PESTANAS.map((p) => {
+            const Icono = p.icono;
             const activa = ruta === p.ruta;
             const cuenta = cuentas[p.ruta] || null;
             return (
@@ -134,26 +163,26 @@ export function Marco({ children }: { children: ReactNode }) {
                 <Link
                   href={p.ruta}
                   aria-current={activa ? "page" : undefined}
-                  aria-label={cuenta ? `${p.numero}. ${p.nombre} (${cuenta})` : `${p.numero}. ${p.nombre}`}
+                  aria-label={cuenta ? `${p.etiqueta} (${cuenta})` : p.etiqueta}
                   className="flex flex-col items-center gap-1 pt-2 pb-1.5"
                 >
                   <span
                     className={cx(
-                      "relative flex h-8 w-12 items-center justify-center rounded-full transition-colors",
+                      "relative flex h-8 w-11 items-center justify-center rounded-full transition-colors",
                       activa ? "bg-pildora text-marca-400" : "text-suave",
                     )}
                   >
-                    <Icono size={21} aria-hidden strokeWidth={activa ? 2.4 : 2} />
+                    <Icono size={20} aria-hidden strokeWidth={activa ? 2.4 : 2} />
                     {cuenta ? (
                       <span
                         aria-hidden
-                        className="cifras absolute -top-1 right-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-marca-600 px-1 text-[10.5px] leading-none font-bold text-white ring-2 ring-superficie"
+                        className="cifras absolute -top-1 right-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-marca-600 px-1 text-[10.5px] leading-none font-bold text-white ring-2 ring-superficie"
                       >
                         {cuenta}
                       </span>
                     ) : null}
                   </span>
-                  <span className={cx("max-w-full truncate text-[11px] leading-tight font-semibold", activa ? "text-marca-400" : "text-suave")}>
+                  <span className={cx("max-w-full truncate text-[10.5px] leading-tight font-semibold", activa ? "text-marca-400" : "text-suave")}>
                     {p.corto}
                   </span>
                 </Link>
