@@ -19,6 +19,7 @@ import {
   crearEmpresa,
   editarEmpresa,
   empresas,
+  guardarClaveCorreo,
   guardarConexionMeta,
   guardarSaliente,
   marcarEntrega,
@@ -27,7 +28,7 @@ import {
   platicaParaResponder,
   dentroDelPlazo,
 } from "./bandeja";
-import { CorreoSinEmpresa, entregarPorCorreo, revisarCorreo } from "./canal-correo";
+import { entregarPorCorreo, revisarCorreo, revisarTodosLosCorreos } from "./canal-correo";
 import { enviarPorMeta, firmaValida, guardarDeMeta } from "./meta";
 import { ORDEN_REDES } from "../../lib/redes";
 import type { Red } from "../../lib/tipos";
@@ -84,11 +85,10 @@ function estadoDeConexion(
   metaListo = false,
 ): { estado: "conectada" | "falta"; nota: string } {
   if (cuenta.red === "correo") {
-    if (correo && correo.usuario === cuenta.identificador) {
+    if (cuenta.tieneToken || (correo && correo.usuario === cuenta.identificador)) {
       return { estado: "conectada", nota: "Recibe y contesta correos desde aquí." };
     }
-    if (!correo) return { estado: "falta", nota: "Falta la contraseña de aplicación de Google de este correo." };
-    return { estado: "falta", nota: `Por ahora NEXORA sólo tiene conectado el correo ${correo.usuario}.` };
+    return { estado: "falta", nota: "Falta pegar la contraseña de aplicación de Google de este correo." };
   }
   if (cuenta.red === "instagram" || cuenta.red === "facebook") {
     if (!metaListo) return { estado: "falta", nota: "Falta poner META_APP_SECRET y META_VERIFY_TOKEN en el servidor." };
@@ -305,6 +305,30 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     }
   }
 
+  // Pegar la contraseña de aplicación de un correo (sólo el dueño). Se prueba al momento: si Google no la acepta, no se guarda.
+  if (ruta === "/api/cuentas/clave" && metodo === "POST") {
+    if (quien.papel !== "dueño") return json({ error: "sólo el dueño puede conectar correos" }, 403);
+    const datos = await cuerpo(peticion);
+    const cuentaId = texto(datos.cuentaId, 60);
+    const clave = texto(datos.clave, 60).replace(/\s+/g, "");
+    if (!cuentaId || !/^[a-z]{16}$/i.test(clave)) {
+      return json({ error: "la contraseña de aplicación son 16 letras (puedes pegarla con o sin espacios)" }, 400);
+    }
+    const fila = await entorno.DB.prepare("SELECT identificador FROM cuentas WHERE id = ? AND red = 'correo'")
+      .bind(cuentaId)
+      .first<{ identificador: string }>();
+    if (!fila) return json({ error: "esa cuenta no existe o no es de correo" }, 404);
+    await guardarClaveCorreo(entorno.DB, cuentaId, clave.toLowerCase());
+    try {
+      await revisarCorreo(entorno.DB, { usuario: fila.identificador, contrasena: clave.toLowerCase() });
+    } catch {
+      await guardarClaveCorreo(entorno.DB, cuentaId, null);
+      return json({ error: "Google no aceptó esa clave. Revisa que sea de ese mismo correo y que esté completa." }, 400);
+    }
+    await apuntar(entorno.DB, "correo", "info", `${quien.correo} conectó el correo ${fila.identificador}`);
+    return json({ bien: true });
+  }
+
   if (ruta === "/api/bandeja" && metodo === "GET") {
     const platicas = await conversacionesGuardadas(entorno.DB, { empresaId: url.searchParams.get("empresa") });
     const ahora = new Date();
@@ -346,7 +370,14 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     const guardado = await guardarSaliente(entorno.DB, { platicaId, texto: mensaje });
 
     if (platica.red === "correo") {
-      const cuenta = cuentaDeCorreo(entorno);
+      // Cada correo contesta con su propia contraseña; si no tiene, se usa la de los secretos (si es la misma dirección).
+      const clave = await tokenDeCuenta(entorno.DB, platica.cuentaId);
+      const deSecretos = cuentaDeCorreo(entorno);
+      const cuenta = clave
+        ? { usuario: platica.cuenta, contrasena: clave }
+        : deSecretos && deSecretos.usuario === platica.cuenta
+          ? deSecretos
+          : null;
       if (!cuenta) {
         return json({ mensaje: { ...guardado, entrega: "pendiente" }, aviso: "falta conectar el correo" });
       }
@@ -378,14 +409,8 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
 
   // Para probar sin esperar al reloj.
   if (ruta === "/api/revisar-correo" && metodo === "POST") {
-    const cuenta = cuentaDeCorreo(entorno);
-    if (!cuenta) return json({ error: "falta conectar el correo" }, 400);
-    try {
-      return json({ nuevos: await revisarCorreo(entorno.DB, cuenta) });
-    } catch (falla) {
-      if (falla instanceof CorreoSinEmpresa) return json({ error: falla.message }, 409);
-      return json({ error: (falla as Error).message }, 502);
-    }
+    const { nuevos, errores } = await revisarTodosLosCorreos(entorno.DB, cuentaDeCorreo(entorno));
+    return json({ nuevos, errores });
   }
 
   if (ruta === "/api/invitar" && metodo === "POST") {
@@ -431,13 +456,8 @@ const servidor = {
       (async () => {
         await limpiarSesiones(entorno.DB);
         await borrarArchivadasViejas(entorno.DB);
-        const cuenta = cuentaDeCorreo(entorno);
-        if (!cuenta) return;
-        try {
-          await revisarCorreo(entorno.DB, cuenta);
-        } catch {
-          // Ya quedó apuntado en la bitácora; no tiramos el reloj por un buzón que no contestó.
-        }
+        // Ya queda apuntado en la bitácora lo que falle; un buzón caído no tira el reloj.
+        await revisarTodosLosCorreos(entorno.DB, cuentaDeCorreo(entorno));
       })(),
     );
   },

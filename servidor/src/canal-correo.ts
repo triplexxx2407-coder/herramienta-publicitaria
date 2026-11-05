@@ -7,6 +7,7 @@
 
 import {
   apuntar,
+  correosConClave,
   cuentaPorIdentificador,
   guardarEntrante,
   guardarHilo,
@@ -74,6 +75,30 @@ export async function revisarCorreo(db: D1Database, cuenta: CuentaCorreo): Promi
   }
   if (guardados) await apuntar(db, "correo", "info", `entraron ${guardados} mensajes nuevos`);
   return guardados;
+}
+
+/**
+ * Revisa todos los buzones: los que se dieron de alta desde la pantalla (cada uno con su propia
+ * contraseña de aplicación) y, si existe, el que viene en los secretos del servidor.
+ * Un buzón que falla no detiene a los demás.
+ */
+export async function revisarTodosLosCorreos(
+  db: D1Database,
+  deSecretos: CuentaCorreo | null,
+): Promise<{ nuevos: number; errores: string[] }> {
+  const cuentas: CuentaCorreo[] = (await correosConClave(db)).map((c) => ({ usuario: c.usuario, contrasena: c.clave }));
+  if (deSecretos && !cuentas.some((c) => c.usuario === deSecretos.usuario)) cuentas.push(deSecretos);
+  let nuevos = 0;
+  const errores: string[] = [];
+  for (const cuenta of cuentas) {
+    try {
+      nuevos += await revisarCorreo(db, cuenta);
+    } catch (falla) {
+      // Ya quedó apuntado en la bitácora.
+      errores.push(`${cuenta.usuario}: ${(falla as Error).message}`);
+    }
+  }
+  return { nuevos, errores };
 }
 
 /** Manda por correo una respuesta que ya quedó apuntada como pendiente. */

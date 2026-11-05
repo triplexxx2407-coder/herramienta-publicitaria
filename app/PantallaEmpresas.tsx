@@ -19,7 +19,7 @@ import {
 import { cx } from "@/components/ui";
 import { actualizarEstado } from "@/lib/almacen";
 import { elegirEmpresa } from "@/lib/bandeja";
-import { agregarCuenta, borrarEmpresa, conectarMeta, crearEmpresa, editarEmpresa, quitarCuenta, useFuente } from "@/lib/fuente";
+import { agregarCuenta, borrarEmpresa, conectarCorreo, conectarMeta, crearEmpresa, editarEmpresa, quitarCuenta, useFuente } from "@/lib/fuente";
 import { nombreRed, ORDEN_REDES } from "@/lib/redes";
 import type { CuentaCanal, EmpresaCliente, Red } from "@/lib/tipos";
 import { useBandeja } from "@/lib/usar-bandeja";
@@ -336,6 +336,7 @@ function Conexion({ red, empresaId, cuentas, soloVer }: { red: Red; empresaId: s
                     {k.estado === "conectada" ? "Conectada" : "Falta conectar"}
                   </span>
                   {k.nota ? <span className="mt-1 block text-[12.5px] leading-snug text-chat-tenue">{k.nota}</span> : null}
+                  {!soloVer && red === "correo" ? <ConectarCorreo cuentaId={k.id} conectada={k.estado === "conectada"} /> : null}
                   {!soloVer && (red === "instagram" || red === "facebook") ? (
                     <ConectarMeta cuentaId={k.id} idActual={k.idMeta ?? ""} tieneToken={!!k.tieneToken} />
                   ) : null}
@@ -507,6 +508,65 @@ function ConectarMeta({ cuentaId, idActual, tieneToken }: { cuentaId: string; id
           className="rounded-full bg-marca-600 px-3 py-1 text-[12.5px] font-bold text-white disabled:opacity-50"
         >
           {guardando ? "Guardando…" : "Guardar"}
+        </button>
+      </span>
+    </form>
+  );
+}
+
+/** Correo: pegar la contraseña de aplicación de Google de ese correo (se prueba al momento). */
+function ConectarCorreo({ cuentaId, conectada }: { cuentaId: string; conectada: boolean }) {
+  const [abierto, setAbierto] = useState(false);
+  const [clave, setClave] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  async function guardar(ev: FormEvent) {
+    ev.preventDefault();
+    setGuardando(true);
+    const falla = await conectarCorreo(cuentaId, clave);
+    setGuardando(false);
+    setError(falla);
+    if (!falla) {
+      setClave("");
+      setAbierto(false);
+    }
+  }
+
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="mt-1.5 rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-[#1c4fd6] shadow-sm hover:bg-[#eef3ff]"
+      >
+        {conectada ? "Cambiar contraseña de aplicación" : "Pegar contraseña de aplicación"}
+      </button>
+    );
+  }
+  return (
+    <form onSubmit={guardar} className="mt-2 space-y-2 rounded-[8px] bg-white p-2.5">
+      <label className="block text-[12.5px] font-semibold text-chat-tenue">
+        Contraseña de aplicación de Google (16 letras)
+        <input
+          value={clave}
+          onChange={(e) => setClave(e.target.value)}
+          type="password"
+          autoComplete="off"
+          placeholder="abcd efgh ijkl mnop"
+          className="mt-1 h-9 w-full rounded-[8px] border border-[#cfd8e3] bg-white px-2.5 text-[14px] text-chat-tinta outline-none focus:border-marca-500"
+        />
+      </label>
+      <p className="text-[12px] leading-snug text-chat-tenue">
+        Se saca en myaccount.google.com/apppasswords, con ese mismo correo y con la verificación en 2 pasos prendida.
+      </p>
+      {error ? <p className="text-[12.5px] font-semibold text-[#b42318]">{error}</p> : null}
+      <span className="flex gap-1.5">
+        <button type="button" onClick={() => setAbierto(false)} className="rounded-full px-3 py-1 text-[12.5px] font-bold text-chat-tenue hover:bg-[#f5f7fa]">
+          Cancelar
+        </button>
+        <button type="submit" disabled={guardando || clave.replace(/\s/g, "").length < 16} className="rounded-full bg-marca-600 px-3 py-1 text-[12.5px] font-bold text-white disabled:opacity-50">
+          {guardando ? "Probando con Google…" : "Guardar y probar"}
         </button>
       </span>
     </form>

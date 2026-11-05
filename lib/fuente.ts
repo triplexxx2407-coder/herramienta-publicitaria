@@ -300,6 +300,11 @@ export function agregarCuenta(empresaId: string, red: Red, identificador: string
   return cambiarYRecargar("/api/cuentas", { empresaId, red, identificador });
 }
 
+/** Pega la contraseña de aplicación de Google de un correo. Devuelve el error si Google no la acepta. */
+export function conectarCorreo(cuentaId: string, clave: string) {
+  return cambiarYRecargar("/api/cuentas/clave", { cuentaId, clave });
+}
+
 /** Pega el número de la cuenta en Meta y su token (Instagram y Facebook). */
 export function conectarMeta(cuentaId: string, idMeta: string, token: string) {
   return cambiarYRecargar("/api/cuentas/meta", { cuentaId, idMeta, token });

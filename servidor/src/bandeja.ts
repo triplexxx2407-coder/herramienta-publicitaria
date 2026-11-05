@@ -289,6 +289,20 @@ export async function guardarConexionMeta(
   return !!r.meta.changes;
 }
 
+/** Guarda (o borra, con null) la contraseña de aplicación de un correo. Nunca sale del servidor. */
+export async function guardarClaveCorreo(db: D1Database, cuentaId: string, clave: string | null): Promise<boolean> {
+  const r = await db.prepare("UPDATE cuentas SET token = ? WHERE id = ? AND red = 'correo'").bind(clave, cuentaId).run();
+  return !!r.meta.changes;
+}
+
+/** Los correos dados de alta desde la pantalla, con su contraseña de aplicación. */
+export async function correosConClave(db: D1Database): Promise<{ id: string; usuario: string; clave: string }[]> {
+  const { results } = await db
+    .prepare("SELECT id, identificador, token FROM cuentas WHERE red = 'correo' AND token IS NOT NULL")
+    .all<{ id: string; identificador: string; token: string }>();
+  return results.map((c) => ({ id: c.id, usuario: c.identificador, clave: c.token }));
+}
+
 /** La cuenta que recibió un aviso de Meta, y su token para pedir el nombre de quien escribió. */
 export async function cuentaDeMeta(
   db: D1Database,
