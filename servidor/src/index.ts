@@ -30,6 +30,7 @@ import {
   guardarCuentaMeta,
 } from "./bandeja";
 import { credencialDeCorreo, entregarPorCorreo, revisarCorreo, revisarTodosLosCorreos } from "./canal-correo";
+import { conectarInstagram, PREFIJO_IG, renovarTokenInstagram, suscribirInstagram, urlDeInstagram, type ClaveInstagram } from "./instagram";
 import { paginasDelDueno, suscribirPagina, urlDeFacebook, type ClaveMeta } from "./facebook";
 import { PREFIJO, crearEstado, intercambiarCodigo, leerEstado, urlDeGoogle, type ClaveGoogle } from "./google";
 import { enviarPorMeta, firmaValida, guardarDeMeta } from "./meta";
@@ -71,6 +72,9 @@ export interface Entorno {
   GOOGLE_CLIENT_SECRET?: string;
   /** «Conectar con Facebook»: el número de la app de Meta (la clave secreta es META_APP_SECRET). */
   META_APP_ID?: string;
+  /** «Conectar Instagram» sin Facebook: el número y la clave de la parte de Instagram de la app de Meta. */
+  INSTAGRAM_APP_ID?: string;
+  INSTAGRAM_APP_SECRET?: string;
 }
 
 function json(datos: unknown, estado = 200, galleta?: string): Response {
@@ -117,6 +121,11 @@ function claveDeMeta(entorno: Entorno): ClaveMeta | null {
   return { appId: entorno.META_APP_ID, appSecret: entorno.META_APP_SECRET };
 }
 
+function claveDeInstagram(entorno: Entorno): ClaveInstagram | null {
+  if (!entorno.INSTAGRAM_APP_ID || !entorno.INSTAGRAM_APP_SECRET) return null;
+  return { appId: entorno.INSTAGRAM_APP_ID, appSecret: entorno.INSTAGRAM_APP_SECRET };
+}
+
 function cuentaDeCorreo(entorno: Entorno): CuentaCorreo | null {
   if (!entorno.CORREO_USUARIO || !entorno.CORREO_CONTRASENA) return null;
   return { usuario: normalizarCorreo(entorno.CORREO_USUARIO), contrasena: entorno.CORREO_CONTRASENA };
@@ -153,6 +162,27 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
   if (ruta === "/api/privacidad") {
     const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aviso de privacidad de NEXORA</title></head><body style="font-family:system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;line-height:1.5"><h1>Aviso de privacidad de NEXORA</h1><p>NEXORA es una herramienta privada de uso interno de un equipo de ventas. No está abierta al público.</p><p>Cuando el dueño conecta un correo con su cuenta de Google, NEXORA guarda un permiso de acceso a ese buzón. Lo usa únicamente para mostrar los mensajes recibidos y enviar las respuestas que el equipo escribe.</p><p>Los datos se guardan en la base de datos privada del equipo, en Cloudflare. No se venden, no se comparten con terceros y no se usan para publicidad ni para entrenar modelos.</p><p>El dueño puede quitar una cuenta en cualquier momento desde NEXORA o revocar el permiso en su cuenta de Google.</p></body></html>`;
     return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
+  }
+
+  // La vuelta de Instagram al conectar una cuenta sin Facebook.
+  if (ruta === "/api/instagram/vuelta" && metodo === "GET") {
+    const ig = claveDeInstagram(entorno);
+    const aPantalla = (resultado: string) => Response.redirect(`${url.origin}/?meta=${resultado}#empresas`, 302);
+    if (!ig) return aPantalla("falta");
+    const empresaId = await leerEstado(ig.appSecret, url.searchParams.get("state") ?? "");
+    const codigo = url.searchParams.get("code");
+    if (!empresaId || !codigo) return aPantalla("no");
+    const hay = await entorno.DB.prepare("SELECT 1 AS si FROM empresas WHERE id = ?").bind(empresaId).first();
+    if (!hay) return aPantalla("no");
+    const r = await conectarInstagram(ig, codigo, `${url.origin}/api/instagram/vuelta`);
+    if ("error" in r) {
+      await apuntar(entorno.DB, "instagram", "error", `Instagram no dio el permiso: ${r.error}`);
+      return aPantalla("no");
+    }
+    await guardarCuentaMeta(entorno.DB, { empresaId, red: "instagram", identificador: `@${r.usuario}`, idMeta: r.id, token: PREFIJO_IG + r.token });
+    const suscrita = await suscribirInstagram(r.token);
+    await apuntar(entorno.DB, "instagram", suscrita ? "info" : "error", `se conectó @${r.usuario}${suscrita ? "" : " (no se pudo suscribir a los avisos)"}`);
+    return aPantalla("ok");
   }
 
   // La vuelta de Facebook al conectar páginas. Va sin sesión: se protege con el estado firmado.
@@ -223,12 +253,15 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
       return new Response("no", { status: 403 });
     }
     if (metodo === "POST") {
-      const secreto = entorno.META_APP_SECRET;
-      if (!secreto) return json({ error: "falta META_APP_SECRET" }, 503);
+      const secretos = [entorno.META_APP_SECRET, entorno.INSTAGRAM_APP_SECRET].filter((x): x is string => !!x);
+      if (secretos.length === 0) return json({ error: "falta META_APP_SECRET" }, 503);
       const crudo = await peticion.text();
-      if (!(await firmaValida(crudo, peticion.headers.get("X-Hub-Signature-256"), secreto))) {
-        return json({ error: "firma incorrecta" }, 403);
+      const cabecera = peticion.headers.get("X-Hub-Signature-256");
+      let firmada = false;
+      for (const secreto of secretos) {
+        if (await firmaValida(crudo, cabecera, secreto)) firmada = true;
       }
+      if (!firmada) return json({ error: "firma incorrecta" }, 403);
       try {
         await guardarDeMeta(entorno.DB, JSON.parse(crudo));
       } catch (falla) {
@@ -298,7 +331,7 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
           identificador: k.identificador,
           idMeta: k.idMeta,
           tieneToken: k.tieneToken,
-          ...estadoDeConexion(k, correo, !!entorno.META_APP_SECRET && !!entorno.META_VERIFY_TOKEN),
+          ...estadoDeConexion(k, correo, (!!entorno.META_APP_SECRET || !!entorno.INSTAGRAM_APP_SECRET) && !!entorno.META_VERIFY_TOKEN),
         })),
       })),
     });
@@ -383,6 +416,18 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     } catch {
       return json({ error: "ese número de Meta ya está en otra cuenta" }, 409);
     }
+  }
+
+  // Empieza «Conectar Instagram»: manda al dueño a Instagram a dar permiso, sin pasar por Facebook.
+  if (ruta === "/api/instagram/iniciar" && metodo === "GET") {
+    if (quien.papel !== "dueño") return json({ error: "sólo el dueño puede conectar redes" }, 403);
+    const ig = claveDeInstagram(entorno);
+    if (!ig) return Response.redirect(`${url.origin}/?meta=falta#empresas`, 302);
+    const empresaId = url.searchParams.get("empresaId") ?? "";
+    const hay = await entorno.DB.prepare("SELECT 1 AS si FROM empresas WHERE id = ?").bind(empresaId).first();
+    if (!hay) return json({ error: "esa empresa no existe" }, 404);
+    const estado = await crearEstado(ig.appSecret, empresaId);
+    return Response.redirect(urlDeInstagram(ig, `${url.origin}/api/instagram/vuelta`, estado), 302);
   }
 
   // Empieza «Conectar con Facebook»: manda al dueño a Meta a elegir las páginas de esa empresa.
@@ -563,13 +608,24 @@ const servidor = {
   },
 
   /** El reloj: cada rato revisa el buzón y tira las sesiones vencidas. */
-  async scheduled(_evento: ScheduledController, entorno: Entorno, contexto: ExecutionContext): Promise<void> {
+  async scheduled(evento: ScheduledController, entorno: Entorno, contexto: ExecutionContext): Promise<void> {
     contexto.waitUntil(
       (async () => {
         await limpiarSesiones(entorno.DB);
         await borrarArchivadasViejas(entorno.DB);
         // Ya queda apuntado en la bitácora lo que falle; un buzón caído no tira el reloj.
         await revisarTodosLosCorreos(entorno.DB, cuentaDeCorreo(entorno), claveDeGoogle(entorno));
+        // Una vez al día se alarga el permiso de las cuentas de Instagram (vence a los 60 días).
+        const cuando = new Date(evento.scheduledTime);
+        if (cuando.getUTCHours() === 4 && cuando.getUTCMinutes() === 0) {
+          const { results } = await entorno.DB.prepare("SELECT id, token FROM cuentas WHERE red = 'instagram' AND token LIKE ?")
+            .bind(`${PREFIJO_IG}%`)
+            .all<{ id: string; token: string }>();
+          for (const c of results) {
+            const nuevo = await renovarTokenInstagram(c.token.slice(PREFIJO_IG.length));
+            if (nuevo) await entorno.DB.prepare("UPDATE cuentas SET token = ? WHERE id = ?").bind(PREFIJO_IG + nuevo, c.id).run();
+          }
+        }
       })(),
     );
   },

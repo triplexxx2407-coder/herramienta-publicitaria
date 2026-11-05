@@ -279,13 +279,19 @@ function Conexiones({ empresa, soloVer }: { empresa: EmpresaCliente; soloVer: bo
       {!soloVer ? (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[10px] bg-[#eef3ff] p-3">
           <a
-            href={`/api/meta/iniciar?empresaId=${encodeURIComponent(empresa.id)}`}
+            href={`/api/instagram/iniciar?empresaId=${encodeURIComponent(empresa.id)}`}
             className="rounded-full bg-marca-600 px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm hover:opacity-90"
           >
-            Conectar Instagram y Facebook
+            Conectar Instagram
+          </a>
+          <a
+            href={`/api/meta/iniciar?empresaId=${encodeURIComponent(empresa.id)}`}
+            className="rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-[#1c4fd6] shadow-sm hover:bg-[#eef3ff]"
+          >
+            Conectar Facebook
           </a>
           <span className="text-[12.5px] leading-snug text-chat-tenue">
-            Entras con tu Facebook, eliges la página y NEXORA liga sola su Instagram. Sin copiar claves.
+            Instagram se conecta solo con su usuario, sin Facebook. Facebook es aparte, para quien tenga página. Sin copiar claves.
           </span>
         </div>
       ) : null}

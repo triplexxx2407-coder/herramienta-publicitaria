@@ -29,3 +29,12 @@ describe("Facebook", () => {
     expect(u.searchParams.get("client_id")).toBe("1");
   });
 });
+
+import { urlDeInstagram } from "../servidor/src/instagram";
+describe("Instagram sin Facebook", () => {
+  it("pide permiso de mensajes de Instagram", () => {
+    const u = new URL(urlDeInstagram({ appId: "9", appSecret: "s" }, "https://x/v", "est"));
+    expect(u.host).toBe("www.instagram.com");
+    expect(u.searchParams.get("scope")).toContain("instagram_business_manage_messages");
+  });
+});

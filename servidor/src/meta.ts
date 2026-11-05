@@ -11,6 +11,7 @@
 
 import { apuntar, cuentaDeMeta, guardarEntrante, platicaDe } from "./bandeja";
 import { firmaValida } from "./firma";
+import { GRAFO_IG, PREFIJO_IG } from "./instagram";
 import type { Red } from "../../lib/tipos";
 
 export { firmaValida };
@@ -32,11 +33,19 @@ interface EventoMeta {
   }[];
 }
 
+/** A qué dirección de Meta se le habla según el token: el de «Conectar Instagram» va por graph.instagram.com. */
+function destinoDe(tokenGuardado: string): { base: string; token: string } {
+  return tokenGuardado.startsWith(PREFIJO_IG)
+    ? { base: GRAFO_IG, token: tokenGuardado.slice(PREFIJO_IG.length) }
+    : { base: GRAFO, token: tokenGuardado };
+}
+
 /** Cómo se llama quien escribió. Si Meta no lo da, se usa su número de identificación. */
-async function nombreDe(red: Red, personaId: string, token: string): Promise<string> {
+async function nombreDe(red: Red, personaId: string, tokenGuardado: string): Promise<string> {
   try {
+    const { base, token } = destinoDe(tokenGuardado);
     const campos = red === "instagram" ? "name,username" : "first_name,last_name";
-    const r = await fetch(`${GRAFO}/${encodeURIComponent(personaId)}?fields=${campos}`, {
+    const r = await fetch(`${base}/${encodeURIComponent(personaId)}?fields=${campos}`, {
       headers: { Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(3000),
     });
@@ -86,12 +95,13 @@ export async function guardarDeMeta(db: D1Database, evento: EventoMeta): Promise
 /** Manda tu respuesta por la API de Meta. Sólo se puede contestar a quien escribió primero. */
 export async function enviarPorMeta(
   red: Red,
-  token: string,
+  tokenGuardado: string,
   destinatario: string,
   texto: string,
 ): Promise<{ entregado: boolean; error?: string }> {
   try {
-    const r = await fetch(`${GRAFO}/me/messages`, {
+    const { base, token } = destinoDe(tokenGuardado);
+    const r = await fetch(`${base}/me/messages`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({
