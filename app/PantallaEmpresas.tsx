@@ -1,8 +1,8 @@
 "use client";
 
-import { Building2, CircleCheck, CircleDashed, Plus, Save, Trash2 } from "lucide-react";
+import { Building2, CircleDashed, Plus, Save, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { avisar } from "@/components/avisos";
 import { CirculoRed, IconoRed } from "@/components/IconoRed";
 import {
@@ -19,7 +19,7 @@ import {
 import { cx } from "@/components/ui";
 import { actualizarEstado } from "@/lib/almacen";
 import { elegirEmpresa } from "@/lib/bandeja";
-import { agregarCuenta, borrarEmpresa, conectarCorreo, conectarMeta, crearEmpresa, editarEmpresa, quitarCuenta, useFuente } from "@/lib/fuente";
+import { agregarCuenta, borrarEmpresa, llenarDemostracion, crearEmpresa, editarEmpresa, quitarCuenta, useFuente } from "@/lib/fuente";
 import { nombreRed, ORDEN_REDES } from "@/lib/redes";
 import type { CuentaCanal, EmpresaCliente, Red } from "@/lib/tipos";
 import { useBandeja } from "@/lib/usar-bandeja";
@@ -40,24 +40,6 @@ export function PantallaEmpresas() {
   const { modo, usuario } = useFuente();
   const { empresas, empresaActiva } = useBandeja();
   const [elegida, setElegida] = useState<string | null>(null);
-
-  // Al volver de Google se dice cómo salió y se limpia la dirección.
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const res = url.searchParams.get("google") ?? url.searchParams.get("meta");
-    if (!res) return;
-    const textos: Record<string, string> = {
-      ok: url.searchParams.has("meta") ? "Instagram y Facebook conectados" : "Correo conectado con Google",
-      no: "Google no dio el permiso. Intenta de nuevo",
-      otrocorreo: "Entraste con otro correo distinto al de la cuenta. Intenta de nuevo con el correcto",
-      falta: "Falta configurar la conexión en el servidor",
-      sinpaginas: "Facebook no dio ninguna página. Elige la página al conectar",
-    };
-    avisar(textos[res] ?? "No se pudo conectar");
-    url.searchParams.delete("google");
-    url.searchParams.delete("meta");
-    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
-  }, []);
 
   if (modo === "revisando") return <CargandoPanel />;
   if (modo !== "real") {
@@ -103,7 +85,7 @@ export function PantallaEmpresas() {
       ayuda={
         <>
           <p>Aquí das de alta cada empresa que atienden y le ligas sus cuentas: su Instagram, su WhatsApp, su Facebook, su TikTok y su correo.</p>
-          <p>Cada cuenta dice si ya está conectada (los mensajes llegan a la bandeja) o qué le falta para conectarse.</p>
+          <p>Por ahora todo es de demostración: usa «Llenar con chats de ejemplo» para ver cómo se vería con mensajes.</p>
         </>
       }
       pastilla={
@@ -132,7 +114,6 @@ export function PantallaEmpresas() {
           {empresas.length ? (
             <ul className="space-y-[11px]">
               {empresas.map((e) => {
-                const conectadas = e.cuentas.filter((k) => k.estado === "conectada").length;
                 return (
                   <li key={e.id}>
                     <PildoraLista
@@ -140,7 +121,7 @@ export function PantallaEmpresas() {
                       titulo={e.nombre}
                       detalle={
                         e.cuentas.length
-                          ? `${e.cuentas.length === 1 ? "1 cuenta" : `${e.cuentas.length} cuentas`} · ${conectadas} conectada${conectadas === 1 ? "" : "s"}`
+                          ? e.cuentas.length === 1 ? "1 cuenta" : `${e.cuentas.length} cuentas`
                           : "Sin cuentas todavía"
                       }
                       icono={
@@ -274,24 +255,27 @@ function FormularioEmpresa({
 }
 
 function Conexiones({ empresa, soloVer }: { empresa: EmpresaCliente; soloVer: boolean }) {
+  const [llenando, setLlenando] = useState(false);
+  async function llenar() {
+    setLlenando(true);
+    const error = await llenarDemostracion(empresa.id);
+    setLlenando(false);
+    avisar(error ?? "Listo: ya hay chats de ejemplo en la bandeja");
+  }
   return (
-    <Seccion titulo="Conexiones" detalle="Las cuentas de esta empresa en cada red. Los mensajes que les lleguen aparecen en la bandeja.">
+    <Seccion titulo="Conexiones" detalle="Las cuentas de esta empresa en cada red. Por ahora son de demostración: no se conectan a nada real.">
       {!soloVer ? (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[10px] bg-[#eef3ff] p-3">
-          <a
-            href={`/api/instagram/iniciar?empresaId=${encodeURIComponent(empresa.id)}`}
-            className="rounded-full bg-marca-600 px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm hover:opacity-90"
+          <button
+            type="button"
+            disabled={llenando}
+            onClick={() => void llenar()}
+            className="rounded-full bg-marca-600 px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm hover:opacity-90 disabled:opacity-50"
           >
-            Conectar Instagram
-          </a>
-          <a
-            href={`/api/meta/iniciar?empresaId=${encodeURIComponent(empresa.id)}`}
-            className="rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-[#1c4fd6] shadow-sm hover:bg-[#eef3ff]"
-          >
-            Conectar Facebook
-          </a>
+            {llenando ? "Llenando…" : "Llenar con chats de ejemplo"}
+          </button>
           <span className="text-[12.5px] leading-snug text-chat-tenue">
-            Instagram se conecta solo con su usuario, sin Facebook. Facebook es aparte, para quien tenga página. Sin copiar claves.
+            Modo demostración: pone chats inventados de Instagram, Facebook, WhatsApp, TikTok y correo para enseñar cómo funciona. Reemplaza los chats de esta empresa. Nada sale a ninguna red.
           </span>
         </div>
       ) : null}
@@ -364,19 +348,11 @@ function Conexion({ red, empresaId, cuentas, soloVer }: { red: Red; empresaId: s
                     <IconoRed red={red} tamano={14} /> {k.identificador}
                   </span>
                   <span
-                    className={cx(
-                      "mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-bold",
-                      k.estado === "conectada" ? "bg-[#dff0e4] text-[#1c6b3f]" : "bg-[#ffe7bd] text-[#7a4b00]",
-                    )}
+                    className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#e8eefb] px-2 py-0.5 text-[12px] font-bold text-[#1c4fd6]"
                   >
-                    {k.estado === "conectada" ? <CircleCheck size={13} aria-hidden /> : <CircleDashed size={13} aria-hidden />}
-                    {k.estado === "conectada" ? "Conectada" : "Falta conectar"}
+                    <CircleDashed size={13} aria-hidden />
+                    Demostración
                   </span>
-                  {k.nota ? <span className="mt-1 block text-[12.5px] leading-snug text-chat-tenue">{k.nota}</span> : null}
-                  {!soloVer && red === "correo" ? <ConectarCorreo cuentaId={k.id} conectada={k.estado === "conectada"} /> : null}
-                  {!soloVer && (red === "instagram" || red === "facebook") ? (
-                    <ConectarMeta cuentaId={k.id} idActual={k.idMeta ?? ""} tieneToken={!!k.tieneToken} />
-                  ) : null}
                 </span>
                 {!soloVer ? (
                   porQuitar === k.id ? (
@@ -489,131 +465,5 @@ function BorrarEmpresa({ empresa, onBorrada }: { empresa: EmpresaCliente; onBorr
         </button>
       )}
     </div>
-  );
-}
-
-/** Instagram y Facebook: pegar el número de la cuenta en Meta y su token. El token no vuelve a mostrarse. */
-function ConectarMeta({ cuentaId, idActual, tieneToken }: { cuentaId: string; idActual: string; tieneToken: boolean }) {
-  const [abierto, setAbierto] = useState(false);
-  const [idMeta, setIdMeta] = useState(idActual);
-  const [token, setToken] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [guardando, setGuardando] = useState(false);
-
-  async function guardar(ev: FormEvent) {
-    ev.preventDefault();
-    setGuardando(true);
-    const falla = await conectarMeta(cuentaId, idMeta.trim(), token.trim());
-    setGuardando(false);
-    setError(falla);
-    if (!falla) {
-      setToken("");
-      setAbierto(false);
-    }
-  }
-
-  if (!abierto) {
-    return (
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="mt-1.5 rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-[#1c4fd6] shadow-sm hover:bg-[#eef3ff]"
-      >
-        {idActual && tieneToken ? "Cambiar datos de Meta" : "Pegar datos de Meta"}
-      </button>
-    );
-  }
-  const campo = "mt-1 h-9 w-full rounded-[8px] border border-[#cfd8e3] bg-white px-2.5 text-[14px] text-chat-tinta outline-none focus:border-marca-500";
-  return (
-    <form onSubmit={guardar} className="mt-2 space-y-2 rounded-[8px] bg-white p-2.5">
-      <label className="block text-[12.5px] font-semibold text-chat-tenue">
-        Número de la cuenta en Meta (sólo dígitos)
-        <input value={idMeta} onChange={(e) => setIdMeta(e.target.value)} inputMode="numeric" className={campo} placeholder="17841400000000000" />
-      </label>
-      <label className="block text-[12.5px] font-semibold text-chat-tenue">
-        Token de acceso {tieneToken ? "(déjalo vacío para conservar el actual)" : ""}
-        <input value={token} onChange={(e) => setToken(e.target.value)} type="password" autoComplete="off" className={campo} placeholder="EAAB…" />
-      </label>
-      {error ? <p className="text-[12.5px] font-semibold text-[#b42318]">{error}</p> : null}
-      <span className="flex gap-1.5">
-        <button type="button" onClick={() => setAbierto(false)} className="rounded-full px-3 py-1 text-[12.5px] font-bold text-chat-tenue hover:bg-[#f5f7fa]">
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          disabled={guardando || !idMeta.trim() || (!tieneToken && !token.trim())}
-          className="rounded-full bg-marca-600 px-3 py-1 text-[12.5px] font-bold text-white disabled:opacity-50"
-        >
-          {guardando ? "Guardando…" : "Guardar"}
-        </button>
-      </span>
-    </form>
-  );
-}
-
-/** Correo: pegar la contraseña de aplicación de Google de ese correo (se prueba al momento). */
-function ConectarCorreo({ cuentaId, conectada }: { cuentaId: string; conectada: boolean }) {
-  const [abierto, setAbierto] = useState(false);
-  const [clave, setClave] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [guardando, setGuardando] = useState(false);
-
-  async function guardar(ev: FormEvent) {
-    ev.preventDefault();
-    setGuardando(true);
-    const falla = await conectarCorreo(cuentaId, clave);
-    setGuardando(false);
-    setError(falla);
-    if (!falla) {
-      setClave("");
-      setAbierto(false);
-    }
-  }
-
-  if (!abierto) {
-    return (
-      <span className="mt-1.5 flex flex-wrap gap-1.5">
-        <a
-          href={`/api/google/iniciar?cuentaId=${encodeURIComponent(cuentaId)}`}
-          className="rounded-full bg-marca-600 px-3 py-1 text-[12.5px] font-bold text-white shadow-sm hover:opacity-90"
-        >
-          {conectada ? "Volver a conectar con Google" : "Conectar con Google"}
-        </a>
-        <button
-          type="button"
-          onClick={() => setAbierto(true)}
-          className="rounded-full bg-white px-3 py-1 text-[12.5px] font-bold text-[#1c4fd6] shadow-sm hover:bg-[#eef3ff]"
-        >
-          {conectada ? "Cambiar contraseña de aplicación" : "Usar contraseña de aplicación"}
-        </button>
-      </span>
-    );
-  }
-  return (
-    <form onSubmit={guardar} className="mt-2 space-y-2 rounded-[8px] bg-white p-2.5">
-      <label className="block text-[12.5px] font-semibold text-chat-tenue">
-        Contraseña de aplicación de Google (16 letras)
-        <input
-          value={clave}
-          onChange={(e) => setClave(e.target.value)}
-          type="password"
-          autoComplete="off"
-          placeholder="abcd efgh ijkl mnop"
-          className="mt-1 h-9 w-full rounded-[8px] border border-[#cfd8e3] bg-white px-2.5 text-[14px] text-chat-tinta outline-none focus:border-marca-500"
-        />
-      </label>
-      <p className="text-[12px] leading-snug text-chat-tenue">
-        Se saca en myaccount.google.com/apppasswords, con ese mismo correo y con la verificación en 2 pasos prendida.
-      </p>
-      {error ? <p className="text-[12.5px] font-semibold text-[#b42318]">{error}</p> : null}
-      <span className="flex gap-1.5">
-        <button type="button" onClick={() => setAbierto(false)} className="rounded-full px-3 py-1 text-[12.5px] font-bold text-chat-tenue hover:bg-[#f5f7fa]">
-          Cancelar
-        </button>
-        <button type="submit" disabled={guardando || clave.replace(/\s/g, "").length < 16} className="rounded-full bg-marca-600 px-3 py-1 text-[12.5px] font-bold text-white disabled:opacity-50">
-          {guardando ? "Probando con Google…" : "Guardar y probar"}
-        </button>
-      </span>
-    </form>
   );
 }

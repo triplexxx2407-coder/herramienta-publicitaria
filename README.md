@@ -17,7 +17,7 @@ Cómo funciona la bandeja:
 | Parte | Estado |
 | --- | --- |
 | Pantalla de la bandeja (`app/PantallaBandeja.tsx`) | Hecha. Varias empresas, filtro por empresa y por red, plazo para contestar de cada red. **Datos de ejemplo**: nada se manda de verdad. |
-| Servidor (`servidor/`) | Escrito, sin publicar. Cloudflare Workers + base D1, entrada con usuario y contraseña, empresas y sus cuentas, correo real por IMAP/SMTP. |
+| Servidor (`servidor/`) | Escrito, sin publicar. Cloudflare Workers + base D1, entrada con usuario y contraseña, empresas y sus cuentas, modo demostración sin conexiones externas. |
 | Instagram, WhatsApp, Facebook, TikTok reales | Pendientes. |
 
 Las empresas y pláticas de ejemplo están en `datos/empresas-clientes.json` y
@@ -52,17 +52,11 @@ Rutas (todas piden sesión menos `salud`, `entrar` y `arrancar`):
 
 **Sin secretos en el código.** El repositorio es público: las claves van como secretos de
 Cloudflare (`npx wrangler secret put NOMBRE --config servidor/wrangler.jsonc`). Los nombres están
-en `.env.example`. El correo usa una contraseña de aplicación de Google, nunca la del correo.
+en `.env.example`.
 
-## Instagram y Facebook (Meta)
+## Modo demostración
 
-- Los avisos de Meta entran por `GET/POST /api/meta/webhook` (sin sesión; se protege con la firma `X-Hub-Signature-256` y la palabra `META_VERIFY_TOKEN`).
-- Cada cuenta lleva su número en Meta y su token (tabla `cuentas`, columnas `id_meta` y `token`). Se pegan en la pantalla de Empresas y el token no vuelve a salir del servidor.
-- Las respuestas salen por la API de Graph (`servidor/src/meta.ts`). Sólo se puede contestar a quien escribió primero y dentro del plazo.
-- Secretos del servidor: `META_APP_SECRET` y `META_VERIFY_TOKEN` (ver `.env.example`).
-
-## Conectar correos con Google (sin contraseña de aplicación)
-
-En Empresas, cada correo tiene el botón «Conectar con Google». Necesita un cliente OAuth de Google Cloud
-(tipo Web, redirección `/api/google/vuelta`, permiso `https://mail.google.com/`) y dos secretos:
-`GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. Sin ellos el botón avisa que falta configurar.
+NEXORA ya no se conecta a correo, Instagram, Facebook, TikTok ni WhatsApp. En Empresas, el botón
+«Llenar con chats de ejemplo» pone conversaciones inventadas de las cinco redes para enseñar cómo funciona.
+Las respuestas se guardan pero no salen a ninguna red. Las conexiones reales se pueden volver a armar después
+(están en el historial de git, antes del commit «Quitar todas las conexiones»).

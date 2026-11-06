@@ -103,8 +103,6 @@ function vigilar() {
     revisando = true;
     void (async () => {
       try {
-        const hayCorreo = fuente.empresas.some((e) => e.cuentas.some((k) => k.red === "correo" && k.estado === "conectada"));
-        if (hayCorreo) await pedir("/api/revisar-correo", {});
         await cargar();
       } catch {
         /* se vuelve a intentar en 10 segundos */
@@ -300,14 +298,9 @@ export function agregarCuenta(empresaId: string, red: Red, identificador: string
   return cambiarYRecargar("/api/cuentas", { empresaId, red, identificador });
 }
 
-/** Pega la contraseña de aplicación de Google de un correo. Devuelve el error si Google no la acepta. */
-export function conectarCorreo(cuentaId: string, clave: string) {
-  return cambiarYRecargar("/api/cuentas/clave", { cuentaId, clave });
-}
-
-/** Pega el número de la cuenta en Meta y su token (Instagram y Facebook). */
-export function conectarMeta(cuentaId: string, idMeta: string, token: string) {
-  return cambiarYRecargar("/api/cuentas/meta", { cuentaId, idMeta, token });
+/** Llena la empresa con chats de ejemplo de las cinco redes. */
+export function llenarDemostracion(empresaId: string) {
+  return cambiarYRecargar("/api/demo", { empresaId });
 }
 
 export function quitarCuenta(id: string) {

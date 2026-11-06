@@ -277,84 +277,6 @@ export async function crearCuenta(
   return { id: cuentaId };
 }
 
-/** Deja la cuenta de Meta de esa empresa lista: si ya existía la actualiza, si no la crea. */
-export async function guardarCuentaMeta(
-  db: D1Database,
-  datos: { empresaId: string; red: "instagram" | "facebook"; identificador: string; idMeta: string; token: string },
-  ahora = new Date(),
-): Promise<void> {
-  const existente = await db
-    .prepare("SELECT id FROM cuentas WHERE red = ? AND (id_meta = ? OR identificador = ?)")
-    .bind(datos.red, datos.idMeta, datos.identificador.trim().toLowerCase())
-    .first<{ id: string }>();
-  if (existente) {
-    await db
-      .prepare("UPDATE cuentas SET empresa_id = ?, id_meta = ?, token = ? WHERE id = ?")
-      .bind(datos.empresaId, datos.idMeta, datos.token, existente.id)
-      .run();
-    return;
-  }
-  const { id: cuentaId } = await crearCuenta(db, { empresaId: datos.empresaId, red: datos.red, identificador: datos.identificador }, ahora);
-  await guardarConexionMeta(db, { cuentaId, idMeta: datos.idMeta, token: datos.token });
-}
-
-/** Pega el número de la cuenta en Meta y su token. Con token vacío conserva el que ya había. */
-export async function guardarConexionMeta(
-  db: D1Database,
-  datos: { cuentaId: string; idMeta: string; token: string },
-): Promise<boolean> {
-  const r = await db
-    .prepare("UPDATE cuentas SET id_meta = ?, token = COALESCE(NULLIF(?, ''), token) WHERE id = ? AND red IN ('instagram', 'facebook')")
-    .bind(datos.idMeta, datos.token, datos.cuentaId)
-    .run();
-  return !!r.meta.changes;
-}
-
-/** Guarda (o borra, con null) la contraseña de aplicación de un correo. Nunca sale del servidor. */
-export async function guardarClaveCorreo(db: D1Database, cuentaId: string, clave: string | null): Promise<boolean> {
-  const r = await db.prepare("UPDATE cuentas SET token = ? WHERE id = ? AND red = 'correo'").bind(clave, cuentaId).run();
-  return !!r.meta.changes;
-}
-
-/** Los correos dados de alta desde la pantalla, con su contraseña de aplicación. */
-export async function correosConClave(db: D1Database): Promise<{ id: string; usuario: string; clave: string }[]> {
-  const { results } = await db
-    .prepare("SELECT id, identificador, token FROM cuentas WHERE red = 'correo' AND token IS NOT NULL")
-    .all<{ id: string; identificador: string; token: string }>();
-  return results.map((c) => ({ id: c.id, usuario: c.identificador, clave: c.token }));
-}
-
-/** La cuenta que recibió un aviso de Meta, y su token para pedir el nombre de quien escribió. */
-export async function cuentaDeMeta(
-  db: D1Database,
-  red: Red,
-  idMeta: string,
-): Promise<{ id: string; token: string | null } | null> {
-  return db
-    .prepare("SELECT id, token FROM cuentas WHERE red = ? AND id_meta = ?")
-    .bind(red, idMeta)
-    .first<{ id: string; token: string | null }>();
-}
-
-/** El token de una cuenta, para mandar una respuesta. */
-export async function tokenDeCuenta(db: D1Database, cuentaId: string): Promise<string | null> {
-  const fila = await db.prepare("SELECT token FROM cuentas WHERE id = ?").bind(cuentaId).first<{ token: string | null }>();
-  return fila?.token ?? null;
-}
-
-/** Qué cuenta de qué empresa es esa dirección o @usuario en esa red. */
-export async function cuentaPorIdentificador(
-  db: D1Database,
-  red: Red,
-  identificador: string,
-): Promise<{ id: string; empresaId: string } | null> {
-  const fila = await db
-    .prepare("SELECT id, empresa_id FROM cuentas WHERE red = ? AND identificador = ?")
-    .bind(red, identificador.trim().toLowerCase())
-    .first<{ id: string; empresa_id: string }>();
-  return fila ? { id: fila.id, empresaId: fila.empresa_id } : null;
-}
-
 /**
  * Guarda un mensaje que llegó. Si ya estaba guardado (mismo id de la red) no hace nada:
  * los lectores de correo y los avisos de las redes a veces repiten el mismo mensaje.
@@ -454,11 +376,6 @@ export async function guardarEstado(db: D1Database, clave: string, valor: string
     )
     .bind(clave, valor, ahora.toISOString())
     .run();
-}
-
-/** Guarda el hilo de la red (en correo, el id del último mensaje) para poder contestar ahí mismo. */
-export async function guardarHilo(db: D1Database, platicaId: string, hilo: string): Promise<void> {
-  await db.prepare("UPDATE conversaciones SET hilo_externo = ? WHERE id = ?").bind(hilo, platicaId).run();
 }
 
 /** Los datos que hacen falta para contestar una plática. */
