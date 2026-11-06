@@ -1,11 +1,11 @@
 "use client";
 
-import { BarChart3, CalendarCheck, Link2, Sparkles, Trophy, UserRoundCheck, type LucideIcon } from "lucide-react";
+import { BarChart3, CalendarCheck, Link2, Sparkles, Trophy, UserRoundCheck, UserRoundPlus, type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { avisar } from "@/components/avisos";
 import { Guardia } from "@/components/Guardia";
-import { BOTON, BOTON_CLARO, Cargando, Encabezado, Tarjeta, Vacio, cx } from "@/components/ui";
+import { BOTON, BOTON_CLARO, CAMPO, Cargando, Encabezado, Tarjeta, Vacio, cx } from "@/components/ui";
 import { guardar, useDatos } from "@/lib/datos";
 import type { EmpresaCliente } from "@/lib/tipos";
 import { porcentaje, type Estadisticas, type Totales } from "@/lib/ventas";
@@ -86,6 +86,7 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
             ))}
           </div>
 
+          <ApuntarRapido empresaId={empresa.id} enlaces={datos.enlaces} />
           <Embudo t={t} />
           <Ranking datos={datos} />
         </>
@@ -160,6 +161,49 @@ function Ranking({ datos }: { datos: Estadisticas }) {
           </li>
         ))}
       </ol>
+    </Tarjeta>
+  );
+}
+
+/** Apuntar rápido que alguien escribió: se elige el enlace por el código que viene en su mensaje. */
+function ApuntarRapido({ empresaId, enlaces }: { empresaId: string; enlaces: Estadisticas["enlaces"] }) {
+  const [elegido, setElegido] = useState("");
+  const [nota, setNota] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+  const enlaceId = enlaces.some((e) => e.id === elegido) ? elegido : (enlaces[0]?.id ?? "");
+
+  async function apuntar(ev: FormEvent) {
+    ev.preventDefault();
+    if (!enlaceId || ocupado) return;
+    setOcupado(true);
+    const r = await guardar("contactos", { empresaId, enlaceId, nota: nota.trim() }, [
+      ["estadisticas", empresaId],
+      ["enlaces", empresaId],
+      ["contactos", empresaId],
+    ]);
+    setOcupado(false);
+    if (r.error) avisar(r.error);
+    else {
+      avisar("Apuntado: alguien escribió");
+      setNota("");
+    }
+  }
+
+  return (
+    <Tarjeta titulo="Te escribieron" detalle="Mira el código «(ref …)» al final del mensaje, elige ese enlace y toca el botón.">
+      <form onSubmit={apuntar} className="flex flex-wrap gap-2">
+        <select value={enlaceId} onChange={(e) => setElegido(e.target.value)} aria-label="Enlace" className={`${CAMPO} mt-0 min-w-0 flex-1 basis-56`}>
+          {enlaces.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.ref} · {e.nombre}
+            </option>
+          ))}
+        </select>
+        <input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={120} placeholder="Nombre (opcional)" className={`${CAMPO} mt-0 min-w-0 flex-1 basis-40`} />
+        <button type="submit" disabled={ocupado || !enlaceId} className={BOTON}>
+          <UserRoundPlus size={17} aria-hidden /> Me escribió
+        </button>
+      </form>
     </Tarjeta>
   );
 }
