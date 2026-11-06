@@ -25,6 +25,7 @@ describe("Facebook", () => {
   it("pide permisos de mensajes y de páginas", () => {
     const u = new URL(urlDeFacebook({ appId: "1", appSecret: "s" }, "https://x/v", "est"));
     expect(u.searchParams.get("scope")).toContain("pages_messaging");
+    expect(u.searchParams.get("scope")).toContain("business_management");
     expect(u.searchParams.get("client_id")).toBe("1");
   });
 });

@@ -11,6 +11,8 @@ export interface ClaveMeta {
   appSecret: string;
   /** Inicio de sesión para empresas: el número de la «configuración» creada en Meta. Si está, sustituye a los permisos sueltos. */
   configId?: string;
+  /** Si se quiere pedir otros permisos (separados por coma) en vez de los de siempre. */
+  permisos?: string;
 }
 
 export interface PaginaMeta {
@@ -25,6 +27,9 @@ const PERMISOS = [
   "pages_show_list",
   "pages_messaging",
   "pages_manage_metadata",
+  "business_management",
+  "instagram_basic",
+  "instagram_manage_messages",
 ];
 
 export function urlDeFacebook(clave: ClaveMeta, redireccion: string, estado: string): string {
@@ -33,7 +38,7 @@ export function urlDeFacebook(clave: ClaveMeta, redireccion: string, estado: str
     p.set("config_id", clave.configId);
     p.set("override_default_response_type", "true");
   } else {
-    p.set("scope", PERMISOS.join(","));
+    p.set("scope", clave.permisos || PERMISOS.join(","));
   }
   return `https://www.facebook.com/${VERSION}/dialog/oauth?${p}`;
 }
@@ -69,40 +74,73 @@ export async function paginasDelDueno(
     })}`,
   );
   const usuarioToken = "access_token" in largo && largo.access_token ? largo.access_token : corto.access_token;
-  const lista = await pedir<{
-    data?: { id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }[];
-  }>(
-    `${GRAFO}/me/accounts?${new URLSearchParams({
-      fields: "id,name,access_token",
-      limit: "50",
-      access_token: usuarioToken,
-    })}`,
-  );
-  if (!("data" in lista) || !lista.data) {
-    return { error: ("error" in lista && lista.error.message) || "Meta no dio la lista de páginas" };
-  }
-  // Para entender por qué no sale ninguna página: qué permisos dio de verdad y quién es.
-  let diagnostico = "";
-  if (lista.data.length === 0) {
-    const permisos = await pedir<{ data?: { permission: string; status: string }[] }>(
-      `${GRAFO}/me/permissions?access_token=${encodeURIComponent(usuarioToken)}`,
+  type Pag = { id: string; name?: string; access_token?: string };
+  const paginas = new Map<string, Pag>();
+  const notas: string[] = [];
+  const meter = (p: Pag) => {
+    if (p.id && p.access_token && !paginas.has(p.id)) paginas.set(p.id, p);
+  };
+  const t = encodeURIComponent(usuarioToken);
+
+  // 1) Las páginas donde esa persona es administradora directa.
+  const lista = await pedir<{ data?: Pag[] }>(`${GRAFO}/me/accounts?fields=id,name,access_token&limit=50&access_token=${t}`);
+  if ("data" in lista && lista.data) lista.data.forEach(meter);
+  else notas.push(`accounts: ${("error" in lista && lista.error.message) || "sin respuesta"}`);
+
+  // 2) Las páginas que la persona marcó en la ventana de permisos (a veces no salen en la lista de arriba).
+  if (paginas.size === 0) {
+    const depurar = await pedir<{ data?: { granular_scopes?: { scope: string; target_ids?: string[] }[] } }>(
+      `${GRAFO}/debug_token?input_token=${t}&access_token=${encodeURIComponent(`${clave.appId}|${clave.appSecret}`)}`,
     );
-    const yo = await pedir<{ id?: string; name?: string }>(`${GRAFO}/me?fields=id,name&access_token=${encodeURIComponent(usuarioToken)}`);
+    const ids = new Set<string>();
+    if ("data" in depurar) for (const g of depurar.data?.granular_scopes ?? []) (g.target_ids ?? []).forEach((i) => ids.add(i));
+    notas.push(`marcadas: ${[...ids].join(",") || "ninguna"}`);
+    for (const id of ids) {
+      const pag = await pedir<Pag>(`${GRAFO}/${encodeURIComponent(id)}?fields=id,name,access_token&access_token=${t}`);
+      if ("id" in pag) meter(pag);
+    }
+  }
+
+  // 3) Las páginas que son de un portafolio comercial al que pertenece la persona (las creadas desde Instagram suelen serlo).
+  if (paginas.size === 0) {
+    const negocios = await pedir<{ data?: { id: string; name?: string }[] }>(`${GRAFO}/me/businesses?fields=id,name&limit=25&access_token=${t}`);
+    if ("data" in negocios && negocios.data) {
+      notas.push(`negocios: ${negocios.data.map((n) => n.name ?? n.id).join(",") || "ninguno"}`);
+      for (const n of negocios.data) {
+        for (const borde of ["owned_pages", "client_pages"]) {
+          const lp = await pedir<{ data?: Pag[] }>(`${GRAFO}/${n.id}/${borde}?fields=id,name,access_token&limit=50&access_token=${t}`);
+          if ("data" in lp && lp.data) lp.data.forEach(meter);
+          else notas.push(`${borde}: ${("error" in lp && lp.error.message) || "sin respuesta"}`);
+        }
+      }
+    } else {
+      notas.push(`negocios: ${("error" in negocios && negocios.error.message) || "sin respuesta"}`);
+    }
+  }
+
+  let diagnostico = "";
+  if (paginas.size === 0) {
+    const permisos = await pedir<{ data?: { permission: string; status: string }[] }>(`${GRAFO}/me/permissions?access_token=${t}`);
+    const yo = await pedir<{ id?: string; name?: string }>(`${GRAFO}/me?fields=id,name&access_token=${t}`);
     diagnostico =
       `entró como ${"name" in yo ? yo.name : "?"}; permisos: ` +
-      ("data" in permisos && permisos.data ? permisos.data.map((x) => `${x.permission}=${x.status}`).join(", ") : "no se pudieron leer");
+      ("data" in permisos && permisos.data ? permisos.data.map((x) => `${x.permission}=${x.status}`).join(", ") : "no se pudieron leer") +
+      `; ${notas.join("; ")}`;
   }
-  return {
-    diagnostico,
-    paginas: lista.data.map((p) => ({
-      id: p.id,
-      nombre: p.name,
-      token: p.access_token,
-      instagram: p.instagram_business_account
-        ? { id: p.instagram_business_account.id, usuario: p.instagram_business_account.username ?? p.instagram_business_account.id }
-        : null,
-    })),
-  };
+
+  // Si la página tiene un Instagram ligado, se trae también (si Meta no lo deja ver, se queda sin él).
+  const resultado: PaginaMeta[] = [];
+  for (const p of paginas.values()) {
+    let instagram: PaginaMeta["instagram"] = null;
+    const ig = await pedir<{ instagram_business_account?: { id: string; username?: string } }>(
+      `${GRAFO}/${encodeURIComponent(p.id)}?fields=instagram_business_account{id,username}&access_token=${encodeURIComponent(p.access_token ?? "")}`,
+    );
+    if ("instagram_business_account" in ig && ig.instagram_business_account) {
+      instagram = { id: ig.instagram_business_account.id, usuario: ig.instagram_business_account.username ?? ig.instagram_business_account.id };
+    }
+    resultado.push({ id: p.id, nombre: p.name ?? p.id, token: p.access_token ?? "", instagram });
+  }
+  return { diagnostico, paginas: resultado };
 }
 
 /** Le dice a Meta que mande a NEXORA los mensajes de esa página. */

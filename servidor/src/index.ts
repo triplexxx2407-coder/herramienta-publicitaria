@@ -74,6 +74,8 @@ export interface Entorno {
   META_APP_ID?: string;
   /** Opcional: número de la «configuración» de inicio de sesión para empresas en Meta. */
   META_CONFIG_ID?: string;
+  /** Opcional: permisos de «Conectar Facebook» separados por coma, si hay que cambiar los de siempre. */
+  META_PERMISOS?: string;
   /** «Conectar Instagram» sin Facebook: el número y la clave de la parte de Instagram de la app de Meta. */
   INSTAGRAM_APP_ID?: string;
   INSTAGRAM_APP_SECRET?: string;
@@ -120,7 +122,7 @@ function claveDeGoogle(entorno: Entorno): ClaveGoogle | null {
 
 function claveDeMeta(entorno: Entorno): ClaveMeta | null {
   if (!entorno.META_APP_ID || !entorno.META_APP_SECRET) return null;
-  return { appId: entorno.META_APP_ID.trim(), appSecret: entorno.META_APP_SECRET.trim(), configId: entorno.META_CONFIG_ID?.trim() || undefined };
+  return { appId: entorno.META_APP_ID.trim(), appSecret: entorno.META_APP_SECRET.trim(), configId: entorno.META_CONFIG_ID?.trim() || undefined, permisos: entorno.META_PERMISOS?.trim() || undefined };
 }
 
 function claveDeInstagram(entorno: Entorno): ClaveInstagram | null {
