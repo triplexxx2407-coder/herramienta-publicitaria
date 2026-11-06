@@ -1,18 +1,15 @@
 "use client";
 
 /**
- * De dónde salen las pláticas: del servidor de verdad o de los ejemplos.
- *
- * Al abrir la página se pregunta al servidor (/api/salud). Si contesta, NEXORA trabaja
- * «de verdad»: pide entrar con usuario y contraseña y trae las pláticas guardadas.
- * Si no contesta (el archivo suelto o la vista de claude.ai), se queda con los ejemplos.
+ * La sesión y los perfiles. Al abrir la página se pregunta al servidor (/api/salud): si contesta,
+ * se pide entrar con usuario y contraseña. Si no contesta (el archivo suelto), NEXORA avisa
+ * que necesita el servidor.
  */
 
 import { useSyncExternalStore } from "react";
-import type { Conversacion } from "@/lib/bandeja";
-import type { EmpresaCliente, MensajeRed, Red } from "@/lib/tipos";
+import type { EmpresaCliente, Red } from "@/lib/tipos";
 
-export type Modo = "revisando" | "ejemplo" | "entrar" | "real";
+export type Modo = "revisando" | "sinservidor" | "entrar" | "real";
 
 export interface Usuario {
   id: string;
@@ -25,16 +22,24 @@ interface Fuente {
   modo: Modo;
   usuario: Usuario | null;
   empresas: EmpresaCliente[];
-  conversaciones: Conversacion[];
-  /** Algo que salió mal y hay que decirle a la persona. */
-  aviso: string | null;
+  /** El perfil que estás viendo. */
+  empresaActiva: string | null;
 }
 
-let fuente: Fuente = { modo: "revisando", usuario: null, empresas: [], conversaciones: [], aviso: null };
+const CLAVE_PERFIL = "nexora-perfil";
+
+function perfilGuardado(): string | null {
+  try {
+    return window.localStorage.getItem(CLAVE_PERFIL);
+  } catch {
+    return null;
+  }
+}
+
+let fuente: Fuente = { modo: "revisando", usuario: null, empresas: [], empresaActiva: null };
 const FUENTE_SERVIDOR: Fuente = fuente;
 const oyentes = new Set<() => void>();
 let iniciada = false;
-let reloj: ReturnType<typeof setInterval> | null = null;
 
 function cambiar(parte: Partial<Fuente>) {
   fuente = { ...fuente, ...parte };
@@ -54,7 +59,13 @@ export function useFuente(): Fuente {
   );
 }
 
-async function pedir<T>(ruta: string, cuerpo?: unknown): Promise<{ estado: number; datos: T | null }> {
+/** El perfil que se está viendo, o el primero si el guardado ya no existe. */
+export function useEmpresaActiva(): EmpresaCliente | null {
+  const { empresas, empresaActiva } = useFuente();
+  return empresas.find((e) => e.id === empresaActiva) ?? empresas[0] ?? null;
+}
+
+export async function pedir<T>(ruta: string, cuerpo?: unknown): Promise<{ estado: number; datos: T | null }> {
   const respuesta = await fetch(ruta, {
     method: cuerpo === undefined ? "GET" : "POST",
     headers: cuerpo === undefined ? undefined : { "Content-Type": "application/json" },
@@ -76,7 +87,7 @@ export async function iniciarFuente(): Promise<void> {
     const salud = await pedir<{ bien: boolean }>("/api/salud");
     if (!salud.datos?.bien) throw new Error("sin servidor");
   } catch {
-    cambiar({ modo: "ejemplo" });
+    cambiar({ modo: "sinservidor" });
     return;
   }
   const yo = await pedir<{ usuario: Usuario }>("/api/yo");
@@ -84,110 +95,27 @@ export async function iniciarFuente(): Promise<void> {
     cambiar({ modo: "entrar" });
     return;
   }
-  cambiar({ usuario: yo.datos.usuario });
+  cambiar({ usuario: yo.datos.usuario, empresaActiva: perfilGuardado() });
   await cargar();
-  vigilar();
 }
 
-let revisando = false;
-
-/**
- * Cada 10 segundos, con la pantalla a la vista, le pide al servidor que mire el buzón de correo
- * y luego trae lo nuevo. Así lo que te escriben aparece casi al instante; el reloj del servidor
- * (cada minuto) cubre cuando nadie tiene Nexora abierta.
- */
-function vigilar() {
-  if (reloj) clearInterval(reloj);
-  reloj = setInterval(() => {
-    if (document.visibilityState !== "visible" || revisando) return;
-    revisando = true;
-    void (async () => {
-      try {
-        await cargar();
-      } catch {
-        /* se vuelve a intentar en 10 segundos */
-      } finally {
-        revisando = false;
-      }
-    })();
-  }, 10_000);
-}
-
-interface ConversacionDelServidor {
-  id: string;
-  empresaId: string;
-  empresa: string;
-  cuentaId: string;
-  cuenta: string;
-  red: Red;
-  personaId: string;
-  persona: string;
-  usuario: string;
-  noLeida: boolean;
-  archivadaEn: string | null;
-  mensajes: (MensajeRed & { entrega: MensajeRed["entrega"]; error: string | null })[];
-}
-
-interface EmpresaDelServidor {
-  id: string;
-  nombre: string;
-  giro: string | null;
-  cuentas: EmpresaCliente["cuentas"];
-}
-
+/** Trae los perfiles. */
 export async function cargar(): Promise<void> {
   try {
-    const [bandeja, empresas] = await Promise.all([
-      pedir<{ conversaciones: ConversacionDelServidor[] }>("/api/bandeja"),
-      pedir<{ empresas: EmpresaDelServidor[] }>("/api/empresas"),
-    ]);
-    if (bandeja.estado === 401 || empresas.estado === 401) {
-      cambiar({ modo: "entrar", usuario: null, conversaciones: [], empresas: [] });
+    const r = await pedir<{ empresas: { id: string; nombre: string; giro: string | null; cuentas: { id: string; red: Red; identificador: string }[] }[] }>(
+      "/api/empresas",
+    );
+    if (r.estado === 401) {
+      cambiar({ modo: "entrar", usuario: null, empresas: [] });
       return;
     }
-    if (!bandeja.datos || !empresas.datos) throw new Error("respuesta rara");
+    if (!r.datos) throw new Error("respuesta rara");
     cambiar({
       modo: "real",
-      aviso: null,
-      empresas: empresas.datos.empresas.map((e) => ({
-        id: e.id,
-        nombre: e.nombre,
-        giro: e.giro ?? "Empresa",
-        producto: "",
-        cuentas: e.cuentas,
-      })),
-      conversaciones: bandeja.datos.conversaciones
-        .filter((c) => c.mensajes.length)
-        .map((c) => {
-          const mensajes = c.mensajes.map((m) => ({
-            id: m.id,
-            de: m.de,
-            texto: m.texto,
-            fecha: m.fecha,
-            entrega: m.entrega,
-            error: m.error,
-          }));
-          const deEllos = mensajes.filter((m) => m.de === "ellos");
-          return {
-            id: c.id,
-            empresaId: c.empresaId,
-            empresa: c.empresa,
-            cuentaId: c.cuentaId,
-            cuenta: c.cuenta,
-            red: c.red,
-            personaId: c.personaId,
-            persona: c.persona,
-            usuario: c.usuario,
-            mensajes,
-            ultimo: mensajes[mensajes.length - 1],
-            ultimoDeEllos: deEllos[deEllos.length - 1] ?? null,
-            noLeida: c.noLeida,
-            archivadaEn: c.archivadaEn,
-          };
-        }),
+      empresas: r.datos.empresas.map((e) => ({ id: e.id, nombre: e.nombre, giro: e.giro ?? "Empresa", cuentas: e.cuentas })),
     });
   } catch {
-    cambiar({ aviso: "No se pudo hablar con el servidor. Reviso otra vez en unos segundos." });
+    /* se vuelve a intentar con la siguiente acción */
   }
 }
 
@@ -195,9 +123,8 @@ export async function entrar(correo: string, contrasena: string): Promise<string
   try {
     const r = await pedir<{ usuario?: Usuario; error?: string }>("/api/entrar", { correo, contrasena });
     if (r.estado !== 200 || !r.datos?.usuario) return r.datos?.error ?? "No se pudo entrar.";
-    cambiar({ usuario: r.datos.usuario });
+    cambiar({ usuario: r.datos.usuario, empresaActiva: perfilGuardado() });
     await cargar();
-    vigilar();
     return null;
   } catch {
     return "No se pudo hablar con el servidor.";
@@ -208,55 +135,21 @@ export async function salir(): Promise<void> {
   try {
     await pedir("/api/salir", {});
   } finally {
-    if (reloj) clearInterval(reloj);
-    cambiar({ modo: "entrar", usuario: null, conversaciones: [], empresas: [] });
+    cambiar({ modo: "entrar", usuario: null, empresas: [] });
   }
 }
 
-/** Manda tu respuesta. Devuelve el aviso si algo salió mal. */
-export async function responderDeVerdad(platicaId: string, texto: string): Promise<string | null> {
+/** Cambia el perfil que se está viendo. */
+export function elegirEmpresa(id: string): void {
   try {
-    const r = await pedir<{ error?: string; aviso?: string }>("/api/responder", { platicaId, texto });
-    await cargar();
-    if (r.estado !== 200) return r.datos?.error ?? "No se pudo mandar.";
-    return r.datos?.aviso ?? null;
+    window.localStorage.setItem(CLAVE_PERFIL, id);
   } catch {
-    return "No se pudo hablar con el servidor.";
+    /* sin almacenamiento: se recuerda sólo mientras esté abierta */
   }
+  cambiar({ empresaActiva: id });
 }
 
-export async function marcarLeidaDeVerdad(platicaId: string): Promise<void> {
-  // Se marca aquí de una vez, para que el punto azul se quite sin esperar.
-  cambiar({ conversaciones: fuente.conversaciones.map((c) => (c.id === platicaId ? { ...c, noLeida: false } : c)) });
-  try {
-    await pedir("/api/leida", { platicaId });
-  } catch {
-    /* la próxima carga lo corrige */
-  }
-}
-
-/** Archiva una plática, o la saca del archivo. Se borra sola a los 7 días de archivada. */
-export async function archivarDeVerdad(platicaId: string, archivar: boolean): Promise<string | null> {
-  // Se mueve aquí de una vez, sin esperar al servidor.
-  cambiar({
-    conversaciones: fuente.conversaciones.map((c) =>
-      c.id === platicaId ? { ...c, archivadaEn: archivar ? new Date().toISOString() : null } : c,
-    ),
-  });
-  try {
-    const r = await pedir<{ error?: string }>("/api/archivar", { platicaId, archivar });
-    if (r.estado !== 200) {
-      await cargar();
-      return r.datos?.error ?? "No se pudo archivar.";
-    }
-    return null;
-  } catch {
-    await cargar();
-    return "No se pudo hablar con el servidor.";
-  }
-}
-
-/* ── Administrar empresas y sus cuentas (sólo el dueño) ── */
+/* ── Administrar perfiles y sus redes (sólo el dueño) ── */
 
 async function cambiarYRecargar(ruta: string, cuerpo: unknown): Promise<string | null> {
   try {
@@ -296,11 +189,6 @@ export function borrarEmpresa(id: string) {
 
 export function agregarCuenta(empresaId: string, red: Red, identificador: string) {
   return cambiarYRecargar("/api/cuentas", { empresaId, red, identificador });
-}
-
-/** Llena la empresa con chats de ejemplo de las cinco redes. */
-export function llenarDemostracion(empresaId: string) {
-  return cambiarYRecargar("/api/demo", { empresaId });
 }
 
 export function quitarCuenta(id: string) {

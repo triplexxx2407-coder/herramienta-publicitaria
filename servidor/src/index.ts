@@ -2,31 +2,30 @@
  * El servidor de Nexora.
  *
  * Hace dos cosas: entrega la pantalla (el mismo archivo que ya usabas) y atiende
- * las peticiones de la bandeja en /api/…. Cada cierto rato, solo, revisa el buzón
- * de correo y guarda lo que llegó.
+ * las peticiones de /api/…: perfiles, interesados, calendario, enlaces de WhatsApp y resultados.
  *
  * Nadie ve nada sin entrar: todas las rutas de /api piden sesión, menos entrar y salud.
  */
 
+import { apuntar, borrarCuenta, borrarEmpresa, crearCuenta, crearEmpresa, editarEmpresa, empresas } from "./perfiles";
 import {
-  apuntar,
-  conversacionesGuardadas,
-  archivarPlatica,
-  borrarArchivadasViejas,
-  borrarCuenta,
-  borrarEmpresa,
-  crearCuenta,
-  crearEmpresa,
-  editarEmpresa,
-  empresas,
-  guardarSaliente,
-  marcarEntrega,
-  marcarLeida,
-  platicaParaResponder,
-  dentroDelPlazo,
-} from "./bandeja";
-import { llenarDemostracion } from "./demo";
+  borrarEnlace,
+  borrarInteresado,
+  borrarPublicacion,
+  contarClic,
+  crearEnlace,
+  crearInteresado,
+  crearPublicacion,
+  editarEnlace,
+  editarInteresado,
+  editarPublicacion,
+  enlacesDe,
+  interesadosDe,
+  publicacionesDe,
+  resultadosDe,
+} from "./ventas";
 import { ORDEN_REDES } from "../../lib/redes";
+import { direccionWhatsApp, esEtapa, fechaValida, telefonoValido } from "../../lib/ventas";
 import type { Red } from "../../lib/tipos";
 import {
   GALLETA,
@@ -75,6 +74,47 @@ function texto(valor: unknown, maximo = 4000): string {
   return typeof valor === "string" ? valor.trim().slice(0, maximo) : "";
 }
 
+/** La red si es una de las conocidas; si no, vacío. */
+function redValida(valor: unknown): string {
+  return ORDEN_REDES.includes(valor as Red) ? (valor as string) : "";
+}
+
+function datosInteresado(d: Record<string, unknown>) {
+  const etapa = esEtapa(d.etapa) ? d.etapa : "nuevo";
+  const siguiente = fechaValida(d.siguiente) ? d.siguiente : null;
+  return {
+    nombre: texto(d.nombre, 120),
+    telefono: texto(d.telefono, 40),
+    red: redValida(d.red),
+    enlaceId: texto(d.enlaceId, 20) || null,
+    etapa,
+    notas: texto(d.notas, 2000),
+    siguiente,
+  };
+}
+
+function datosPublicacion(d: Record<string, unknown>) {
+  const titulo = texto(d.titulo, 160);
+  if (!titulo) return "falta el título de la publicación";
+  if (!fechaValida(d.fecha)) return "falta la fecha";
+  return {
+    red: redValida(d.red),
+    titulo,
+    texto: texto(d.texto, 4000),
+    fecha: d.fecha,
+    hecha: d.hecha === true,
+    enlaceId: texto(d.enlaceId, 20) || null,
+  };
+}
+
+function datosEnlace(d: Record<string, unknown>) {
+  const nombre = texto(d.nombre, 120);
+  const telefono = texto(d.telefono, 40);
+  if (!nombre) return "falta el nombre del enlace";
+  if (!telefonoValido(telefono)) return "el WhatsApp debe tener entre 10 y 15 números";
+  return { nombre, telefono, mensaje: texto(d.mensaje, 500) };
+}
+
 async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
   const url = new URL(peticion.url);
   if (!url.pathname.startsWith("/api/")) {
@@ -87,6 +127,14 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
 
   if (ruta === "/api/salud") {
     return json({ bien: true });
+  }
+
+  // El enlace público de WhatsApp: cuenta el clic y manda a la persona a WhatsApp. Va sin sesión.
+  const corto = /^\/api\/w\/([a-z0-9]{4,20})$/.exec(ruta);
+  if (corto && metodo === "GET") {
+    const destino = await contarClic(entorno.DB, corto[1]);
+    if (!destino) return new Response("Este enlace ya no existe.", { status: 404 });
+    return Response.redirect(direccionWhatsApp(destino.telefono, destino.mensaje), 302);
   }
 
   // Crear al primer dueño. Sólo funciona si todavía no hay nadie y con la clave de arranque.
@@ -141,13 +189,7 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     return json({
       empresas: lista.map((e) => ({
         ...e,
-        cuentas: e.cuentas.map((k) => ({
-          id: k.id,
-          red: k.red,
-          identificador: k.identificador,
-          estado: "falta",
-          nota: "Cuenta de demostración: todavía no recibe mensajes de verdad.",
-        })),
+        cuentas: e.cuentas,
       })),
     });
   }
@@ -215,58 +257,95 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     }
   }
 
-  // Llena una empresa con chats de ejemplo de las cinco redes, para enseñar cómo funciona.
-  if (ruta === "/api/demo" && metodo === "POST") {
-    if (quien.papel !== "dueño") return json({ error: "sólo el dueño puede llenar la demostración" }, 403);
-    const empresaId = texto((await cuerpo(peticion)).empresaId, 60);
-    const hay = await entorno.DB.prepare("SELECT 1 AS si FROM empresas WHERE id = ?").bind(empresaId).first();
-    if (!hay) return json({ error: "esa empresa no existe" }, 404);
-    const n = await llenarDemostracion(entorno.DB, empresaId);
-    return json({ bien: true, pláticas: n });
-  }
+  /* ── Ventas de cada perfil ── */
 
-  if (ruta === "/api/bandeja" && metodo === "GET") {
-    const platicas = await conversacionesGuardadas(entorno.DB, { empresaId: url.searchParams.get("empresa") });
-    const ahora = new Date();
-    return json({
-      usuario: quien,
-      conversaciones: platicas.map((c) => ({ ...c, sePuedeContestar: dentroDelPlazo(c, ahora) })),
-    });
-  }
+  const empresaDe = async (): Promise<string | null> => {
+    const e = url.searchParams.get("empresa") ?? "";
+    if (!e) return null;
+    const hay = await entorno.DB.prepare("SELECT 1 AS si FROM empresas WHERE id = ?").bind(e).first();
+    return hay ? e : null;
+  };
+  const deLaEmpresa = async (datos: Record<string, unknown>): Promise<string | null> => {
+    const e = texto(datos.empresaId, 60);
+    if (!e) return null;
+    const hay = await entorno.DB.prepare("SELECT 1 AS si FROM empresas WHERE id = ?").bind(e).first();
+    return hay ? e : null;
+  };
 
-  if (ruta === "/api/leida" && metodo === "POST") {
+  if (ruta === "/api/interesados" && metodo === "GET") {
+    const e = await empresaDe();
+    return e ? json({ interesados: await interesadosDe(entorno.DB, e) }) : json({ error: "elige una empresa" }, 400);
+  }
+  if (ruta === "/api/interesados" && metodo === "POST") {
     const datos = await cuerpo(peticion);
-    const platicaId = texto(datos.platicaId, 60);
-    if (!platicaId) return json({ error: "falta la plática" }, 400);
-    await marcarLeida(entorno.DB, platicaId);
-    return json({ bien: true });
+    const e = await deLaEmpresa(datos);
+    const nombre = texto(datos.nombre, 120);
+    if (!e || !nombre) return json({ error: "falta la empresa o el nombre" }, 400);
+    const d = datosInteresado(datos);
+    if (typeof d === "string") return json({ error: d }, 400);
+    return json({ id: await crearInteresado(entorno.DB, e, d) });
+  }
+  if (ruta === "/api/interesados/editar" && metodo === "POST") {
+    const datos = await cuerpo(peticion);
+    const d = datosInteresado(datos);
+    if (typeof d === "string") return json({ error: d }, 400);
+    if (!d.nombre) return json({ error: "falta el nombre" }, 400);
+    return (await editarInteresado(entorno.DB, texto(datos.id, 60), d)) ? json({ bien: true }) : json({ error: "ese interesado ya no existe" }, 404);
+  }
+  if (ruta === "/api/interesados/borrar" && metodo === "POST") {
+    const hecho = await borrarInteresado(entorno.DB, texto((await cuerpo(peticion)).id, 60));
+    return hecho ? json({ bien: true }) : json({ error: "ese interesado ya no existe" }, 404);
   }
 
-  if (ruta === "/api/archivar" && metodo === "POST") {
+  if (ruta === "/api/publicaciones" && metodo === "GET") {
+    const e = await empresaDe();
+    return e ? json({ publicaciones: await publicacionesDe(entorno.DB, e) }) : json({ error: "elige una empresa" }, 400);
+  }
+  if (ruta === "/api/publicaciones" && metodo === "POST") {
     const datos = await cuerpo(peticion);
-    const platicaId = texto(datos.platicaId, 60);
-    if (!platicaId) return json({ error: "falta la plática" }, 400);
-    const hecho = await archivarPlatica(entorno.DB, platicaId, datos.archivar !== false);
-    return hecho ? json({ bien: true }) : json({ error: "esa plática ya no existe" }, 404);
+    const e = await deLaEmpresa(datos);
+    const d = datosPublicacion(datos);
+    if (!e) return json({ error: "elige una empresa" }, 400);
+    if (typeof d === "string") return json({ error: d }, 400);
+    return json({ id: await crearPublicacion(entorno.DB, e, d) });
+  }
+  if (ruta === "/api/publicaciones/editar" && metodo === "POST") {
+    const datos = await cuerpo(peticion);
+    const d = datosPublicacion(datos);
+    if (typeof d === "string") return json({ error: d }, 400);
+    return (await editarPublicacion(entorno.DB, texto(datos.id, 60), d)) ? json({ bien: true }) : json({ error: "esa publicación ya no existe" }, 404);
+  }
+  if (ruta === "/api/publicaciones/borrar" && metodo === "POST") {
+    const hecho = await borrarPublicacion(entorno.DB, texto((await cuerpo(peticion)).id, 60));
+    return hecho ? json({ bien: true }) : json({ error: "esa publicación ya no existe" }, 404);
   }
 
-  if (ruta === "/api/responder" && metodo === "POST") {
+  if (ruta === "/api/enlaces" && metodo === "GET") {
+    const e = await empresaDe();
+    return e ? json({ enlaces: await enlacesDe(entorno.DB, e) }) : json({ error: "elige una empresa" }, 400);
+  }
+  if (ruta === "/api/enlaces" && metodo === "POST") {
     const datos = await cuerpo(peticion);
-    const platicaId = texto(datos.platicaId, 60);
-    const mensaje = texto(datos.texto, 4000);
-    if (!platicaId || !mensaje) return json({ error: "falta la plática o el texto" }, 400);
+    const e = await deLaEmpresa(datos);
+    const d = datosEnlace(datos);
+    if (!e) return json({ error: "elige una empresa" }, 400);
+    if (typeof d === "string") return json({ error: d }, 400);
+    return json({ id: await crearEnlace(entorno.DB, e, d) });
+  }
+  if (ruta === "/api/enlaces/editar" && metodo === "POST") {
+    const datos = await cuerpo(peticion);
+    const d = datosEnlace(datos);
+    if (typeof d === "string") return json({ error: d }, 400);
+    return (await editarEnlace(entorno.DB, texto(datos.id, 60), d)) ? json({ bien: true }) : json({ error: "ese enlace ya no existe" }, 404);
+  }
+  if (ruta === "/api/enlaces/borrar" && metodo === "POST") {
+    const hecho = await borrarEnlace(entorno.DB, texto((await cuerpo(peticion)).id, 60));
+    return hecho ? json({ bien: true }) : json({ error: "ese enlace ya no existe" }, 404);
+  }
 
-    const platica = await platicaParaResponder(entorno.DB, platicaId);
-    if (!platica) return json({ error: "esa plática ya no existe" }, 404);
-    if (!dentroDelPlazo(platica)) {
-      return json({ error: "se pasó el plazo para contestar por esa red" }, 409);
-    }
-
-    const guardado = await guardarSaliente(entorno.DB, { platicaId, texto: mensaje });
-
-    // Modo demostración: nada sale de verdad, pero queda como entregado para que se vea cómo funciona.
-    await marcarEntrega(entorno.DB, guardado.id, "entregado");
-    return json({ mensaje: { ...guardado, entrega: "entregado" }, aviso: "demostración: no salió a ninguna red" });
+  if (ruta === "/api/resultados" && metodo === "GET") {
+    const e = await empresaDe();
+    return e ? json(await resultadosDe(entorno.DB, e)) : json({ error: "elige una empresa" }, 400);
   }
 
   if (ruta === "/api/invitar" && metodo === "POST") {
@@ -306,12 +385,11 @@ const servidor = {
     }
   },
 
-  /** El reloj: tira las sesiones vencidas y los chats archivados hace más de 7 días. */
+  /** El reloj: tira las sesiones vencidas y borra cualquier permiso viejo que haya quedado guardado. */
   async scheduled(_evento: ScheduledController, entorno: Entorno, contexto: ExecutionContext): Promise<void> {
     contexto.waitUntil(
       (async () => {
         await limpiarSesiones(entorno.DB);
-        await borrarArchivadasViejas(entorno.DB);
         // Por seguridad, cualquier permiso que haya quedado guardado de una conexión vieja se borra.
         await entorno.DB.prepare("UPDATE cuentas SET token = NULL, id_meta = NULL WHERE token IS NOT NULL OR id_meta IS NOT NULL").run();
       })(),

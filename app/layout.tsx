@@ -3,9 +3,9 @@ import { Marco } from "@/components/Marco";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NEXORA · Demo",
+  title: "NEXORA",
   description:
-    "NEXORA: herramienta privada del equipo para atender los mensajes de las empresas que representan, desde una sola bandeja. Demo: todos los datos son de ejemplo.",
+    "NEXORA: herramienta privada del equipo para llevar las ventas de cada empresa que representan: interesados, calendario de publicaciones, enlaces de WhatsApp y resultados.",
 };
 
 export const viewport: Viewport = {

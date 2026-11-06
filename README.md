@@ -54,9 +54,14 @@ Rutas (todas piden sesión menos `salud`, `entrar` y `arrancar`):
 Cloudflare (`npx wrangler secret put NOMBRE --config servidor/wrangler.jsonc`). Los nombres están
 en `.env.example`.
 
-## Modo demostración
+## Cómo funciona ahora
 
-NEXORA ya no se conecta a correo, Instagram, Facebook, TikTok ni WhatsApp. En Empresas, el botón
-«Llenar con chats de ejemplo» pone conversaciones inventadas de las cinco redes para enseñar cómo funciona.
-Las respuestas se guardan pero no salen a ninguna red. Las conexiones reales se pueden volver a armar después
-(están en el historial de git, antes del commit «Quitar todas las conexiones»).
+NEXORA es el control de ventas privado del equipo. No se conecta a ninguna red: cada empresa es un **perfil** y
+dentro de cada perfil hay cuatro secciones:
+
+- **Interesados**: quién se interesó, por dónde llegó, su etapa (nuevo, platicando, cita, apartó, vendido, perdido) y su próximo seguimiento.
+- **Calendario**: qué se publica, en qué red y qué día, con el texto listo para copiar.
+- **Enlaces**: enlaces de WhatsApp con medición (`/api/w/<código>`): cuentan el clic y mandan a WhatsApp con el mensaje escrito.
+- **Resultados**: por enlace, cuántos clics, interesados, citas y ventas.
+
+Las conexiones reales (Google, Meta, TikTok) se quitaron; siguen en el historial de git, antes del commit «Quitar todas las conexiones».

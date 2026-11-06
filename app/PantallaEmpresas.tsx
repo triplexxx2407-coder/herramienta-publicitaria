@@ -1,15 +1,14 @@
 "use client";
 
-import { Building2, CircleDashed, Plus, Save, Trash2 } from "lucide-react";
-import Link from "next/link";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { Building2, Plus, Save, Trash2 } from "lucide-react";
+import { useState, type FormEvent } from "react";
 import { avisar } from "@/components/avisos";
 import { CirculoRed, IconoRed } from "@/components/IconoRed";
+import { BOTON_AZUL, CAMPO, Seccion } from "@/components/campos";
 import {
   BotonPildora,
   CargandoPanel,
   ContenidoClaro,
-  HojaBlanca,
   IconoCirculo,
   PanelNexora,
   PastillaCliente,
@@ -17,12 +16,9 @@ import {
   VacioClaro,
 } from "@/components/PanelNexora";
 import { cx } from "@/components/ui";
-import { actualizarEstado } from "@/lib/almacen";
-import { elegirEmpresa } from "@/lib/bandeja";
-import { agregarCuenta, borrarEmpresa, llenarDemostracion, crearEmpresa, editarEmpresa, quitarCuenta, useFuente } from "@/lib/fuente";
+import { agregarCuenta, borrarEmpresa, crearEmpresa, editarEmpresa, elegirEmpresa, quitarCuenta, useEmpresaActiva, useFuente } from "@/lib/fuente";
 import { nombreRed, ORDEN_REDES } from "@/lib/redes";
 import type { CuentaCanal, EmpresaCliente, Red } from "@/lib/tipos";
-import { useBandeja } from "@/lib/usar-bandeja";
 
 /** Qué se escribe para dar de alta la cuenta de cada red. */
 const COMO_SE_LLAMA: Record<Red, { etiqueta: string; ejemplo: string }> = {
@@ -37,31 +33,27 @@ const NUEVA = "nueva";
 
 /** Dar de alta las empresas que atiende el equipo y ligarles sus cuentas. */
 export function PantallaEmpresas() {
-  const { modo, usuario } = useFuente();
-  const { empresas, empresaActiva } = useBandeja();
+  const { modo, usuario, empresas } = useFuente();
+  const activa = useEmpresaActiva();
   const [elegida, setElegida] = useState<string | null>(null);
 
   if (modo === "revisando") return <CargandoPanel />;
   if (modo !== "real") {
     return (
       <PanelNexora
-        titulo="Empresas"
-        ayuda={<p>Aquí das de alta las empresas que atienden y sus cuentas. Funciona en la versión con servidor, no en la demo.</p>}
-        pastilla={<PastillaCliente texto="Empresas" icono={<IconoCirculo><Building2 size={18} aria-hidden /></IconoCirculo>} />}
-        etiquetaLista="Empresas"
-        lista={<p className="px-2 py-3 text-sm text-tinta-2">En la demo las empresas son de ejemplo y no se pueden cambiar.</p>}
-        etiquetaPrincipal="Empresa"
+        titulo="Perfiles"
+        ayuda={<p>Aquí das de alta las empresas que atienden. Necesita el servidor de NEXORA.</p>}
+        pastilla={<PastillaCliente texto="Perfiles" icono={<IconoCirculo><Building2 size={18} aria-hidden /></IconoCirculo>} />}
+        etiquetaLista="Perfiles"
+        lista={<p className="px-2 py-3 text-sm text-tinta-2">Sin servidor.</p>}
+        etiquetaPrincipal="Perfil"
         principal={
           <ContenidoClaro>
             <VacioClaro
               icono={<Building2 size={28} aria-hidden />}
-              titulo="Sólo en la versión de verdad"
-              texto="Entra a NEXORA en su dirección de Cloudflare para dar de alta empresas y conectar sus cuentas."
-            >
-              <Link href="/" className="font-bold text-marca-600 underline underline-offset-2">
-                Volver a la bandeja
-              </Link>
-            </VacioClaro>
+              titulo="Abre NEXORA desde su dirección"
+              texto="Esta pantalla sólo funciona entrando a NEXORA en su dirección de Cloudflare."
+            />
           </ContenidoClaro>
         }
       />
@@ -69,23 +61,23 @@ export function PantallaEmpresas() {
   }
 
   const esDueno = usuario?.papel === "dueño";
-  // Lo elegido aquí manda; si no, la empresa que estabas viendo en la bandeja.
-  const idActual = elegida ?? empresaActiva ?? empresas[0]?.id ?? NUEVA;
+  // Lo elegido aquí manda; si no, el perfil que estabas viendo.
+  const idActual = elegida ?? activa?.id ?? NUEVA;
   const actual = empresas.find((e) => e.id === idActual) ?? null;
   const creando = idActual === NUEVA || !actual;
 
   function abrir(id: string) {
     setElegida(id);
-    if (id !== NUEVA) actualizarEstado((e) => elegirEmpresa(e, id));
+    if (id !== NUEVA) elegirEmpresa(id);
   }
 
   return (
     <PanelNexora
-      titulo="Empresas"
+      titulo="Perfiles"
       ayuda={
         <>
-          <p>Aquí das de alta cada empresa que atienden y le ligas sus cuentas: su Instagram, su WhatsApp, su Facebook, su TikTok y su correo.</p>
-          <p>Por ahora todo es de demostración: usa «Llenar con chats de ejemplo» para ver cómo se vería con mensajes.</p>
+          <p>Cada empresa que atienden es un perfil. Aquí lo creas y apuntas sus redes: su Instagram, su WhatsApp, su Facebook, su TikTok y su correo.</p>
+          <p>Lo demás (interesados, calendario, enlaces y resultados) se ve en las otras secciones, para el perfil que elijas.</p>
         </>
       }
       pastilla={
@@ -98,7 +90,7 @@ export function PantallaEmpresas() {
           }
         />
       }
-      etiquetaLista="Empresas"
+      etiquetaLista="Perfiles"
       lista={
         <>
           {esDueno ? (
@@ -108,7 +100,7 @@ export function PantallaEmpresas() {
               icono={<Plus size={16} aria-hidden />}
               onClick={() => setElegida(NUEVA)}
             >
-              Agregar empresa
+              Agregar perfil
             </BotonPildora>
           ) : null}
           {empresas.length ? (
@@ -121,8 +113,8 @@ export function PantallaEmpresas() {
                       titulo={e.nombre}
                       detalle={
                         e.cuentas.length
-                          ? e.cuentas.length === 1 ? "1 cuenta" : `${e.cuentas.length} cuentas`
-                          : "Sin cuentas todavía"
+                          ? e.cuentas.length === 1 ? "1 red" : `${e.cuentas.length} redes`
+                          : "Sin redes todavía"
                       }
                       icono={
                         <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-marco-2 text-marca-400">
@@ -136,7 +128,7 @@ export function PantallaEmpresas() {
               })}
             </ul>
           ) : (
-            <p className="px-2 py-1 text-sm text-tinta-2">Todavía no hay empresas.</p>
+            <p className="px-2 py-1 text-sm text-tinta-2">Todavía no hay perfiles.</p>
           )}
         </>
       }
@@ -168,21 +160,6 @@ export function PantallaEmpresas() {
   );
 }
 
-function Seccion({ titulo, children, detalle }: { titulo: string; detalle?: string; children: ReactNode }) {
-  return (
-    <HojaBlanca className="p-4 sm:p-5">
-      <h2 className="text-[17px] font-bold text-chat-tinta">{titulo}</h2>
-      {detalle ? <p className="mt-0.5 text-sm text-chat-tenue">{detalle}</p> : null}
-      <div className="mt-3">{children}</div>
-    </HojaBlanca>
-  );
-}
-
-const CAMPO =
-  "mt-1 h-11 w-full rounded-[6px] border border-[#cfd6e0] bg-white px-3 text-[16px] text-chat-tinta outline-none placeholder:text-[#9aa5b4] focus:border-marca-600 focus:ring-2 focus:ring-marca-600/25 disabled:bg-[#f2f4f7]";
-const BOTON_AZUL =
-  "inline-flex h-11 items-center justify-center gap-2 rounded-[6px] bg-marca-600 px-5 text-[15px] font-bold text-white transition-colors hover:bg-marca-700 disabled:opacity-45";
-
 function FormularioEmpresa({
   empresa,
   soloVer = false,
@@ -208,7 +185,7 @@ function FormularioEmpresa({
       const r = await crearEmpresa(nombre.trim(), giro.trim());
       if (r.error) avisar(r.error);
       else if (r.id) {
-        avisar("Empresa agregada. Ahora ligale sus cuentas.");
+        avisar("Perfil agregado. Ahora apunta sus redes.");
         onListo?.(r.id);
       }
     }
@@ -246,7 +223,7 @@ function FormularioEmpresa({
         {!soloVer ? (
           <button type="submit" disabled={!nombre.trim() || !cambio || guardando} className={BOTON_AZUL}>
             {empresa ? <Save size={17} aria-hidden /> : <Plus size={17} aria-hidden />}
-            {guardando ? "Guardando…" : empresa ? "Guardar cambios" : "Agregar empresa"}
+            {guardando ? "Guardando…" : empresa ? "Guardar cambios" : "Agregar perfil"}
           </button>
         ) : null}
       </form>
@@ -255,39 +232,12 @@ function FormularioEmpresa({
 }
 
 function Conexiones({ empresa, soloVer }: { empresa: EmpresaCliente; soloVer: boolean }) {
-  const [llenando, setLlenando] = useState(false);
-  async function llenar() {
-    setLlenando(true);
-    const error = await llenarDemostracion(empresa.id);
-    setLlenando(false);
-    avisar(error ?? "Listo: ya hay chats de ejemplo en la bandeja");
-  }
   return (
-    <Seccion titulo="Conexiones" detalle="Las cuentas de esta empresa en cada red. Por ahora son de demostración: no se conectan a nada real.">
-      {!soloVer ? (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[10px] bg-[#eef3ff] p-3">
-          <button
-            type="button"
-            disabled={llenando}
-            onClick={() => void llenar()}
-            className="rounded-full bg-marca-600 px-3.5 py-1.5 text-[13px] font-bold text-white shadow-sm hover:opacity-90 disabled:opacity-50"
-          >
-            {llenando ? "Llenando…" : "Llenar con chats de ejemplo"}
-          </button>
-          <span className="text-[12.5px] leading-snug text-chat-tenue">
-            Modo demostración: pone chats inventados de Instagram, Facebook, WhatsApp, TikTok y correo para enseñar cómo funciona. Reemplaza los chats de esta empresa. Nada sale a ninguna red.
-          </span>
-        </div>
-      ) : null}
+    <Seccion titulo="Redes del perfil" detalle="Las cuentas de esta empresa en cada red. Sólo se apuntan para tenerlas a la mano: NEXORA no se conecta a ellas.">
       <ul className="divide-y divide-[#e6eaf0]">
         {ORDEN_REDES.map((red) => (
           <li key={red} className="py-3 first:pt-0 last:pb-0">
-            <Conexion
-              red={red}
-              empresaId={empresa.id}
-              cuentas={empresa.cuentas.filter((k) => k.red === red)}
-              soloVer={soloVer}
-            />
+            <Conexion red={red} empresaId={empresa.id} cuentas={empresa.cuentas.filter((k) => k.red === red)} soloVer={soloVer} />
           </li>
         ))}
       </ul>
@@ -346,12 +296,6 @@ function Conexion({ red, empresaId, cuentas, soloVer }: { red: Red; empresaId: s
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5 text-[14.5px] font-semibold break-all text-chat-tinta">
                     <IconoRed red={red} tamano={14} /> {k.identificador}
-                  </span>
-                  <span
-                    className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#e8eefb] px-2 py-0.5 text-[12px] font-bold text-[#1c4fd6]"
-                  >
-                    <CircleDashed size={13} aria-hidden />
-                    Demostración
                   </span>
                 </span>
                 {!soloVer ? (
@@ -432,7 +376,6 @@ function BorrarEmpresa({ empresa, onBorrada }: { empresa: EmpresaCliente; onBorr
     setBorrando(false);
     if (error) avisar(error);
     else {
-      actualizarEstado((e) => elegirEmpresa(e, null));
       avisar(`${empresa.nombre} borrada`);
       onBorrada();
     }

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Building2, ChevronDown, CircleHelp, FlaskConical, Tag, X } from "lucide-react";
+import { ArrowLeft, Building2, ChevronDown, CircleHelp, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cx } from "./ui";
 import { nombreRed } from "@/lib/redes";
-import { useBandeja } from "@/lib/usar-bandeja";
+import { useEmpresaActiva } from "@/lib/fuente";
 
 /*
  * El marco de cada pantalla, copiado del diseño NEXORA (1440×810):
@@ -117,39 +117,30 @@ export function TituloLista({ children, className }: { children: ReactNode; clas
   return <p className={cx("px-1.5 text-[11px] font-bold tracking-[0.08em] text-marca-200/80 uppercase", className)}>{children}</p>;
 }
 
-/** La tarjeta roja de arriba a la izquierda: la empresa que estás viendo, o todas. */
+/** La tarjeta roja de arriba a la izquierda: el perfil que estás viendo. */
 function TarjetaRoja() {
-  const { empresas, empresaActiva, esEjemplo } = useBandeja();
-  const empresa = empresas.find((e) => e.id === empresaActiva) ?? null;
-  const cuentas = empresa ? empresa.cuentas : empresas.flatMap((e) => e.cuentas);
+  const empresa = useEmpresaActiva();
+  const cuentas = empresa ? empresa.cuentas : [];
   const redes = [...new Set(cuentas.map((k) => k.red))];
   return (
     <div className="flex flex-col bg-linear-to-br from-proyecto-claro to-proyecto-oscuro px-4 pt-3 pb-3 text-white lg:h-full lg:overflow-hidden lg:rounded-2xl lg:px-4 lg:pt-3.5 lg:pb-3 lg:shadow-tarjeta">
       <span className="flex flex-wrap items-center gap-1.5">
-        {esEjemplo ? (
-          <span className="rounded-[2px] bg-marca-600 px-1.5 text-[9px] leading-[13px] font-bold text-white uppercase">Ejemplo</span>
-        ) : null}
         <span className="rounded-[2px] bg-pildora px-1.5 text-[9px] leading-[13px] font-bold text-marca-200 uppercase">
-          {empresa ? empresa.giro : "Equipo"}
+          {empresa ? empresa.giro : "Perfil"}
         </span>
       </span>
       <span className="mt-2 flex items-center gap-1 text-[10px] leading-3 text-white/50 lg:mt-[4px]">
-        <Building2 size={11} aria-hidden /> {empresa ? "Empresa" : "Todas las empresas"}
+        <Building2 size={11} aria-hidden /> Perfil
       </span>
       <span className="mt-0.5 line-clamp-2 text-[20px] leading-[1.25] font-bold lg:mt-0 lg:pl-[3px] lg:text-[23px] lg:leading-[33px]">
-        {empresa ? empresa.nombre : empresas.length === 1 ? "1 empresa" : `${empresas.length} empresas`}
+        {empresa ? empresa.nombre : "Sin perfil"}
       </span>
       <span className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-0.5 text-[10px] leading-3 font-bold lg:mt-auto">
-        {empresa?.producto ? (
-          <span className="inline-flex items-center gap-1">
-            <Tag size={11} aria-hidden className="text-[#9fb0c2]" /> {empresa.producto}
-          </span>
-        ) : null}
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-cifra" />
           {cuentas.length === 0
-            ? "Sin cuentas todavía"
-            : `${cuentas.length === 1 ? "1 cuenta" : `${cuentas.length} cuentas`}: ${redes.map(nombreRed).join(", ")}`}
+            ? "Sin redes todavía"
+            : `${cuentas.length === 1 ? "1 red" : `${cuentas.length} redes`}: ${redes.map(nombreRed).join(", ")}`}
         </span>
       </span>
     </div>
@@ -249,29 +240,6 @@ export function ContenidoClaro({ children, className }: { children: ReactNode; c
 /** Una hoja blanca sobre el área clara (un correo, el editor, un renglón). */
 export function HojaBlanca({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cx("rounded-lg bg-white shadow-[0_1px_2px_rgb(0_0_0/0.14)]", className)}>{children}</div>;
-}
-
-/** La marca azul «Ejemplo» (la misma de la tarjeta roja), para lo que va sobre el área clara. */
-export function MarcaEjemplo({ className }: { className?: string }) {
-  return (
-    <span className={cx("inline-flex shrink-0 items-center rounded-[2px] bg-marca-600 px-1.5 text-[10px] leading-[15px] font-bold text-white uppercase", className)}>
-      Ejemplo
-    </span>
-  );
-}
-
-/** El aviso amarillo de «Ejemplo», como el de la plática. */
-export function AvisoEjemplo({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <p
-      className={cx(
-        "mx-auto flex w-fit max-w-full items-center gap-1.5 rounded-lg bg-[#fff5c4] px-3 py-1.5 text-center text-xs font-semibold text-[#5c4b00] shadow-sm",
-        className,
-      )}
-    >
-      <FlaskConical size={13} aria-hidden className="shrink-0" /> {children}
-    </p>
-  );
 }
 
 /** Lo que se ve en el área clara cuando todavía no hay nada que mostrar. */
