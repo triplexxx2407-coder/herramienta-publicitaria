@@ -56,11 +56,23 @@ jobs:
           fi
           echo "CLOUDFLARE_ACCOUNT_ID=$CUENTA" >> "$GITHUB_ENV"
           # La dirección gratis es <algo>.workers.dev. Si la cuenta todavía no tiene una, se crea.
-          SUB=$(curl -sS -H "$H" "$API/accounts/$CUENTA/workers/subdomain" | jq -r '.result.subdomain // empty')
-          if [ -z "$SUB" ]; then
+          # A veces Cloudflare contesta algo que no es JSON; se reintenta unas veces.
+          SUB=""
+          for intento in 1 2 3 4 5; do
+            RESP=$(curl -sS -H "$H" "$API/accounts/$CUENTA/workers/subdomain" || true)
+            SUB=$(printf '%s' "$RESP" | jq -r '.result.subdomain // empty' 2>/dev/null || true)
+            [ -n "$SUB" ] && break
+            echo "Intento $intento sin dirección. Respuesta: $(printf '%s' "$RESP" | head -c 200)"
+            sleep $((intento * 4))
+          done
+          if [ -z "$SUB" ] && printf '%s' "${RESP:-}" | jq -e '.success == true' >/dev/null 2>&1; then
             SUB="nexora-$(openssl rand -hex 3)"
             curl -fsS -X PUT -H "$H" -H "Content-Type: application/json" \
               -d "{\"subdomain\":\"$SUB\"}" "$API/accounts/$CUENTA/workers/subdomain" > /dev/null
+          fi
+          if [ -z "$SUB" ]; then
+            echo "::error::No se pudo leer la dirección workers.dev de la cuenta."
+            exit 1
           fi
           echo "DIRECCION=https://nexora.$SUB.workers.dev" >> "$GITHUB_ENV"
 
