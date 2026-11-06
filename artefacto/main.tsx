@@ -1,27 +1,25 @@
 import { useEffect, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
-import { PantallaCalendario } from "@/app/PantallaCalendario";
+import { PantallaContenidos } from "@/app/PantallaContenidos";
 import { PantallaEmpresas } from "@/app/PantallaEmpresas";
 import { PantallaEnlaces } from "@/app/PantallaEnlaces";
-import { PantallaInicio } from "@/app/PantallaInicio";
-import { PantallaInteresados } from "@/app/PantallaInteresados";
-import { PantallaResultados } from "@/app/PantallaResultados";
+import { PantallaEstadisticas } from "@/app/PantallaEstadisticas";
+import { PantallaWhatsApp } from "@/app/PantallaWhatsApp";
 import { Marco } from "@/components/Marco";
 import { usePathname } from "next/navigation";
 import "@/app/globals.css";
 
 const PANTALLAS: Record<string, ComponentType> = {
-  "/": PantallaInicio,
-  "/interesados": PantallaInteresados,
-  "/calendario": PantallaCalendario,
+  "/": PantallaEstadisticas,
+  "/contenidos": PantallaContenidos,
   "/enlaces": PantallaEnlaces,
-  "/resultados": PantallaResultados,
+  "/whatsapp": PantallaWhatsApp,
   "/empresas": PantallaEmpresas,
 };
 
 function App() {
   const ruta = usePathname();
-  const Pantalla = PANTALLAS[ruta] ?? PantallaInicio;
+  const Pantalla = PANTALLAS[ruta] ?? PantallaEstadisticas;
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [ruta]);

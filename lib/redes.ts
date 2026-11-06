@@ -11,8 +11,8 @@ export const REDES: Record<Red, DatosRed> = {
   instagram: { nombre: "Instagram", color: "#e1306c" },
   whatsapp: { nombre: "WhatsApp", color: "#25d366" },
   facebook: { nombre: "Facebook", color: "#1877f2" },
-  tiktok: { nombre: "TikTok", color: "#22d3ee" },
-  correo: { nombre: "Correo", color: "#93a9c9" },
+  tiktok: { nombre: "TikTok", color: "#111827" },
+  correo: { nombre: "Correo", color: "#64748b" },
 };
 
 /** Las redes en el orden en que se muestran. */

@@ -56,9 +56,9 @@ export function ContenedorAvisos() {
         <div
           key={m.id}
           role="status"
-          className="entrada inline-flex items-center gap-2 rounded-full border border-linea bg-superficie-2 px-4 py-2.5 text-sm font-semibold text-white shadow-flotante"
+          className="entrada inline-flex items-center gap-2 rounded-full bg-tinta px-4 py-2.5 text-sm font-semibold text-white shadow-lg"
         >
-          <CircleCheck size={18} aria-hidden className="text-verde-400" />
+          <CircleCheck size={18} aria-hidden className="text-emerald-400" />
           {m.texto}
           {m.accion ? (
             <button
@@ -67,7 +67,7 @@ export function ContenedorAvisos() {
                 m.accion?.alHacer();
                 quitar(m.id);
               }}
-              className="pointer-events-auto -my-1 -mr-2 ml-1 rounded-full px-2.5 py-1 font-bold text-marca-400 underline-offset-2 hover:bg-white/10 hover:underline"
+              className="pointer-events-auto -my-1 -mr-2 ml-1 rounded-full px-2.5 py-1 font-bold text-indigo-300 underline-offset-2 hover:bg-white/10 hover:underline"
             >
               {m.accion.texto}
             </button>

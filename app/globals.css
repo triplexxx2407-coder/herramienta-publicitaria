@@ -1,102 +1,51 @@
 @import "tailwindcss";
 
-/*
- * Dónde buscar las clases de estilo. Hace falta decirlo para la versión de un solo archivo:
- * esa se arma desde la carpeta artefacto/ y, sin esto, sólo veía las clases de esa carpeta
- * (la página salía casi sin diseño).
- */
 @source "../app";
 @source "../components";
 @source "../artefacto";
 
 /*
- * Diseño NEXORA, copiado del archivo que mandó el dueño del proyecto (NEXORA 1.pdf, 1440×810).
- * Los colores y medidas salieron de medir ese archivo. Todo va en un marco oscuro: barra de arriba,
- * menú a la izquierda y, en cada pantalla, un panel con la tarjeta roja del proyecto, la barra azul,
- * una lista a la izquierda y el contenido a la derecha.
+ * Diseño claro de tablero: fondo gris suave, tarjetas blancas, cifras grandes y una barra de arriba
+ * con el logo, la empresa que estás viendo y las pestañas.
  */
 @theme {
-  --font-sans: "Roboto", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Roboto", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  /* Sólo para la palabra NEXORA del logo, como en el diseño. */
-  --font-logo: "Open Sans", "Roboto", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-logo: "Open Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  /* Texto sobre el azul oscuro */
-  --color-tinta: #eaf1ff;
-  --color-tinta-2: #c3d3ee;
-  --color-suave: #93a9c9;
-  --color-tenue: #6b81a4;
+  --color-fondo: #f3f5f9;
+  --color-tarjeta: #ffffff;
+  --color-linea: #e3e8f0;
+  --color-tinta: #0f172a;
+  --color-tinta-2: #334155;
+  --color-suave: #64748b;
+  --color-tenue: #94a3b8;
+  --color-relleno: #f1f4f9;
 
-  /* Superficies */
-  --color-fondo: #0a1428;
-  --color-superficie: #15264a;
-  --color-superficie-2: #1e3a5f;
-  --color-panel: #1a2f52;
-  --color-linea: #243a63;
+  --color-marca-50: #eef2ff;
+  --color-marca-100: #e0e7ff;
+  --color-marca-500: #6366f1;
+  --color-marca-600: #4f46e5;
+  --color-marca-700: #4338ca;
 
-  /* Del diseño: el fondo del panel (lo que se ve entre las piezas), las pastillas de la lista
-     y la pastilla elegida. */
-  --color-marco: #172f4c;
-  --color-marco-2: #102134;
-  --color-pildora: #243f69;
-  --color-pildora-activa: #60a5fa;
-  --color-cifra: #10b981;
-  /* Letra gris y los iconos del menú de la izquierda */
-  --color-menu: #7b8fa3;
-  --color-menu-icono: #55677b;
-
-  --color-marca-50: #eff6ff;
-  --color-marca-100: #dbeafe;
-  --color-marca-200: #bfdbfe;
-  --color-marca-400: #60a5fa;
-  --color-marca-500: #3b82f6;
-  --color-marca-600: #2563eb;
-  --color-marca-700: #1d4ed8;
-  --color-marca-900: #172f86;
-
-  /* Verde azulado del logo */
   --color-logo: #47807f;
-  --color-logo-claro: #5f9e9c;
 
-  /* Rojo de la tarjeta del proyecto */
-  --color-proyecto: #b91010;
-  --color-proyecto-claro: #d81b1b;
-  --color-proyecto-oscuro: #7d0a0a;
+  --color-vistas: #6366f1;
+  --color-clics: #0ea5e9;
+  --color-likes: #ec4899;
+  --color-visitas: #f59e0b;
+  --color-escriben: #10b981;
+  --color-mensajes: #14b8a6;
 
-  --color-verde-50: #123a26;
-  --color-verde-400: #4ade80;
-  --color-verde-500: #22c55e;
-  --color-verde-600: #16a34a;
-  --color-verde-700: #86efac;
-  --color-ambar-50: #3a2c0c;
-  --color-ambar-500: #f59e0b;
-  --color-ambar-700: #fcd34d;
-  --color-rojo-50: #3d1218;
-  --color-rojo-500: #ef4444;
-  --color-rojo-700: #fca5a5;
-  --color-violeta-50: #241a4d;
-  --color-violeta-200: #4c3f8f;
-  --color-violeta-500: #8b5cf6;
-  --color-violeta-700: #c4b5fd;
+  --color-wa: #075e54;
+  --color-wa-claro: #128c7e;
+  --color-wa-mio: #d9fdd3;
+  --color-wa-fondo: #efeae2;
 
-  /* Pantalla de la plática: clara, como la de un celular */
-  --color-chat-fondo: #edf1f6;
-  --color-chat-mio: #d7f6c6;
-  --color-chat-suyo: #ffffff;
-  --color-chat-tinta: #0b1a14;
-  --color-chat-tenue: #5c7367;
-
-  --radius-tarjeta: 1.25rem;
-  --shadow-tarjeta: 0 1px 2px rgb(0 0 0 / 0.25), 0 10px 28px -14px rgb(0 0 0 / 0.6);
-  --shadow-flotante: 0 18px 44px -12px rgb(0 0 0 / 0.75);
+  --shadow-tarjeta: 0 1px 2px rgb(15 23 42 / 0.05), 0 8px 24px -16px rgb(15 23 42 / 0.18);
 }
 
 html {
-  color-scheme: dark;
   -webkit-text-size-adjust: 100%;
-  /* Deja libre la zona de la hora y la batería del teléfono, y la barrita de abajo. */
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 body {
@@ -105,16 +54,6 @@ body {
   font-family: var(--font-sans);
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
-}
-
-/* Franja fija bajo la barra de estado del teléfono: tapa lo que pasa por detrás al bajar. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0 0 auto;
-  height: env(safe-area-inset-top, 0px);
-  z-index: 10;
-  background: var(--color-superficie);
 }
 
 h1,
@@ -127,18 +66,6 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 
-summary {
-  list-style: none;
-}
-summary::-webkit-details-marker {
-  display: none;
-}
-
-/* El engrane de la barra de arriba va relleno, con el hueco del centro del color de la barra. */
-.icono-solido-hueco circle {
-  fill: var(--color-superficie);
-}
-
 .sin-barra {
   scrollbar-width: none;
 }
@@ -146,77 +73,38 @@ summary::-webkit-details-marker {
   display: none;
 }
 
-/* Fondo de la pantalla de la plática, con un tramado suave como el de un celular. */
-.fondo-platica {
-  background-color: var(--color-chat-fondo);
-  background-image: linear-gradient(180deg, #f5f7fb 0%, #e6ebf3 100%);
-}
-
-/* La lista de pasos y de pláticas se desplaza sin barra gruesa. */
 .barra-fina {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-superficie-2) transparent;
+  scrollbar-color: var(--color-linea) transparent;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-marca-500);
+  outline-offset: 2px;
 }
 
 @keyframes aparecer {
   from {
     opacity: 0.001;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
-@keyframes subir {
-  from {
-    transform: translateY(24px);
-    opacity: 0.001;
-  }
-  to {
-    transform: none;
-    opacity: 1;
-  }
-}
-@keyframes velo {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 .entrada {
-  animation: aparecer 0.32s ease-out both;
+  animation: aparecer 0.28s ease-out both;
 }
-.hoja-entrada {
-  animation: subir 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.velo-entrada {
-  animation: velo 0.2s ease-out both;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .entrada,
-  .hoja-entrada,
-  .velo-entrada {
+  .entrada {
     animation: none;
   }
 }
 
-:focus-visible {
-  outline: 3px solid var(--color-marca-400);
-  outline-offset: 2px;
-}
-
-/* Las listas desplegables se dibujan con los colores del sistema: aquí se fuerzan los de la app. */
-select option {
-  background: var(--color-superficie);
-  color: var(--color-tinta);
-}
-
-/* Fondo de la pantalla de entrada. */
-.fondo-entrada {
-  background: radial-gradient(120% 90% at 0% 0%, #13274a 0%, #0a1428 55%, #070f1f 100%);
+/* El fondo de la plática del WhatsApp de prueba: un tramado suave. */
+.fondo-wa {
+  background-color: var(--color-wa-fondo);
+  background-image: radial-gradient(rgb(0 0 0 / 0.045) 1px, transparent 1px);
+  background-size: 18px 18px;
 }

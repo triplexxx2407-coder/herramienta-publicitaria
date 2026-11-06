@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ETAPAS, direccionWhatsApp, esEtapa, fechaValida, hoyISO, porcentaje, soloDigitos, telefonoValido } from "@/lib/ventas";
+import { cifraCorta, direccionWhatsApp, enteroPositivo, esTipo, porcentaje, soloDigitos, telefonoValido } from "@/lib/ventas";
 
 describe("teléfonos y enlaces de WhatsApp", () => {
   it("deja sólo los dígitos", () => {
@@ -26,27 +26,29 @@ describe("teléfonos y enlaces de WhatsApp", () => {
   });
 });
 
-describe("etapas y fechas", () => {
-  it("conoce las etapas de venta", () => {
-    for (const e of ETAPAS) expect(esEtapa(e)).toBe(true);
-    expect(esEtapa("otra")).toBe(false);
-    expect(esEtapa(undefined)).toBe(false);
+describe("números de las estadísticas", () => {
+  it("convierte lo que se escribe a un entero válido", () => {
+    expect(enteroPositivo("12,500")).toBe(12500);
+    expect(enteroPositivo(3.9)).toBe(3);
+    expect(enteroPositivo(-4)).toBe(0);
+    expect(enteroPositivo("hola")).toBe(0);
+    expect(enteroPositivo(undefined)).toBe(0);
   });
 
-  it("valida el formato de las fechas", () => {
-    expect(fechaValida("2026-11-06")).toBe(true);
-    expect(fechaValida("06/11/2026")).toBe(false);
-    expect(fechaValida("2026-13-45")).toBe(false);
-    expect(fechaValida(null)).toBe(false);
-  });
-
-  it("el día de hoy es el de Tijuana, no el de UTC", () => {
-    expect(hoyISO(new Date("2026-11-06T03:00:00Z"))).toBe("2026-11-05");
-    expect(hoyISO(new Date("2026-11-06T20:00:00Z"))).toBe("2026-11-06");
+  it("acorta las cifras grandes", () => {
+    expect(cifraCorta(950)).toBe("950");
+    expect(cifraCorta(12500)).toBe("12.5 mil");
+    expect(cifraCorta(250000)).toBe("250 mil");
+    expect(cifraCorta(1200000)).toBe("1.2 M");
   });
 
   it("calcula porcentajes sin dividir entre cero", () => {
     expect(porcentaje(1, 4)).toBe(25);
     expect(porcentaje(0, 0)).toBe(0);
+  });
+
+  it("conoce los tipos de contenido", () => {
+    expect(esTipo("anuncio")).toBe(true);
+    expect(esTipo("otro")).toBe(false);
   });
 });

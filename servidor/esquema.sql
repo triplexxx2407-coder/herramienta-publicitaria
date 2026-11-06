@@ -68,35 +68,37 @@ CREATE TABLE IF NOT EXISTS enlaces (
 );
 CREATE INDEX IF NOT EXISTS enlaces_por_empresa ON enlaces(empresa_id);
 
--- Quien escribió o se interesó, con su etapa de venta y cuándo darle seguimiento.
-CREATE TABLE IF NOT EXISTS interesados (
-  id TEXT PRIMARY KEY,
-  empresa_id TEXT NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
-  nombre TEXT NOT NULL,
-  telefono TEXT NOT NULL DEFAULT '',
-  -- Por dónde llegó (instagram, whatsapp, facebook, tiktok, correo u otro).
-  red TEXT NOT NULL DEFAULT '',
-  enlace_id TEXT REFERENCES enlaces(id),
-  etapa TEXT NOT NULL DEFAULT 'nuevo' CHECK (etapa IN ('nuevo', 'platicando', 'cita', 'apartado', 'vendido', 'perdido')),
-  notas TEXT,
-  siguiente_en TEXT,                 -- día del próximo seguimiento, «2026-11-06»
-  creada_en TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS interesados_por_empresa ON interesados(empresa_id, creada_en DESC);
+-- Ya no se llevan interesados ni calendario: se tiran (si hubiera algo, era de prueba).
+DROP TABLE IF EXISTS interesados;
+DROP TABLE IF EXISTS publicaciones;
 
--- El calendario de publicaciones de cada empresa.
-CREATE TABLE IF NOT EXISTS publicaciones (
+-- Los videos, publicaciones y anuncios de cada empresa, con los números que da la red.
+CREATE TABLE IF NOT EXISTS contenidos (
   id TEXT PRIMARY KEY,
   empresa_id TEXT NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL CHECK (tipo IN ('video', 'publicacion', 'anuncio')),
   red TEXT NOT NULL,
   titulo TEXT NOT NULL,
-  texto TEXT,
-  fecha TEXT NOT NULL,               -- día de publicación, «2026-11-06»
-  hecha INTEGER NOT NULL DEFAULT 0,
-  enlace_id TEXT REFERENCES enlaces(id),
+  enlace_id TEXT REFERENCES enlaces(id),   -- el enlace de WhatsApp que lleva
+  vistas INTEGER NOT NULL DEFAULT 0,
+  clics INTEGER NOT NULL DEFAULT 0,
+  likes INTEGER NOT NULL DEFAULT 0,
   creada_en TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS publicaciones_por_empresa ON publicaciones(empresa_id, fecha);
+CREATE INDEX IF NOT EXISTS contenidos_por_empresa ON contenidos(empresa_id);
+
+-- El WhatsApp de prueba: personas que tocan un enlace y escriben, para ver cómo se vería todo.
+CREATE TABLE IF NOT EXISTS mensajes_prueba (
+  id TEXT PRIMARY KEY,
+  empresa_id TEXT NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+  enlace_id TEXT,
+  persona TEXT NOT NULL,
+  telefono TEXT NOT NULL,
+  de TEXT NOT NULL CHECK (de IN ('yo', 'ellos')),
+  texto TEXT NOT NULL,
+  fecha TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS mensajes_prueba_por_empresa ON mensajes_prueba(empresa_id, fecha);
 
 -- Para ver qué pasó cuando algo falle.
 CREATE TABLE IF NOT EXISTS bitacora (

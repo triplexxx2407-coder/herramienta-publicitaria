@@ -1,174 +1,94 @@
 "use client";
 
-import { BarChart3, Building2, CalendarDays, House, Link2, Settings2, Users, type LucideIcon } from "lucide-react";
+import { BarChart3, Building2, Link2, MessageCircle, Settings2, Video, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { elegirEmpresa, iniciarFuente, useEmpresaActiva, useFuente } from "@/lib/fuente";
 import { ContenedorAvisos } from "./avisos";
-import { BarraSuperior } from "./BarraSuperior";
-import { CargandoPanel } from "./PanelNexora";
+import { BotonSalir, Logo } from "./BarraSuperior";
 import { PantallaEntrar } from "./PantallaEntrar";
-import { cx } from "./ui";
+import { Cargando, cx } from "./ui";
 
-const SECCIONES: { ruta: string; nombre: string; detalle: string; Icono: LucideIcon }[] = [
-  { ruta: "/", nombre: "Inicio", detalle: "Qué hacer ahora", Icono: House },
-  { ruta: "/enlaces", nombre: "Enlaces", detalle: "Enlaces de WhatsApp", Icono: Link2 },
-  { ruta: "/calendario", nombre: "Publicaciones", detalle: "Qué subir y cuándo", Icono: CalendarDays },
-  { ruta: "/interesados", nombre: "Gente", detalle: "A quién le vendes", Icono: Users },
-  { ruta: "/resultados", nombre: "Resultados", detalle: "Qué funciona", Icono: BarChart3 },
-  { ruta: "/empresas", nombre: "Perfiles", detalle: "Tus empresas", Icono: Settings2 },
+const PESTANAS: { ruta: string; nombre: string; Icono: LucideIcon }[] = [
+  { ruta: "/", nombre: "Estadísticas", Icono: BarChart3 },
+  { ruta: "/contenidos", nombre: "Videos y anuncios", Icono: Video },
+  { ruta: "/enlaces", nombre: "Enlaces", Icono: Link2 },
+  { ruta: "/whatsapp", nombre: "WhatsApp de prueba", Icono: MessageCircle },
+  { ruta: "/empresas", nombre: "Perfiles", Icono: Settings2 },
 ];
 
-/**
- * Marco de la app: barra de arriba y, en la computadora, el menú de la izquierda con las
- * secciones y los perfiles. En el celular las secciones y el perfil se eligen en una franja arriba.
- */
+/** Marco de la app: arriba el logo, la empresa que estás viendo y las pestañas. */
 export function Marco({ children }: { children: ReactNode }) {
   const { modo } = useFuente();
   useEffect(() => {
     void iniciarFuente();
   }, []);
 
-  if (modo === "entrar") {
-    return (
-      <div className="flex min-h-dvh flex-col">
-        <PantallaEntrar />
-      </div>
-    );
-  }
+  if (modo === "entrar") return <PantallaEntrar />;
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <BarraSuperior />
-      {modo === "real" ? <FranjaCelular /> : null}
+      <header className="sticky top-0 z-40 border-b border-linea bg-white/95 backdrop-blur">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4">
+          <Logo />
+          <div className="ml-auto flex min-w-0 items-center gap-1">
+            {modo === "real" ? <SelectorPerfil /> : null}
+            <BotonSalir />
+          </div>
+        </div>
+        {modo === "real" ? <Pestanas /> : null}
+      </header>
 
-      <div className="flex flex-1">
-        <aside className="hidden w-[230px] shrink-0 lg:sticky lg:top-[68px] lg:flex lg:h-[calc(100dvh-68px)] lg:flex-col lg:overflow-y-auto lg:pt-[43px] lg:pr-[14px] lg:pl-[18px]">
-          {modo === "real" ? <MenuLateral /> : null}
-        </aside>
-
-        <main className="w-full min-w-0 flex-1 pb-[env(safe-area-inset-bottom,0px)] lg:pt-[5px] lg:pr-[31px] lg:pb-6 lg:pl-px">
-          {modo === "revisando" ? <CargandoPanel /> : children}
-        </main>
-      </div>
-
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-6 pb-16">{modo === "revisando" ? <Cargando /> : children}</main>
       <ContenedorAvisos />
     </div>
   );
 }
 
-function enRuta(actual: string, ruta: string): boolean {
-  return ruta === "/" ? actual === "/" : actual === ruta;
-}
-
-/** Celular: el perfil y las secciones en una franja que se desliza. */
-function FranjaCelular() {
+function SelectorPerfil() {
   const { empresas } = useFuente();
   const activa = useEmpresaActiva();
-  const ruta = usePathname();
+  if (empresas.length === 0) return null;
   return (
-    <div className="space-y-2 bg-superficie px-3 pb-2.5 lg:hidden">
-      {empresas.length > 0 ? (
-        <label className="block">
-          <span className="sr-only">Perfil</span>
-          <select
-            value={activa?.id ?? ""}
-            onChange={(e) => elegirEmpresa(e.target.value)}
-            className="h-10 w-full rounded-full bg-pildora px-4 text-[14px] font-semibold text-tinta-2 outline-none focus:ring-2 focus:ring-marca-400"
-          >
-            {empresas.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.nombre}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-      <nav aria-label="Secciones" className="barra-fina -mx-3 flex gap-1.5 overflow-x-auto px-3">
-        {SECCIONES.map(({ ruta: r, nombre, Icono }) => (
-          <Link
-            key={r}
-            href={r}
-            aria-current={enRuta(ruta, r) ? "page" : undefined}
-            className={cx(
-              "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold",
-              enRuta(ruta, r) ? "bg-pildora-activa text-black" : "bg-pildora text-tinta-2",
-            )}
-          >
-            <Icono size={14} aria-hidden /> {nombre}
-          </Link>
+    <label className="relative flex min-w-0 items-center">
+      <span className="sr-only">Empresa que estás viendo</span>
+      <Building2 size={16} aria-hidden className="pointer-events-none absolute left-3 text-suave" />
+      <select
+        value={activa?.id ?? ""}
+        onChange={(e) => elegirEmpresa(e.target.value)}
+        className="h-10 max-w-[48vw] min-w-0 rounded-full border border-linea bg-relleno pr-3 pl-9 text-[14px] font-semibold text-tinta outline-none focus:ring-2 focus:ring-marca-500/30 sm:max-w-xs"
+      >
+        {empresas.map((e) => (
+          <option key={e.id} value={e.id}>
+            {e.nombre}
+          </option>
         ))}
-      </nav>
-    </div>
+      </select>
+    </label>
   );
 }
 
-/** Computadora: las secciones y debajo los perfiles. Elegir un perfil cambia lo que ves en todas las secciones. */
-function MenuLateral() {
-  const { empresas } = useFuente();
-  const activa = useEmpresaActiva();
+function Pestanas() {
   const ruta = usePathname();
   return (
-    <>
-      <nav aria-label="Secciones">
-        <p className="mb-[7px] text-[11px] leading-4 font-bold text-menu uppercase">Menú</p>
-        <ul className="space-y-[6px]">
-          {SECCIONES.map(({ ruta: r, nombre, detalle, Icono }) => {
-            const elegida = enRuta(ruta, r);
-            return (
-              <li key={r}>
-                <Link
-                  href={r}
-                  aria-current={elegida ? "page" : undefined}
-                  className={cx(
-                    "flex min-h-[46px] w-full items-center gap-2.5 rounded-[3px] py-1 pr-2.5 pl-2 text-left text-[14px] transition-colors",
-                    elegida ? "bg-pildora font-bold text-marca-400" : "text-menu hover:bg-white/5 hover:text-tinta-2",
-                  )}
-                >
-                  <Icono size={15} aria-hidden strokeWidth={2.4} className={elegida ? "text-marca-400" : "text-menu-icono"} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate">{nombre}</span>
-                    <span className="block truncate text-[11px] font-normal text-menu">{detalle}</span>
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      <nav aria-label="Perfiles" className="mt-6">
-        <p className="mb-[7px] text-[11px] leading-4 font-bold text-menu uppercase">Empresa que estás viendo</p>
-        {empresas.length === 0 ? (
-          <p className="text-[12.5px] text-menu">Todavía no hay perfiles.</p>
-        ) : (
-          <ul className="space-y-[6px]">
-            {empresas.map((e) => {
-              const elegida = activa?.id === e.id;
-              return (
-                <li key={e.id}>
-                  <button
-                    type="button"
-                    aria-current={elegida ? "true" : undefined}
-                    onClick={() => elegirEmpresa(e.id)}
-                    className={cx(
-                      "flex min-h-[38px] w-full items-center gap-2 rounded-[3px] py-1 pr-2.5 pl-2 text-left text-[13px] transition-colors",
-                      elegida ? "bg-pildora font-bold text-marca-400" : "text-menu hover:bg-white/5 hover:text-tinta-2",
-                    )}
-                  >
-                    <Building2 size={14} aria-hidden strokeWidth={2.4} className={elegida ? "text-marca-400" : "text-menu-icono"} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate">{e.nombre}</span>
-                      <span className="block truncate text-[11px] font-normal text-menu">{e.giro}</span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </nav>
-    </>
+    <nav aria-label="Secciones" className="sin-barra mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-3">
+      {PESTANAS.map(({ ruta: r, nombre, Icono }) => {
+        const activa = ruta === r;
+        return (
+          <Link
+            key={r}
+            href={r}
+            aria-current={activa ? "page" : undefined}
+            className={cx(
+              "inline-flex h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-[14px] font-semibold whitespace-nowrap transition-colors",
+              activa ? "border-marca-600 text-marca-600" : "border-transparent text-suave hover:text-tinta",
+            )}
+          >
+            <Icono size={16} aria-hidden /> {nombre}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

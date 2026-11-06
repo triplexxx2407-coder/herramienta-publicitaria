@@ -1,5 +1,5 @@
-import { PantallaInicio } from "./PantallaInicio";
+import { PantallaEstadisticas } from "./PantallaEstadisticas";
 
 export default function Inicio() {
-  return <PantallaInicio />;
+  return <PantallaEstadisticas />;
 }

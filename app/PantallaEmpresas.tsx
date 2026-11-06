@@ -3,182 +3,93 @@
 import { Building2, Plus, Save, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { avisar } from "@/components/avisos";
-import { CirculoRed, IconoRed } from "@/components/IconoRed";
-import { BOTON_AZUL, CAMPO, Seccion } from "@/components/campos";
-import {
-  BotonPildora,
-  CargandoPanel,
-  ContenidoClaro,
-  IconoCirculo,
-  PanelNexora,
-  PastillaCliente,
-  PildoraLista,
-  VacioClaro,
-} from "@/components/PanelNexora";
-import { cx } from "@/components/ui";
-import { agregarCuenta, borrarEmpresa, crearEmpresa, editarEmpresa, elegirEmpresa, quitarCuenta, useEmpresaActiva, useFuente } from "@/lib/fuente";
-import { nombreRed, ORDEN_REDES } from "@/lib/redes";
-import type { CuentaCanal, EmpresaCliente, Red } from "@/lib/tipos";
-
-/** Qué se escribe para dar de alta la cuenta de cada red. */
-const COMO_SE_LLAMA: Record<Red, { etiqueta: string; ejemplo: string }> = {
-  instagram: { etiqueta: "Usuario de Instagram", ejemplo: "@condominios.tj" },
-  whatsapp: { etiqueta: "Número de WhatsApp", ejemplo: "+52 664 123 4567" },
-  facebook: { etiqueta: "Nombre de la página de Facebook", ejemplo: "Condominios Tijuana" },
-  tiktok: { etiqueta: "Usuario de TikTok", ejemplo: "@condominios.tj" },
-  correo: { etiqueta: "Dirección de correo", ejemplo: "ventas@gmail.com" },
-};
+import { BOTON, BOTON_CLARO, BOTON_PELIGRO, CAMPO, Cargando, Encabezado, Etiqueta, Tarjeta, Vacio, cx } from "@/components/ui";
+import { borrarEmpresa, crearEmpresa, editarEmpresa, elegirEmpresa, useEmpresaActiva, useFuente } from "@/lib/fuente";
+import type { EmpresaCliente } from "@/lib/tipos";
 
 const NUEVA = "nueva";
 
-/** Dar de alta las empresas que atiende el equipo y ligarles sus cuentas. */
+/** Dar de alta las empresas que promociona el equipo. Cada una tiene sus propias estadísticas. */
 export function PantallaEmpresas() {
   const { modo, usuario, empresas } = useFuente();
   const activa = useEmpresaActiva();
-  const [elegida, setElegida] = useState<string | null>(null);
+  const [abierta, setAbierta] = useState<string | null>(null);
 
-  if (modo === "revisando") return <CargandoPanel />;
+  if (modo === "revisando") return <Cargando />;
   if (modo !== "real") {
-    return (
-      <PanelNexora
-        titulo="Perfiles"
-        ayuda={<p>Aquí das de alta las empresas que atienden. Necesita el servidor de NEXORA.</p>}
-        pastilla={<PastillaCliente texto="Perfiles" icono={<IconoCirculo><Building2 size={18} aria-hidden /></IconoCirculo>} />}
-        etiquetaLista="Perfiles"
-        lista={<p className="px-2 py-3 text-sm text-tinta-2">Sin servidor.</p>}
-        etiquetaPrincipal="Perfil"
-        principal={
-          <ContenidoClaro>
-            <VacioClaro
-              icono={<Building2 size={28} aria-hidden />}
-              titulo="Abre NEXORA desde su dirección"
-              texto="Esta pantalla sólo funciona entrando a NEXORA en su dirección de Cloudflare."
-            />
-          </ContenidoClaro>
-        }
-      />
-    );
+    return <Vacio icono={<Building2 size={26} aria-hidden />} titulo="Abre NEXORA desde su dirección" texto="Esta pantalla sólo funciona entrando a NEXORA en su dirección de Cloudflare." />;
   }
-
   const esDueno = usuario?.papel === "dueño";
-  // Lo elegido aquí manda; si no, el perfil que estabas viendo.
-  const idActual = elegida ?? activa?.id ?? NUEVA;
-  const actual = empresas.find((e) => e.id === idActual) ?? null;
-  const creando = idActual === NUEVA || !actual;
-
-  function abrir(id: string) {
-    setElegida(id);
-    if (id !== NUEVA) elegirEmpresa(id);
-  }
+  const actual = empresas.find((e) => e.id === abierta) ?? null;
 
   return (
-    <PanelNexora
-      titulo="Perfiles"
-      descripcion="Cada empresa que atiendes es un perfil. Elige uno para ver sus enlaces, publicaciones y gente."
-      ayuda={
-        <>
-          <p>Cada empresa que atienden es un perfil. Aquí lo creas y apuntas sus redes: su Instagram, su WhatsApp, su Facebook, su TikTok y su correo.</p>
-          <p>Lo demás (interesados, calendario, enlaces y resultados) se ve en las otras secciones, para el perfil que elijas.</p>
-        </>
-      }
-      pastilla={
-        <PastillaCliente
-          texto={creando ? "Nueva empresa" : actual.nombre}
-          icono={
-            <IconoCirculo>
-              <Building2 size={18} aria-hidden />
-            </IconoCirculo>
-          }
-        />
-      }
-      etiquetaLista="Perfiles"
-      lista={
-        <>
+    <div className="entrada space-y-6">
+      <Encabezado
+        titulo="Perfiles"
+        frase="Un perfil es una empresa que promocionas. Cada una lleva sus propios videos, enlaces, estadísticas y mensajes, sin mezclarse."
+        derecha={
+          esDueno ? (
+            <button type="button" onClick={() => setAbierta(NUEVA)} className={BOTON}>
+              <Plus size={17} aria-hidden /> Agregar empresa
+            </button>
+          ) : null
+        }
+      />
+
+      {abierta === NUEVA || actual ? (
+        <Formulario key={actual?.id ?? NUEVA} empresa={actual} soloVer={!esDueno} alTerminar={(id) => setAbierta(id)} />
+      ) : null}
+
+      {empresas.length === 0 ? (
+        <Vacio icono={<Building2 size={26} aria-hidden />} titulo="Todavía no hay perfiles" texto="Agrega la primera empresa que promocionas.">
           {esDueno ? (
-            <BotonPildora
-              className="mb-3 w-full"
-              activo={creando}
-              icono={<Plus size={16} aria-hidden />}
-              onClick={() => setElegida(NUEVA)}
-            >
-              Agregar perfil
-            </BotonPildora>
+            <button type="button" onClick={() => setAbierta(NUEVA)} className={BOTON}>
+              <Plus size={17} aria-hidden /> Agregar empresa
+            </button>
           ) : null}
-          {empresas.length ? (
-            <ul className="space-y-[11px]">
-              {empresas.map((e) => {
-                return (
-                  <li key={e.id}>
-                    <PildoraLista
-                      activa={!creando && e.id === actual?.id}
-                      titulo={e.nombre}
-                      detalle={
-                        e.cuentas.length
-                          ? e.cuentas.length === 1 ? "1 red" : `${e.cuentas.length} redes`
-                          : "Sin redes todavía"
-                      }
-                      icono={
-                        <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-marco-2 text-marca-400">
-                          <Building2 size={18} aria-hidden />
-                        </span>
-                      }
-                      onClick={() => abrir(e.id)}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="px-2 py-1 text-sm text-tinta-2">Todavía no hay perfiles.</p>
-          )}
-        </>
-      }
-      etiquetaPrincipal={creando ? "Nueva empresa" : `Empresa ${actual.nombre}`}
-      modo="detalle"
-      detalleAbierto={elegida !== null}
-      onCerrarDetalle={() => setElegida(null)}
-      encabezadoDetalle={<PastillaCliente texto={creando ? "Nueva empresa" : actual.nombre} icono={<Building2 size={18} aria-hidden />} />}
-      principal={
-        <ContenidoClaro>
-          <div className="mx-auto max-w-2xl space-y-4">
-            {creando ? (
-              esDueno ? (
-                <FormularioEmpresa key="nueva" onListo={(id) => abrir(id)} />
-              ) : (
-                <VacioClaro icono={<Building2 size={28} aria-hidden />} titulo="Elige una empresa" texto="Sólo el dueño puede agregar empresas." />
-              )
-            ) : (
-              <>
-                <FormularioEmpresa key={actual.id} empresa={actual} soloVer={!esDueno} />
-                <Conexiones empresa={actual} soloVer={!esDueno} />
-                {esDueno ? <BorrarEmpresa key={`borrar-${actual.id}`} empresa={actual} onBorrada={() => setElegida(null)} /> : null}
-              </>
-            )}
-          </div>
-        </ContenidoClaro>
-      }
-    />
+        </Vacio>
+      ) : (
+        <ul className="grid gap-3 md:grid-cols-2">
+          {empresas.map((e) => {
+            const viendo = activa?.id === e.id;
+            return (
+              <li key={e.id} className={cx("flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border bg-tarjeta p-4 shadow-tarjeta", viendo ? "border-marca-500" : "border-linea")}>
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-marca-50 text-marca-600">
+                  <Building2 size={20} aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1 basis-40">
+                  <p className="truncate text-[16px] font-bold text-tinta">{e.nombre}</p>
+                  <p className="truncate text-[13px] text-suave">{e.giro}</p>
+                </div>
+                {viendo ? (
+                  <span className="rounded-full bg-marca-50 px-2.5 py-1 text-[12px] font-semibold text-marca-600">Viendo</span>
+                ) : (
+                  <button type="button" onClick={() => elegirEmpresa(e.id)} className="rounded-full border border-linea px-3 py-1.5 text-[13px] font-semibold text-tinta-2 hover:bg-relleno">
+                    Ver
+                  </button>
+                )}
+                <button type="button" onClick={() => setAbierta(e.id)} className="rounded-full border border-linea px-3 py-1.5 text-[13px] font-semibold text-tinta-2 hover:bg-relleno">
+                  {esDueno ? "Editar" : "Abrir"}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
-function FormularioEmpresa({
-  empresa,
-  soloVer = false,
-  onListo,
-}: {
-  empresa?: EmpresaCliente;
-  soloVer?: boolean;
-  onListo?: (id: string) => void;
-}) {
+function Formulario({ empresa, soloVer, alTerminar }: { empresa: EmpresaCliente | null; soloVer: boolean; alTerminar: (id: string | null) => void }) {
   const [nombre, setNombre] = useState(empresa?.nombre ?? "");
   const [giro, setGiro] = useState(empresa && empresa.giro !== "Empresa" ? empresa.giro : "");
-  const [guardando, setGuardando] = useState(false);
-  const cambio = !empresa || nombre.trim() !== empresa.nombre || giro.trim() !== (empresa.giro === "Empresa" ? "" : empresa.giro);
+  const [ocupado, setOcupado] = useState(false);
+  const [porBorrar, setPorBorrar] = useState(false);
 
-  async function guardar(ev: FormEvent) {
+  async function enviar(ev: FormEvent) {
     ev.preventDefault();
-    if (!nombre.trim() || guardando) return;
-    setGuardando(true);
+    if (!nombre.trim() || ocupado || soloVer) return;
+    setOcupado(true);
     if (empresa) {
       const error = await editarEmpresa(empresa.id, nombre.trim(), giro.trim());
       avisar(error ?? "Cambios guardados");
@@ -186,228 +97,59 @@ function FormularioEmpresa({
       const r = await crearEmpresa(nombre.trim(), giro.trim());
       if (r.error) avisar(r.error);
       else if (r.id) {
-        avisar("Perfil agregado. Ahora apunta sus redes.");
-        onListo?.(r.id);
+        elegirEmpresa(r.id);
+        avisar("Empresa agregada");
+        alTerminar(null);
       }
     }
-    setGuardando(false);
+    setOcupado(false);
   }
-
-  return (
-    <Seccion
-      titulo={empresa ? "Datos de la empresa" : "Agregar una empresa"}
-      detalle={empresa ? undefined : "La empresa que les encargó vender. Después le ligas sus cuentas."}
-    >
-      <form onSubmit={guardar} className="space-y-3">
-        <label className="block text-sm font-semibold text-chat-tinta">
-          Nombre
-          <input
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            disabled={soloVer}
-            maxLength={120}
-            placeholder="Por ejemplo: Inmobiliaria del Mar"
-            className={CAMPO}
-          />
-        </label>
-        <label className="block text-sm font-semibold text-chat-tinta">
-          Qué vende <span className="font-normal text-chat-tenue">(opcional)</span>
-          <input
-            value={giro}
-            onChange={(e) => setGiro(e.target.value)}
-            disabled={soloVer}
-            maxLength={120}
-            placeholder="Por ejemplo: Condominios"
-            className={CAMPO}
-          />
-        </label>
-        {!soloVer ? (
-          <button type="submit" disabled={!nombre.trim() || !cambio || guardando} className={BOTON_AZUL}>
-            {empresa ? <Save size={17} aria-hidden /> : <Plus size={17} aria-hidden />}
-            {guardando ? "Guardando…" : empresa ? "Guardar cambios" : "Agregar perfil"}
-          </button>
-        ) : null}
-      </form>
-    </Seccion>
-  );
-}
-
-function Conexiones({ empresa, soloVer }: { empresa: EmpresaCliente; soloVer: boolean }) {
-  return (
-    <Seccion titulo="Redes del perfil" detalle="Las cuentas de esta empresa en cada red. Sólo se apuntan para tenerlas a la mano: NEXORA no se conecta a ellas.">
-      <ul className="divide-y divide-[#e6eaf0]">
-        {ORDEN_REDES.map((red) => (
-          <li key={red} className="py-3 first:pt-0 last:pb-0">
-            <Conexion red={red} empresaId={empresa.id} cuentas={empresa.cuentas.filter((k) => k.red === red)} soloVer={soloVer} />
-          </li>
-        ))}
-      </ul>
-    </Seccion>
-  );
-}
-
-function Conexion({ red, empresaId, cuentas, soloVer }: { red: Red; empresaId: string; cuentas: CuentaCanal[]; soloVer: boolean }) {
-  const [abierto, setAbierto] = useState(false);
-  const [valor, setValor] = useState("");
-  const [guardando, setGuardando] = useState(false);
-  const [porQuitar, setPorQuitar] = useState<string | null>(null);
-  const como = COMO_SE_LLAMA[red];
-
-  async function agregar(ev: FormEvent) {
-    ev.preventDefault();
-    if (!valor.trim() || guardando) return;
-    setGuardando(true);
-    const error = await agregarCuenta(empresaId, red, valor.trim());
-    setGuardando(false);
-    if (error) avisar(error);
-    else {
-      avisar(`${nombreRed(red)} agregado`);
-      setValor("");
-      setAbierto(false);
-    }
-  }
-
-  async function quitar(id: string) {
-    const error = await quitarCuenta(id);
-    setPorQuitar(null);
-    avisar(error ?? `${nombreRed(red)} quitado`);
-  }
-
-  return (
-    <div>
-      <div className="flex items-center gap-3">
-        <CirculoRed red={red} />
-        <p className="min-w-0 flex-1 text-[15px] font-bold text-chat-tinta">{nombreRed(red)}</p>
-        {!soloVer && !abierto ? (
-          <button
-            type="button"
-            onClick={() => setAbierto(true)}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-[#cfd6e0] px-3 text-[13px] font-bold text-marca-600 hover:bg-[#f2f6fc]"
-          >
-            <Plus size={15} aria-hidden /> {cuentas.length ? "Otra" : "Agregar"}
-          </button>
-        ) : null}
-      </div>
-
-      {cuentas.length ? (
-        <ul className="mt-2 space-y-2 pl-[50px]">
-          {cuentas.map((k) => (
-            <li key={k.id} className="rounded-[8px] bg-[#f5f7fa] px-3 py-2.5">
-              <div className="flex items-start gap-2">
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5 text-[14.5px] font-semibold break-all text-chat-tinta">
-                    <IconoRed red={red} tamano={14} /> {k.identificador}
-                  </span>
-                </span>
-                {!soloVer ? (
-                  porQuitar === k.id ? (
-                    <span className="flex shrink-0 flex-col items-end gap-1">
-                      <span className="text-[12px] font-semibold text-[#8e1b1b]">¿Quitarla? Se borran sus pláticas.</span>
-                      <span className="flex gap-1.5">
-                        <button type="button" onClick={() => setPorQuitar(null)} className="rounded-full px-2.5 py-1 text-[12.5px] font-bold text-chat-tenue hover:bg-white">
-                          No
-                        </button>
-                        <button type="button" onClick={() => void quitar(k.id)} className="rounded-full bg-[#b42318] px-2.5 py-1 text-[12.5px] font-bold text-white">
-                          Sí, quitar
-                        </button>
-                      </span>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setPorQuitar(k.id)}
-                      aria-label={`Quitar ${k.identificador}`}
-                      className="shrink-0 rounded-full p-1.5 text-chat-tenue hover:bg-white hover:text-[#b42318]"
-                    >
-                      <Trash2 size={16} aria-hidden />
-                    </button>
-                  )
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : !abierto ? (
-        <p className="mt-1 pl-[50px] text-[13px] text-chat-tenue">Sin cuenta todavía.</p>
-      ) : null}
-
-      {abierto ? (
-        <form onSubmit={agregar} className="mt-2 pl-[50px]">
-          <label className="block text-[13px] font-semibold text-chat-tinta">
-            {como.etiqueta}
-            <input
-              autoFocus
-              value={valor}
-              onChange={(e) => setValor(e.target.value)}
-              placeholder={como.ejemplo}
-              inputMode={red === "whatsapp" ? "tel" : red === "correo" ? "email" : "text"}
-              autoCapitalize="none"
-              maxLength={200}
-              className={CAMPO}
-            />
-          </label>
-          <div className="mt-2 flex gap-2">
-            <button type="submit" disabled={!valor.trim() || guardando} className={cx(BOTON_AZUL, "h-10 px-4 text-[14px]")}>
-              {guardando ? "Guardando…" : "Guardar"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAbierto(false);
-                setValor("");
-              }}
-              className="h-10 rounded-[6px] px-4 text-[14px] font-bold text-chat-tenue hover:bg-[#f2f4f7]"
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      ) : null}
-    </div>
-  );
-}
-
-function BorrarEmpresa({ empresa, onBorrada }: { empresa: EmpresaCliente; onBorrada: () => void }) {
-  const [seguro, setSeguro] = useState(false);
-  const [borrando, setBorrando] = useState(false);
 
   async function borrar() {
-    setBorrando(true);
+    if (!empresa) return;
+    setOcupado(true);
     const error = await borrarEmpresa(empresa.id);
-    setBorrando(false);
+    setOcupado(false);
     if (error) avisar(error);
     else {
       avisar(`${empresa.nombre} borrada`);
-      onBorrada();
+      alTerminar(null);
     }
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-      {seguro ? (
-        <>
-          <p className="text-sm font-semibold text-[#8e1b1b]">Se borran la empresa, sus cuentas y todas sus pláticas. No se puede deshacer.</p>
-          <button type="button" onClick={() => setSeguro(false)} className="h-10 rounded-[6px] px-4 text-[14px] font-bold text-chat-tenue hover:bg-white/60">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            disabled={borrando}
-            onClick={() => void borrar()}
-            className="inline-flex h-10 items-center gap-1.5 rounded-[6px] bg-[#b42318] px-4 text-[14px] font-bold text-white disabled:opacity-50"
-          >
-            <Trash2 size={16} aria-hidden /> {borrando ? "Borrando…" : "Sí, borrar"}
-          </button>
-        </>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setSeguro(true)}
-          className="inline-flex h-10 items-center gap-1.5 rounded-[6px] px-3 text-[14px] font-bold text-[#b42318] hover:bg-white/60"
-        >
-          <Trash2 size={16} aria-hidden /> Borrar esta empresa
-        </button>
-      )}
-    </div>
+    <Tarjeta titulo={empresa ? empresa.nombre : "Agregar una empresa"}>
+      <form onSubmit={enviar} className="space-y-3">
+        <Etiqueta texto="Nombre">
+          <input value={nombre} onChange={(e) => setNombre(e.target.value)} disabled={soloVer} maxLength={120} placeholder="Por ejemplo: Condominios del Mar" className={CAMPO} />
+        </Etiqueta>
+        <Etiqueta texto="Qué vende" opcional>
+          <input value={giro} onChange={(e) => setGiro(e.target.value)} disabled={soloVer} maxLength={120} placeholder="Por ejemplo: Condominios en construcción" className={CAMPO} />
+        </Etiqueta>
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {!soloVer ? (
+            <button type="submit" disabled={!nombre.trim() || ocupado} className={BOTON}>
+              {empresa ? <Save size={17} aria-hidden /> : <Plus size={17} aria-hidden />}
+              {ocupado ? "Guardando…" : empresa ? "Guardar" : "Agregar"}
+            </button>
+          ) : null}
+          <button type="button" onClick={() => alTerminar(null)} className={BOTON_CLARO}>Cerrar</button>
+          {empresa && !soloVer ? (
+            porBorrar ? (
+              <>
+                <span className="text-sm font-semibold text-[#b42318]">Se borra todo lo de esta empresa.</span>
+                <button type="button" disabled={ocupado} onClick={() => void borrar()} className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#b42318] px-4 text-[15px] font-semibold text-white">
+                  <Trash2 size={16} aria-hidden /> Sí, borrar
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={() => setPorBorrar(true)} className={BOTON_PELIGRO}>
+                <Trash2 size={16} aria-hidden /> Borrar
+              </button>
+            )
+          ) : null}
+        </div>
+      </form>
+    </Tarjeta>
   );
 }

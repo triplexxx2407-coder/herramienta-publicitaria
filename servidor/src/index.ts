@@ -9,23 +9,23 @@
 
 import { apuntar, borrarCuenta, borrarEmpresa, crearCuenta, crearEmpresa, editarEmpresa, empresas } from "./perfiles";
 import {
+  borrarContenido,
   borrarEnlace,
-  borrarInteresado,
-  borrarPublicacion,
+  chatsDe,
   contarClic,
+  crearContenido,
   crearEnlace,
-  crearInteresado,
-  crearPublicacion,
+  editarContenido,
   editarEnlace,
-  editarInteresado,
-  editarPublicacion,
   enlacesDe,
-  interesadosDe,
-  publicacionesDe,
-  resultadosDe,
+  estadisticasDe,
+  llenarDatosDePrueba,
+  responderPrueba,
+  simularMensaje,
+  simularVisita,
 } from "./ventas";
 import { ORDEN_REDES } from "../../lib/redes";
-import { direccionWhatsApp, esEtapa, fechaValida, telefonoValido } from "../../lib/ventas";
+import { direccionWhatsApp, enteroPositivo, esTipo, telefonoValido } from "../../lib/ventas";
 import type { Red } from "../../lib/tipos";
 import {
   GALLETA,
@@ -79,31 +79,17 @@ function redValida(valor: unknown): string {
   return ORDEN_REDES.includes(valor as Red) ? (valor as string) : "";
 }
 
-function datosInteresado(d: Record<string, unknown>) {
-  const etapa = esEtapa(d.etapa) ? d.etapa : "nuevo";
-  const siguiente = fechaValida(d.siguiente) ? d.siguiente : null;
-  return {
-    nombre: texto(d.nombre, 120),
-    telefono: texto(d.telefono, 40),
-    red: redValida(d.red),
-    enlaceId: texto(d.enlaceId, 20) || null,
-    etapa,
-    notas: texto(d.notas, 2000),
-    siguiente,
-  };
-}
-
-function datosPublicacion(d: Record<string, unknown>) {
+function datosContenido(d: Record<string, unknown>) {
   const titulo = texto(d.titulo, 160);
-  if (!titulo) return "falta el título de la publicación";
-  if (!fechaValida(d.fecha)) return "falta la fecha";
+  if (!titulo) return "falta el título";
   return {
+    tipo: esTipo(d.tipo) ? d.tipo : "video",
     red: redValida(d.red),
     titulo,
-    texto: texto(d.texto, 4000),
-    fecha: d.fecha,
-    hecha: d.hecha === true,
     enlaceId: texto(d.enlaceId, 20) || null,
+    vistas: enteroPositivo(d.vistas),
+    clics: enteroPositivo(d.clics),
+    likes: enteroPositivo(d.likes),
   };
 }
 
@@ -272,52 +258,28 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     return hay ? e : null;
   };
 
-  if (ruta === "/api/interesados" && metodo === "GET") {
+  if (ruta === "/api/estadisticas" && metodo === "GET") {
     const e = await empresaDe();
-    return e ? json({ interesados: await interesadosDe(entorno.DB, e) }) : json({ error: "elige una empresa" }, 400);
-  }
-  if (ruta === "/api/interesados" && metodo === "POST") {
-    const datos = await cuerpo(peticion);
-    const e = await deLaEmpresa(datos);
-    const nombre = texto(datos.nombre, 120);
-    if (!e || !nombre) return json({ error: "falta la empresa o el nombre" }, 400);
-    const d = datosInteresado(datos);
-    if (typeof d === "string") return json({ error: d }, 400);
-    return json({ id: await crearInteresado(entorno.DB, e, d) });
-  }
-  if (ruta === "/api/interesados/editar" && metodo === "POST") {
-    const datos = await cuerpo(peticion);
-    const d = datosInteresado(datos);
-    if (typeof d === "string") return json({ error: d }, 400);
-    if (!d.nombre) return json({ error: "falta el nombre" }, 400);
-    return (await editarInteresado(entorno.DB, texto(datos.id, 60), d)) ? json({ bien: true }) : json({ error: "ese interesado ya no existe" }, 404);
-  }
-  if (ruta === "/api/interesados/borrar" && metodo === "POST") {
-    const hecho = await borrarInteresado(entorno.DB, texto((await cuerpo(peticion)).id, 60));
-    return hecho ? json({ bien: true }) : json({ error: "ese interesado ya no existe" }, 404);
+    return e ? json(await estadisticasDe(entorno.DB, e)) : json({ error: "elige una empresa" }, 400);
   }
 
-  if (ruta === "/api/publicaciones" && metodo === "GET") {
-    const e = await empresaDe();
-    return e ? json({ publicaciones: await publicacionesDe(entorno.DB, e) }) : json({ error: "elige una empresa" }, 400);
-  }
-  if (ruta === "/api/publicaciones" && metodo === "POST") {
+  if (ruta === "/api/contenidos" && metodo === "POST") {
     const datos = await cuerpo(peticion);
     const e = await deLaEmpresa(datos);
-    const d = datosPublicacion(datos);
+    const d = datosContenido(datos);
     if (!e) return json({ error: "elige una empresa" }, 400);
     if (typeof d === "string") return json({ error: d }, 400);
-    return json({ id: await crearPublicacion(entorno.DB, e, d) });
+    return json({ id: await crearContenido(entorno.DB, e, d) });
   }
-  if (ruta === "/api/publicaciones/editar" && metodo === "POST") {
+  if (ruta === "/api/contenidos/editar" && metodo === "POST") {
     const datos = await cuerpo(peticion);
-    const d = datosPublicacion(datos);
+    const d = datosContenido(datos);
     if (typeof d === "string") return json({ error: d }, 400);
-    return (await editarPublicacion(entorno.DB, texto(datos.id, 60), d)) ? json({ bien: true }) : json({ error: "esa publicación ya no existe" }, 404);
+    return (await editarContenido(entorno.DB, texto(datos.id, 60), d)) ? json({ bien: true }) : json({ error: "ese contenido ya no existe" }, 404);
   }
-  if (ruta === "/api/publicaciones/borrar" && metodo === "POST") {
-    const hecho = await borrarPublicacion(entorno.DB, texto((await cuerpo(peticion)).id, 60));
-    return hecho ? json({ bien: true }) : json({ error: "esa publicación ya no existe" }, 404);
+  if (ruta === "/api/contenidos/borrar" && metodo === "POST") {
+    const hecho = await borrarContenido(entorno.DB, texto((await cuerpo(peticion)).id, 60));
+    return hecho ? json({ bien: true }) : json({ error: "ese contenido ya no existe" }, 404);
   }
 
   if (ruta === "/api/enlaces" && metodo === "GET") {
@@ -343,9 +305,32 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     return hecho ? json({ bien: true }) : json({ error: "ese enlace ya no existe" }, 404);
   }
 
-  if (ruta === "/api/resultados" && metodo === "GET") {
+  // El WhatsApp de prueba: simula personas que tocan un enlace y escriben.
+  if (ruta === "/api/whatsapp" && metodo === "GET") {
     const e = await empresaDe();
-    return e ? json(await resultadosDe(entorno.DB, e)) : json({ error: "elige una empresa" }, 400);
+    return e ? json({ chats: await chatsDe(entorno.DB, e) }) : json({ error: "elige una empresa" }, 400);
+  }
+  if (ruta === "/api/whatsapp/simular" && metodo === "POST") {
+    const datos = await cuerpo(peticion);
+    const e = await deLaEmpresa(datos);
+    if (!e) return json({ error: "elige una empresa" }, 400);
+    const r = datos.soloVisita === true
+      ? (await simularVisita(entorno.DB, e, texto(datos.enlaceId, 20))) ? { persona: "" } : null
+      : await simularMensaje(entorno.DB, e, texto(datos.enlaceId, 20));
+    return r ? json({ bien: true, persona: r.persona }) : json({ error: "elige un enlace de esta empresa" }, 400);
+  }
+  if (ruta === "/api/whatsapp/responder" && metodo === "POST") {
+    const datos = await cuerpo(peticion);
+    const e = await deLaEmpresa(datos);
+    const mensaje = texto(datos.texto, 4000);
+    if (!e || !mensaje) return json({ error: "falta la empresa o el texto" }, 400);
+    return (await responderPrueba(entorno.DB, e, texto(datos.persona, 120), mensaje)) ? json({ bien: true }) : json({ error: "esa conversación ya no existe" }, 404);
+  }
+  if (ruta === "/api/datos-de-prueba" && metodo === "POST") {
+    const e = await deLaEmpresa(await cuerpo(peticion));
+    if (!e) return json({ error: "elige una empresa" }, 400);
+    await llenarDatosDePrueba(entorno.DB, e);
+    return json({ bien: true });
   }
 
   if (ruta === "/api/invitar" && metodo === "POST") {
