@@ -1,5 +1,5 @@
-import { PantallaInteresados } from "./PantallaInteresados";
+import { PantallaInicio } from "./PantallaInicio";
 
 export default function Inicio() {
-  return <PantallaInteresados />;
+  return <PantallaInicio />;
 }

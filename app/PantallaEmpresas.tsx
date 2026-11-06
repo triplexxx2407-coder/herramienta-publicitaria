@@ -74,6 +74,7 @@ export function PantallaEmpresas() {
   return (
     <PanelNexora
       titulo="Perfiles"
+      descripcion="Cada empresa que atiendes es un perfil. Elige uno para ver sus enlaces, publicaciones y gente."
       ayuda={
         <>
           <p>Cada empresa que atienden es un perfil. Aquí lo creas y apuntas sus redes: su Instagram, su WhatsApp, su Facebook, su TikTok y su correo.</p>

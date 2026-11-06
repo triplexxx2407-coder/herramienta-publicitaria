@@ -25,6 +25,7 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
   return (
     <PanelNexora
       titulo="Resultados"
+      descripcion="Qué enlace trae más gente y cuántos llegan a cita o compra. Repite lo que funciona."
       ayuda={
         <>
           <p>Aquí ves, por cada enlace de {empresa.nombre}, cuánta gente lo tocó, cuántos quedaron apuntados como interesados y cuántos llegaron a cita o compra.</p>

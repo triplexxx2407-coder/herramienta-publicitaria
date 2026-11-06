@@ -29,6 +29,7 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
   return (
     <PanelNexora
       titulo="Enlaces"
+      descripcion="Un enlace por cada video, foto o anuncio: abre WhatsApp con el mensaje escrito y cuenta cuántos lo tocan."
       ayuda={
         <>
           <p>Cada enlace abre el WhatsApp de {empresa.nombre} con un mensaje ya escrito, y NEXORA cuenta cuántas veces lo tocan.</p>
@@ -84,7 +85,7 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
               <VacioClaro
                 icono={<Link2 size={28} aria-hidden />}
                 titulo={todos.length ? "Elige un enlace" : "Aún no hay enlaces"}
-                texto="Crea un enlace por cada video, foto o anuncio. Lo pegas ahí y NEXORA cuenta quién lo toca."
+                texto="Ejemplo: haces «Video avance de obra» con el WhatsApp de la empresa. Pegas el enlace en la descripción del video. Cada persona que lo toque abre WhatsApp con «Hola, vi el video» ya escrito y NEXORA lo cuenta."
               >
                 <button type="button" onClick={() => setElegido(NUEVO)} className={BOTON_AZUL}>
                   <Plus size={17} aria-hidden /> Crear enlace

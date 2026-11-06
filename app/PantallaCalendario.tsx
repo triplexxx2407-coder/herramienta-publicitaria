@@ -16,7 +16,7 @@ const NUEVA = "nueva";
 
 /** Qué se publica, dónde y cuándo, para cada perfil. NEXORA no publica solo: tú subes cada cosa desde la app de la red. */
 export function PantallaCalendario() {
-  return <Guardia titulo="Calendario">{(empresa) => <Contenido key={empresa.id} empresa={empresa} />}</Guardia>;
+  return <Guardia titulo="Publicaciones">{(empresa) => <Contenido key={empresa.id} empresa={empresa} />}</Guardia>;
 }
 
 function Contenido({ empresa }: { empresa: EmpresaCliente }) {
@@ -32,7 +32,8 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
 
   return (
     <PanelNexora
-      titulo="Calendario"
+      titulo="Publicaciones"
+      descripcion="Planea qué subes, en qué red y qué día. Tú lo publicas desde la app de la red."
       ayuda={
         <>
           <p>Aquí planeas qué se publica en {empresa.nombre}: la red, el día y el texto ya escrito.</p>
@@ -41,7 +42,7 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
       }
       pastilla={
         <PastillaCliente
-          texto={creando ? "Nueva publicación" : (actual?.titulo ?? "Calendario")}
+          texto={creando ? "Nueva publicación" : (actual?.titulo ?? "Publicaciones")}
           icono={<IconoCirculo><CalendarDays size={18} aria-hidden /></IconoCirculo>}
         />
       }
@@ -92,7 +93,7 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
               <VacioClaro
                 icono={<CalendarDays size={28} aria-hidden />}
                 titulo={todas.length ? "Elige una publicación" : "Aún no hay publicaciones"}
-                texto="Planea qué subir esta semana: red, día y texto. Así no se te pasa nada."
+                texto="Ejemplo: «Lunes, Instagram: video de avance de obra», con su texto y el enlace de WhatsApp que lleva. El lunes copias el texto, lo subes y lo marcas como hecho."
               >
                 <button type="button" onClick={() => setElegida(NUEVA)} className={BOTON_AZUL}>
                   <Plus size={17} aria-hidden /> Agregar publicación

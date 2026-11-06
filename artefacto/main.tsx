@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { PantallaCalendario } from "@/app/PantallaCalendario";
 import { PantallaEmpresas } from "@/app/PantallaEmpresas";
 import { PantallaEnlaces } from "@/app/PantallaEnlaces";
+import { PantallaInicio } from "@/app/PantallaInicio";
 import { PantallaInteresados } from "@/app/PantallaInteresados";
 import { PantallaResultados } from "@/app/PantallaResultados";
 import { Marco } from "@/components/Marco";
@@ -10,7 +11,8 @@ import { usePathname } from "next/navigation";
 import "@/app/globals.css";
 
 const PANTALLAS: Record<string, ComponentType> = {
-  "/": PantallaInteresados,
+  "/": PantallaInicio,
+  "/interesados": PantallaInteresados,
   "/calendario": PantallaCalendario,
   "/enlaces": PantallaEnlaces,
   "/resultados": PantallaResultados,
@@ -19,7 +21,7 @@ const PANTALLAS: Record<string, ComponentType> = {
 
 function App() {
   const ruta = usePathname();
-  const Pantalla = PANTALLAS[ruta] ?? PantallaInteresados;
+  const Pantalla = PANTALLAS[ruta] ?? PantallaInicio;
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [ruta]);

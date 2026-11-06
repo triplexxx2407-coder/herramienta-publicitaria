@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Building2, CalendarDays, Link2, Settings2, Users, type LucideIcon } from "lucide-react";
+import { BarChart3, Building2, CalendarDays, House, Link2, Settings2, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
@@ -11,12 +11,13 @@ import { CargandoPanel } from "./PanelNexora";
 import { PantallaEntrar } from "./PantallaEntrar";
 import { cx } from "./ui";
 
-const SECCIONES: { ruta: string; nombre: string; Icono: LucideIcon }[] = [
-  { ruta: "/", nombre: "Interesados", Icono: Users },
-  { ruta: "/calendario", nombre: "Calendario", Icono: CalendarDays },
-  { ruta: "/enlaces", nombre: "Enlaces", Icono: Link2 },
-  { ruta: "/resultados", nombre: "Resultados", Icono: BarChart3 },
-  { ruta: "/empresas", nombre: "Perfiles", Icono: Settings2 },
+const SECCIONES: { ruta: string; nombre: string; detalle: string; Icono: LucideIcon }[] = [
+  { ruta: "/", nombre: "Inicio", detalle: "Qué hacer ahora", Icono: House },
+  { ruta: "/enlaces", nombre: "Enlaces", detalle: "Enlaces de WhatsApp", Icono: Link2 },
+  { ruta: "/calendario", nombre: "Publicaciones", detalle: "Qué subir y cuándo", Icono: CalendarDays },
+  { ruta: "/interesados", nombre: "Gente", detalle: "A quién le vendes", Icono: Users },
+  { ruta: "/resultados", nombre: "Resultados", detalle: "Qué funciona", Icono: BarChart3 },
+  { ruta: "/empresas", nombre: "Perfiles", detalle: "Tus empresas", Icono: Settings2 },
 ];
 
 /**
@@ -111,9 +112,9 @@ function MenuLateral() {
   return (
     <>
       <nav aria-label="Secciones">
-        <p className="mb-[7px] text-[11px] leading-4 font-bold text-menu uppercase">Secciones</p>
+        <p className="mb-[7px] text-[11px] leading-4 font-bold text-menu uppercase">Menú</p>
         <ul className="space-y-[6px]">
-          {SECCIONES.map(({ ruta: r, nombre, Icono }) => {
+          {SECCIONES.map(({ ruta: r, nombre, detalle, Icono }) => {
             const elegida = enRuta(ruta, r);
             return (
               <li key={r}>
@@ -121,12 +122,15 @@ function MenuLateral() {
                   href={r}
                   aria-current={elegida ? "page" : undefined}
                   className={cx(
-                    "flex min-h-[38px] w-full items-center gap-2 rounded-[3px] py-1 pr-2.5 pl-2 text-left text-[13px] transition-colors",
+                    "flex min-h-[46px] w-full items-center gap-2.5 rounded-[3px] py-1 pr-2.5 pl-2 text-left text-[14px] transition-colors",
                     elegida ? "bg-pildora font-bold text-marca-400" : "text-menu hover:bg-white/5 hover:text-tinta-2",
                   )}
                 >
-                  <Icono size={14} aria-hidden strokeWidth={2.4} className={elegida ? "text-marca-400" : "text-menu-icono"} />
-                  {nombre}
+                  <Icono size={15} aria-hidden strokeWidth={2.4} className={elegida ? "text-marca-400" : "text-menu-icono"} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{nombre}</span>
+                    <span className="block truncate text-[11px] font-normal text-menu">{detalle}</span>
+                  </span>
                 </Link>
               </li>
             );
@@ -135,7 +139,7 @@ function MenuLateral() {
       </nav>
 
       <nav aria-label="Perfiles" className="mt-6">
-        <p className="mb-[7px] text-[11px] leading-4 font-bold text-menu uppercase">Perfil</p>
+        <p className="mb-[7px] text-[11px] leading-4 font-bold text-menu uppercase">Empresa que estás viendo</p>
         {empresas.length === 0 ? (
           <p className="text-[12.5px] text-menu">Todavía no hay perfiles.</p>
         ) : (

@@ -135,14 +135,14 @@ function TarjetaRoja() {
       <span className="mt-0.5 line-clamp-2 text-[20px] leading-[1.25] font-bold lg:mt-0 lg:pl-[3px] lg:text-[23px] lg:leading-[33px]">
         {empresa ? empresa.nombre : "Sin perfil"}
       </span>
-      <span className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-0.5 text-[10px] leading-3 font-bold lg:mt-auto">
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-cifra" />
-          {cuentas.length === 0
-            ? "Sin redes todavía"
-            : `${cuentas.length === 1 ? "1 red" : `${cuentas.length} redes`}: ${redes.map(nombreRed).join(", ")}`}
+      {cuentas.length > 0 ? (
+        <span className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-0.5 text-[10px] leading-3 font-bold lg:mt-auto">
+          <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-cifra" />
+            {`${cuentas.length === 1 ? "1 red" : `${cuentas.length} redes`}: ${redes.map(nombreRed).join(", ")}`}
+          </span>
         </span>
-      </span>
+      ) : null}
     </div>
   );
 }
@@ -151,13 +151,16 @@ const BOTON_BARRA_AZUL =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-[3px] text-[12.5px] font-bold whitespace-nowrap transition-colors lg:h-[27px] lg:text-[11px] [&>svg]:shrink-0 [&>svg]:lg:h-[12px] [&>svg]:lg:w-[12px]";
 
 /** La barra azul, arriba a la derecha: la pastilla y el botón de ayuda. */
-function BarraAzul({ pastilla, ayuda }: { pastilla?: ReactNode; ayuda: ReactNode }) {
+function BarraAzul({ pastilla, ayuda, descripcion }: { pastilla?: ReactNode; ayuda: ReactNode; descripcion?: string }) {
   const [ayudaAbierta, setAyudaAbierta] = useState(false);
   const idAyuda = useId();
 
   return (
     <div className="relative flex items-center gap-3 bg-panel px-3 py-3 lg:h-full lg:items-center lg:rounded-2xl lg:py-0 lg:pr-5 lg:pl-5 lg:shadow-tarjeta">
-      <div className="flex min-w-0 flex-1 lg:h-full lg:items-center">{pastilla}</div>
+      <div className="flex min-w-0 flex-1 lg:h-full lg:items-center lg:gap-4">
+        {pastilla}
+        {descripcion ? <p className="hidden max-w-md text-[14px] leading-snug text-tinta-2 xl:block">{descripcion}</p> : null}
+      </div>
       <div className="flex shrink-0 gap-2 lg:gap-[9px]">
         <button
           type="button"
@@ -361,6 +364,7 @@ export function PanelNexora({
   titulo,
   ayuda,
   pastilla,
+  descripcion,
   lista,
   etiquetaLista,
   principal,
@@ -381,6 +385,8 @@ export function PanelNexora({
   /** Lo que dice «¿Qué hace esto?»: 2 o 3 frases. */
   ayuda: ReactNode;
   pastilla?: ReactNode;
+  /** Una frase que dice para qué sirve la pantalla, a la vista junto al título. */
+  descripcion?: string;
   lista: ReactNode;
   etiquetaLista: string;
   principal: ReactNode;
@@ -438,7 +444,7 @@ export function PanelNexora({
     <div className="lg:grid lg:h-[calc(100dvh-6.0625rem)] lg:min-h-[34rem] lg:grid-cols-[14.5rem_minmax(0,1fr)] lg:grid-rows-[7.8125rem_minmax(0,1fr)] lg:gap-3 lg:p-3">
       <h1 className="sr-only">{titulo}</h1>
       <TarjetaRoja />
-      <BarraAzul pastilla={pastilla} ayuda={ayuda} />
+      <BarraAzul pastilla={pastilla} ayuda={ayuda} descripcion={descripcion} />
 
       <section
         aria-label={etiquetaLista}

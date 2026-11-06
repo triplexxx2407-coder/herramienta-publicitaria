@@ -25,7 +25,7 @@ const NUEVO = "nuevo";
 
 /** La gente que se interesó en cada perfil, con su etapa y cuándo darle seguimiento. */
 export function PantallaInteresados() {
-  return <Guardia titulo="Interesados">{(empresa) => <Contenido key={empresa.id} empresa={empresa} />}</Guardia>;
+  return <Guardia titulo="Gente">{(empresa) => <Contenido key={empresa.id} empresa={empresa} />}</Guardia>;
 }
 
 function Contenido({ empresa }: { empresa: EmpresaCliente }) {
@@ -49,28 +49,29 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
 
   return (
     <PanelNexora
-      titulo="Interesados"
+      titulo="Gente"
+      descripcion="Aquí apuntas a cada persona que se interesó, en qué etapa va y cuándo darle seguimiento."
       ayuda={
         <>
-          <p>Aquí apuntas a cada persona que se interesó en {empresa.nombre}: quién es, por dónde llegó y en qué etapa va.</p>
+          <p>Aquí apuntas a cada persona que se interesó en {empresa.nombre}: quién es, por dónde llegó y en qué etapa va (nuevo, platicando, con cita, apartó, vendido).</p>
           <p>Si le pones una fecha de seguimiento, NEXORA te la marca cuando llegue el día para que no se te enfríe.</p>
         </>
       }
       pastilla={
         <PastillaCliente
-          texto={creando ? "Nuevo interesado" : (actual?.nombre ?? "Interesados")}
+          texto={creando ? "Persona nueva" : (actual?.nombre ?? "Gente")}
           icono={<IconoCirculo><Users size={18} aria-hidden /></IconoCirculo>}
         />
       }
-      etiquetaLista="Interesados"
+      etiquetaLista="Gente"
       lista={
         <>
           <BotonPildora className="mb-2 w-full" activo={creando} icono={<Plus size={16} aria-hidden />} onClick={() => setElegido(NUEVO)}>
-            Agregar interesado
+            Apuntar persona
           </BotonPildora>
           <SelectorPildora etiqueta="Filtrar" icono={<Users size={15} aria-hidden />} valor={filtro} onChange={setFiltro} className="mb-3">
             <option value="todas">Todos ({todos.length})</option>
-            <option value="hoy">Seguimiento hoy ({hoyN})</option>
+            <option value="hoy">Le toca seguimiento hoy ({hoyN})</option>
             {ETAPAS.map((e) => (
               <option key={e} value={e}>
                 {NOMBRE_ETAPA[e]} ({todos.filter((i) => i.etapa === e).length})
@@ -92,15 +93,15 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
               ))}
             </ul>
           ) : (
-            <p className="px-2 py-1 text-sm text-tinta-2">{todos.length ? "Nadie en este filtro." : "Todavía no hay interesados."}</p>
+            <p className="px-2 py-1 text-sm text-tinta-2">{todos.length ? "Nadie en este filtro." : "Todavía no apuntas a nadie."}</p>
           )}
         </>
       }
-      etiquetaPrincipal={creando ? "Nuevo interesado" : `Interesado ${actual?.nombre ?? ""}`}
+      etiquetaPrincipal={creando ? "Persona nueva" : `Persona ${actual?.nombre ?? ""}`}
       modo="detalle"
       detalleAbierto={elegido !== null}
       onCerrarDetalle={() => setElegido(null)}
-      encabezadoDetalle={<PastillaCliente texto={creando ? "Nuevo interesado" : (actual?.nombre ?? "")} icono={<Users size={18} aria-hidden />} />}
+      encabezadoDetalle={<PastillaCliente texto={creando ? "Persona nueva" : (actual?.nombre ?? "")} icono={<Users size={18} aria-hidden />} />}
       principal={
         <ContenidoClaro>
           <div className="mx-auto max-w-2xl space-y-4">
@@ -115,11 +116,11 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
             ) : (
               <VacioClaro
                 icono={<Users size={28} aria-hidden />}
-                titulo={todos.length ? "Elige a alguien de la lista" : "Aún no hay interesados"}
-                texto="Cuando alguien te escriba o se interese, apúntalo aquí con su etapa y su próximo seguimiento."
+                titulo={todos.length ? "Elige a alguien de la lista" : "Aún no apuntas a nadie"}
+                texto="Ejemplo: Marco te escribió por Facebook. Lo apuntas con su teléfono, pones «Platicando» y le programas seguimiento para el jueves. Ese día te sale marcado."
               >
                 <button type="button" onClick={() => setElegido(NUEVO)} className={BOTON_AZUL}>
-                  <Plus size={17} aria-hidden /> Agregar interesado
+                  <Plus size={17} aria-hidden /> Apuntar persona
                 </button>
               </VacioClaro>
             )}
@@ -171,7 +172,7 @@ function FormularioInteresado({
     setOcupado(false);
     if (r.error) avisar(r.error);
     else {
-      avisar(interesado ? "Cambios guardados" : "Interesado agregado");
+      avisar(interesado ? "Cambios guardados" : "Persona apuntada");
       if (!interesado) alTerminar(r.id ?? null);
     }
   }
@@ -183,13 +184,13 @@ function FormularioInteresado({
     setOcupado(false);
     if (r.error) avisar(r.error);
     else {
-      avisar("Interesado borrado");
+      avisar("Persona borrada");
       alTerminar(null);
     }
   }
 
   return (
-    <Seccion titulo={interesado ? "Datos del interesado" : "Agregar un interesado"}>
+    <Seccion titulo={interesado ? "Datos de la persona" : "Apuntar a una persona"}>
       <form onSubmit={enviar} className="space-y-3">
         <Etiqueta texto="Nombre">
           <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={120} placeholder="Por ejemplo: Marco Salinas" className={CAMPO} />
