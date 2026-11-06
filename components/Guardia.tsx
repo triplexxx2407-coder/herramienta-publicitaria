@@ -27,7 +27,7 @@ export function Guardia({ children }: { children: (empresa: EmpresaCliente) => R
       <Vacio
         icono={<Building2 size={26} aria-hidden />}
         titulo="Primero crea un perfil"
-        texto="Un perfil es una empresa que promocionas. Créala y aquí verás las estadísticas de sus videos y anuncios."
+        texto="Un perfil es una empresa que promocionas. Créala y aquí verás qué publicaciones le traen clientes."
       >
         <Link href="/empresas" className={BOTON}>
           Crear un perfil

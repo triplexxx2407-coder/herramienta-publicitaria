@@ -60,7 +60,7 @@ export async function editarEmpresa(
 export async function borrarEmpresa(db: D1Database, empresaId: string): Promise<boolean> {
   const r = await db.batch([
     db.prepare("DELETE FROM mensajes_prueba WHERE empresa_id = ?").bind(empresaId),
-    db.prepare("DELETE FROM contenidos WHERE empresa_id = ?").bind(empresaId),
+    db.prepare("DELETE FROM contactos WHERE empresa_id = ?").bind(empresaId),
     db.prepare("DELETE FROM enlaces WHERE empresa_id = ?").bind(empresaId),
     db.prepare("DELETE FROM cuentas WHERE empresa_id = ?").bind(empresaId),
     db.prepare("DELETE FROM empresas WHERE id = ?").bind(empresaId),

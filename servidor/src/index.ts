@@ -9,13 +9,14 @@
 
 import { apuntar, borrarCuenta, borrarEmpresa, crearCuenta, crearEmpresa, editarEmpresa, empresas } from "./perfiles";
 import {
-  borrarContenido,
   borrarEnlace,
   chatsDe,
   contarClic,
-  crearContenido,
+  crearContacto,
+  contactosDe,
+  ponerEtapa,
+  borrarContacto,
   crearEnlace,
-  editarContenido,
   editarEnlace,
   enlacesDe,
   estadisticasDe,
@@ -25,7 +26,7 @@ import {
   simularVisita,
 } from "./ventas";
 import { ORDEN_REDES } from "../../lib/redes";
-import { direccionWhatsApp, enteroPositivo, esTipo, telefonoValido } from "../../lib/ventas";
+import { direccionWhatsApp, esEtapa, telefonoValido } from "../../lib/ventas";
 import type { Red } from "../../lib/tipos";
 import {
   GALLETA,
@@ -75,24 +76,6 @@ function texto(valor: unknown, maximo = 4000): string {
 }
 
 /** La red si es una de las conocidas; si no, vacío. */
-function redValida(valor: unknown): string {
-  return ORDEN_REDES.includes(valor as Red) ? (valor as string) : "";
-}
-
-function datosContenido(d: Record<string, unknown>) {
-  const titulo = texto(d.titulo, 160);
-  if (!titulo) return "falta el título";
-  return {
-    tipo: esTipo(d.tipo) ? d.tipo : "video",
-    red: redValida(d.red),
-    titulo,
-    enlaceId: texto(d.enlaceId, 20) || null,
-    vistas: enteroPositivo(d.vistas),
-    clics: enteroPositivo(d.clics),
-    likes: enteroPositivo(d.likes),
-  };
-}
-
 function datosEnlace(d: Record<string, unknown>) {
   const nombre = texto(d.nombre, 120);
   const telefono = texto(d.telefono, 40);
@@ -120,7 +103,7 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
   if (corto && metodo === "GET") {
     const destino = await contarClic(entorno.DB, corto[1]);
     if (!destino) return new Response("Este enlace ya no existe.", { status: 404 });
-    return Response.redirect(direccionWhatsApp(destino.telefono, destino.mensaje), 302);
+    return Response.redirect(direccionWhatsApp(destino.telefono, `${destino.mensaje.trim() || "Hola, quiero más información"} (ref ${destino.ref})`), 302);
   }
 
   // Crear al primer dueño. Sólo funciona si todavía no hay nadie y con la clave de arranque.
@@ -263,23 +246,25 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
     return e ? json(await estadisticasDe(entorno.DB, e)) : json({ error: "elige una empresa" }, 400);
   }
 
-  if (ruta === "/api/contenidos" && metodo === "POST") {
+  if (ruta === "/api/contactos" && metodo === "GET") {
+    const e = await empresaDe();
+    return e ? json({ contactos: await contactosDe(entorno.DB, e) }) : json({ error: "elige una empresa" }, 400);
+  }
+  if (ruta === "/api/contactos" && metodo === "POST") {
     const datos = await cuerpo(peticion);
     const e = await deLaEmpresa(datos);
-    const d = datosContenido(datos);
     if (!e) return json({ error: "elige una empresa" }, 400);
-    if (typeof d === "string") return json({ error: d }, 400);
-    return json({ id: await crearContenido(entorno.DB, e, d) });
+    const nuevo = await crearContacto(entorno.DB, e, texto(datos.enlaceId, 20), texto(datos.nota, 120));
+    return nuevo ? json({ id: nuevo }) : json({ error: "elige un enlace de esta empresa" }, 400);
   }
-  if (ruta === "/api/contenidos/editar" && metodo === "POST") {
+  if (ruta === "/api/contactos/etapa" && metodo === "POST") {
     const datos = await cuerpo(peticion);
-    const d = datosContenido(datos);
-    if (typeof d === "string") return json({ error: d }, 400);
-    return (await editarContenido(entorno.DB, texto(datos.id, 60), d)) ? json({ bien: true }) : json({ error: "ese contenido ya no existe" }, 404);
+    if (!esEtapa(datos.etapa)) return json({ error: "etapa no válida" }, 400);
+    return (await ponerEtapa(entorno.DB, texto(datos.id, 60), datos.etapa)) ? json({ bien: true }) : json({ error: "esa persona ya no existe" }, 404);
   }
-  if (ruta === "/api/contenidos/borrar" && metodo === "POST") {
-    const hecho = await borrarContenido(entorno.DB, texto((await cuerpo(peticion)).id, 60));
-    return hecho ? json({ bien: true }) : json({ error: "ese contenido ya no existe" }, 404);
+  if (ruta === "/api/contactos/borrar" && metodo === "POST") {
+    const hecho = await borrarContacto(entorno.DB, texto((await cuerpo(peticion)).id, 60));
+    return hecho ? json({ bien: true }) : json({ error: "esa persona ya no existe" }, 404);
   }
 
   if (ruta === "/api/enlaces" && metodo === "GET") {

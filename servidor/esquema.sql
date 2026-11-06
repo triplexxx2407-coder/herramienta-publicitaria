@@ -72,20 +72,19 @@ CREATE INDEX IF NOT EXISTS enlaces_por_empresa ON enlaces(empresa_id);
 DROP TABLE IF EXISTS interesados;
 DROP TABLE IF EXISTS publicaciones;
 
--- Los videos, publicaciones y anuncios de cada empresa, con los números que da la red.
-CREATE TABLE IF NOT EXISTS contenidos (
+DROP TABLE IF EXISTS contenidos;
+
+-- Cada persona que escribió desde un enlace, y hasta dónde llegó (escribió, cita, compró).
+CREATE TABLE IF NOT EXISTS contactos (
   id TEXT PRIMARY KEY,
   empresa_id TEXT NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
-  tipo TEXT NOT NULL CHECK (tipo IN ('video', 'publicacion', 'anuncio')),
-  red TEXT NOT NULL,
-  titulo TEXT NOT NULL,
-  enlace_id TEXT REFERENCES enlaces(id),   -- el enlace de WhatsApp que lleva
-  vistas INTEGER NOT NULL DEFAULT 0,
-  clics INTEGER NOT NULL DEFAULT 0,
-  likes INTEGER NOT NULL DEFAULT 0,
+  enlace_id TEXT NOT NULL,
+  nota TEXT NOT NULL DEFAULT '',
+  etapa TEXT NOT NULL CHECK (etapa IN ('escribio', 'cita', 'venta')),
   creada_en TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS contenidos_por_empresa ON contenidos(empresa_id);
+CREATE INDEX IF NOT EXISTS contactos_por_empresa ON contactos(empresa_id);
+CREATE INDEX IF NOT EXISTS contactos_por_enlace ON contactos(enlace_id);
 
 -- El WhatsApp de prueba: personas que tocan un enlace y escriben, para ver cómo se vería todo.
 CREATE TABLE IF NOT EXISTS mensajes_prueba (

@@ -56,13 +56,12 @@ en `.env.example`.
 
 ## Cómo funciona ahora
 
-NEXORA es el tablero privado del equipo para ver cómo rinde lo que se publica de cada empresa. No se conecta a ninguna red:
-cada empresa es un **perfil** y dentro de cada perfil hay cinco pestañas:
+NEXORA es el medidor privado del equipo para saber qué video, anuncio o letrero trae clientes. No se conecta a ninguna red:
+cada empresa es un **perfil** y dentro de cada perfil hay cuatro pestañas:
 
-- **Estadísticas**: vistas, clics, likes, visitas al enlace, personas que escribieron y mensajes; por red y los mejores videos.
-- **Videos y anuncios**: lo publicado en cada red, con las cifras que da esa red (se anotan a mano).
-- **Enlaces**: enlaces de WhatsApp con medición (`/api/w/<código>`): cuentan la visita y mandan a WhatsApp con el mensaje escrito.
-- **WhatsApp de prueba**: un teléfono simulado donde alguien toca un enlace y escribe, para ver cómo se contaría. En la vida real haría falta WhatsApp Business (conexión oficial) para saber quién escribió por qué enlace.
+- **Resultados**: tocaron el enlace, escribieron, citas y ventas; el camino de enlace a venta y el ranking de qué publicación vende más.
+- **Enlaces**: un enlace de WhatsApp por video, anuncio o letrero (`/api/w/<código>`). Cuenta la visita y abre WhatsApp con el mensaje escrito y un código al final («ref K7M2P») que dice de qué enlace vino. Dentro de cada enlace se apunta con un toque «Me escribió» y se avanza a cita o compra.
+- **WhatsApp de prueba**: un teléfono simulado donde alguien toca un enlace y escribe, para ver cómo se vería.
 - **Perfiles**: alta de empresas.
 
 Las conexiones reales (Google, Meta, TikTok) se quitaron; siguen en el historial de git, antes del commit «Quitar todas las conexiones».

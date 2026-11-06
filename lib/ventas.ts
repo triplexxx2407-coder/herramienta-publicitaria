@@ -41,35 +41,22 @@ export function cifraCorta(n: number): string {
   return n.toLocaleString("es-MX");
 }
 
-export const TIPOS = ["video", "publicacion", "anuncio"] as const;
-export type Tipo = (typeof TIPOS)[number];
+export const ETAPAS = ["escribio", "cita", "venta"] as const;
+export type Etapa = (typeof ETAPAS)[number];
 
-export const NOMBRE_TIPO: Record<Tipo, string> = {
-  video: "Video",
-  publicacion: "Publicación",
-  anuncio: "Anuncio",
+export const NOMBRE_ETAPA: Record<Etapa, string> = {
+  escribio: "Escribió",
+  cita: "Tiene cita",
+  venta: "Compró",
 };
 
-export function esTipo(valor: unknown): valor is Tipo {
-  return typeof valor === "string" && (TIPOS as readonly string[]).includes(valor);
+export function esEtapa(valor: unknown): valor is Etapa {
+  return typeof valor === "string" && (ETAPAS as readonly string[]).includes(valor);
 }
 
-/** Un video, publicación o anuncio con los números que da la red. */
-export interface Contenido {
-  id: string;
-  empresaId: string;
-  tipo: Tipo;
-  red: string;
-  titulo: string;
-  enlaceId: string | null;
-  enlace: string | null;
-  vistas: number;
-  /** Clics en el anuncio o la publicación (los que da la red). */
-  clics: number;
-  likes: number;
-  /** Lo que mide NEXORA: personas que tocaron el enlace de WhatsApp de este contenido y las que escribieron. */
-  visitas: number;
-  escribieron: number;
+/** El código corto que sale escrito en el mensaje, para saber de qué enlace vino. */
+export function codigoRef(enlaceId: string): string {
+  return enlaceId.slice(0, 5).toUpperCase();
 }
 
 /** Un enlace de WhatsApp con medición. */
@@ -79,30 +66,36 @@ export interface Enlace {
   nombre: string;
   telefono: string;
   mensaje: string;
+  /** Código que se agrega al mensaje («ref K7M2P»). */
+  ref: string;
   /** Veces que tocaron el enlace. */
   visitas: number;
-  /** Personas distintas que escribieron por WhatsApp desde él. */
+  /** Personas que escribieron (las que se marcaron). */
   escribieron: number;
-  mensajes: number;
+  /** De ésas, las que llegaron a cita o compra. */
+  citas: number;
+  ventas: number;
+}
+
+/** Una persona que escribió desde un enlace. */
+export interface Contacto {
+  id: string;
+  enlaceId: string;
+  enlace: string;
+  nota: string;
+  etapa: Etapa;
+  fecha: string;
 }
 
 export interface Totales {
-  vistas: number;
-  clics: number;
-  likes: number;
   visitas: number;
   escribieron: number;
-  mensajes: number;
-}
-
-export interface PorRed extends Totales {
-  red: string;
+  citas: number;
+  ventas: number;
 }
 
 export interface Estadisticas {
   totales: Totales;
-  porRed: PorRed[];
-  contenidos: Contenido[];
   enlaces: Enlace[];
 }
 

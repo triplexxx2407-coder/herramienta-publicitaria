@@ -1,6 +1,5 @@
 import { useEffect, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
-import { PantallaContenidos } from "@/app/PantallaContenidos";
 import { PantallaEmpresas } from "@/app/PantallaEmpresas";
 import { PantallaEnlaces } from "@/app/PantallaEnlaces";
 import { PantallaEstadisticas } from "@/app/PantallaEstadisticas";
@@ -11,7 +10,6 @@ import "@/app/globals.css";
 
 const PANTALLAS: Record<string, ComponentType> = {
   "/": PantallaEstadisticas,
-  "/contenidos": PantallaContenidos,
   "/enlaces": PantallaEnlaces,
   "/whatsapp": PantallaWhatsApp,
   "/empresas": PantallaEmpresas,

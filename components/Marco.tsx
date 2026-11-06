@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Building2, Link2, MessageCircle, Settings2, Video, type LucideIcon } from "lucide-react";
+import { BarChart3, Building2, Link2, MessageCircle, Settings2, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
@@ -11,8 +11,7 @@ import { PantallaEntrar } from "./PantallaEntrar";
 import { Cargando, cx } from "./ui";
 
 const PESTANAS: { ruta: string; nombre: string; Icono: LucideIcon }[] = [
-  { ruta: "/", nombre: "Estadísticas", Icono: BarChart3 },
-  { ruta: "/contenidos", nombre: "Videos y anuncios", Icono: Video },
+  { ruta: "/", nombre: "Resultados", Icono: BarChart3 },
   { ruta: "/enlaces", nombre: "Enlaces", Icono: Link2 },
   { ruta: "/whatsapp", nombre: "WhatsApp de prueba", Icono: MessageCircle },
   { ruta: "/empresas", nombre: "Perfiles", Icono: Settings2 },

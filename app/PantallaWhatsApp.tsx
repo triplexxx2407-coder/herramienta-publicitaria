@@ -28,6 +28,7 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
   const recargas: [string, string][] = [
     ["whatsapp", empresa.id],
     ["enlaces", empresa.id],
+    ["contactos", empresa.id],
     ["estadisticas", empresa.id],
   ];
 
@@ -45,7 +46,7 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
     <div className="entrada space-y-6">
       <Encabezado
         titulo="WhatsApp de prueba"
-        frase="Así se vería tu WhatsApp. Aquí simulas gente que toca un enlace y escribe, y ves cómo se cuentan en las estadísticas."
+        frase="Así se vería tu WhatsApp. Aquí simulas gente que toca un enlace y escribe, con el código del enlace en el mensaje."
       />
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px] [&>*]:min-w-0">
         <div className="space-y-4">
@@ -76,10 +77,10 @@ function Contenido({ empresa }: { empresa: EmpresaCliente }) {
             <ol className="list-decimal space-y-1.5 pl-5 text-[14.5px] text-tinta-2">
               <li>Le llega un mensaje nuevo al teléfono de la derecha.</li>
               <li>Ábrelo y contéstale, como harías en tu WhatsApp.</li>
-              <li>Ve a <b>Estadísticas</b>: subieron las visitas al enlace y las personas que escribieron.</li>
+              <li>Ve a <b>Resultados</b>: subieron las visitas al enlace y las personas que escribieron.</li>
             </ol>
             <p className="mt-3 rounded-lg bg-relleno p-3 text-[13px] leading-snug text-suave">
-              Esto es una simulación. En la vida real, WhatsApp no avisa quién entró por qué enlace: para contarlo de verdad se necesita WhatsApp Business con su conexión oficial, o anotarlo a mano.
+              Esto es una simulación. En la vida real, el código que sale en el mensaje te dice de qué enlace vino, y tú lo apuntas con un toque en Enlaces → Me escribió.
             </p>
           </Tarjeta>
         </div>

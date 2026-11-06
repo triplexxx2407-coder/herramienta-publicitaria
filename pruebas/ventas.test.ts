@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cifraCorta, direccionWhatsApp, enteroPositivo, esTipo, porcentaje, soloDigitos, telefonoValido } from "@/lib/ventas";
+import { cifraCorta, codigoRef, direccionWhatsApp, enteroPositivo, esEtapa, porcentaje, soloDigitos, telefonoValido } from "@/lib/ventas";
 
 describe("teléfonos y enlaces de WhatsApp", () => {
   it("deja sólo los dígitos", () => {
@@ -47,8 +47,12 @@ describe("números de las estadísticas", () => {
     expect(porcentaje(0, 0)).toBe(0);
   });
 
-  it("conoce los tipos de contenido", () => {
-    expect(esTipo("anuncio")).toBe(true);
-    expect(esTipo("otro")).toBe(false);
+  it("conoce las etapas de una persona", () => {
+    expect(esEtapa("cita")).toBe(true);
+    expect(esEtapa("otro")).toBe(false);
+  });
+
+  it("saca un código corto en mayúsculas del enlace", () => {
+    expect(codigoRef("k7m2pabc")).toBe("K7M2P");
   });
 });
