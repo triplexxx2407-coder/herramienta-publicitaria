@@ -25,8 +25,6 @@ const PERMISOS = [
   "pages_show_list",
   "pages_messaging",
   "pages_manage_metadata",
-  "instagram_basic",
-  "instagram_manage_messages",
 ];
 
 export function urlDeFacebook(clave: ClaveMeta, redireccion: string, estado: string): string {
@@ -75,7 +73,7 @@ export async function paginasDelDueno(
     data?: { id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }[];
   }>(
     `${GRAFO}/me/accounts?${new URLSearchParams({
-      fields: "id,name,access_token,instagram_business_account{id,username}",
+      fields: "id,name,access_token",
       limit: "50",
       access_token: usuarioToken,
     })}`,
