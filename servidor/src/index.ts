@@ -202,7 +202,10 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
       await apuntar(entorno.DB, "meta", "error", `Facebook no dio el permiso: ${r.error}`);
       return aPantalla("no");
     }
-    if (r.paginas.length === 0) return aPantalla("sinpaginas");
+    if (r.paginas.length === 0) {
+      await apuntar(entorno.DB, "meta", "error", `Facebook no dio ninguna página (${r.diagnostico})`);
+      return aPantalla("sinpaginas");
+    }
     for (const p of r.paginas) {
       await guardarCuentaMeta(entorno.DB, { empresaId, red: "facebook", identificador: p.nombre, idMeta: p.id, token: p.token });
       if (p.instagram) {
