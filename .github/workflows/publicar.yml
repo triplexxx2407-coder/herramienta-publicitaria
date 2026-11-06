@@ -38,6 +38,7 @@ jobs:
       META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
       META_VERIFY_TOKEN: ${{ secrets.META_VERIFY_TOKEN }}
       META_APP_ID: ${{ secrets.META_APP_ID }}
+      META_CONFIG_ID: ${{ secrets.META_CONFIG_ID }}
       INSTAGRAM_APP_ID: ${{ secrets.INSTAGRAM_APP_ID }}
       INSTAGRAM_APP_SECRET: ${{ secrets.INSTAGRAM_APP_SECRET }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
@@ -106,7 +107,7 @@ jobs:
           CLAVE=$(openssl rand -hex 24)
           echo "::add-mask::$CLAVE"
           echo "CLAVE_ARRANQUE=$CLAVE" >> "$GITHUB_ENV"
-          jq -n --arg clave "$CLAVE" --arg u "$CORREO_USUARIO" --arg c "$CORREO_CONTRASENA" --arg n "$CORREO_NOMBRE" --arg ms "$META_APP_SECRET" --arg mv "$META_VERIFY_TOKEN" --arg mi "$META_APP_ID" --arg ii "$INSTAGRAM_APP_ID" --arg is "$INSTAGRAM_APP_SECRET" --arg gi "$GOOGLE_CLIENT_ID" --arg gs "$GOOGLE_CLIENT_SECRET" '
+          jq -n --arg clave "$CLAVE" --arg u "$CORREO_USUARIO" --arg c "$CORREO_CONTRASENA" --arg n "$CORREO_NOMBRE" --arg ms "$META_APP_SECRET" --arg mv "$META_VERIFY_TOKEN" --arg mi "$META_APP_ID" --arg mc "$META_CONFIG_ID" --arg ii "$INSTAGRAM_APP_ID" --arg is "$INSTAGRAM_APP_SECRET" --arg gi "$GOOGLE_CLIENT_ID" --arg gs "$GOOGLE_CLIENT_SECRET" '
             {CLAVE_ARRANQUE: $clave}
             + (if $u != "" then {CORREO_USUARIO: $u} else {} end)
             + (if $c != "" then {CORREO_CONTRASENA: $c} else {} end)
@@ -114,6 +115,7 @@ jobs:
             + (if $ms != "" then {META_APP_SECRET: $ms} else {} end)
             + (if $mv != "" then {META_VERIFY_TOKEN: $mv} else {} end)
             + (if $mi != "" then {META_APP_ID: $mi} else {} end)
+            + (if $mc != "" then {META_CONFIG_ID: $mc} else {} end)
             + (if $ii != "" then {INSTAGRAM_APP_ID: $ii} else {} end)
             + (if $is != "" then {INSTAGRAM_APP_SECRET: $is} else {} end)
             + (if $gi != "" then {GOOGLE_CLIENT_ID: $gi} else {} end)

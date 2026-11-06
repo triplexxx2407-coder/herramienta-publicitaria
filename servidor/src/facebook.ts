@@ -9,6 +9,8 @@ const GRAFO = `https://graph.facebook.com/${VERSION}`;
 export interface ClaveMeta {
   appId: string;
   appSecret: string;
+  /** Inicio de sesión para empresas: el número de la «configuración» creada en Meta. Si está, sustituye a los permisos sueltos. */
+  configId?: string;
 }
 
 export interface PaginaMeta {
@@ -28,13 +30,13 @@ const PERMISOS = [
 ];
 
 export function urlDeFacebook(clave: ClaveMeta, redireccion: string, estado: string): string {
-  const p = new URLSearchParams({
-    client_id: clave.appId,
-    redirect_uri: redireccion,
-    state: estado,
-    scope: PERMISOS.join(","),
-    response_type: "code",
-  });
+  const p = new URLSearchParams({ client_id: clave.appId, redirect_uri: redireccion, state: estado, response_type: "code" });
+  if (clave.configId) {
+    p.set("config_id", clave.configId);
+    p.set("override_default_response_type", "true");
+  } else {
+    p.set("scope", PERMISOS.join(","));
+  }
   return `https://www.facebook.com/${VERSION}/dialog/oauth?${p}`;
 }
 

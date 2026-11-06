@@ -72,6 +72,8 @@ export interface Entorno {
   GOOGLE_CLIENT_SECRET?: string;
   /** «Conectar con Facebook»: el número de la app de Meta (la clave secreta es META_APP_SECRET). */
   META_APP_ID?: string;
+  /** Opcional: número de la «configuración» de inicio de sesión para empresas en Meta. */
+  META_CONFIG_ID?: string;
   /** «Conectar Instagram» sin Facebook: el número y la clave de la parte de Instagram de la app de Meta. */
   INSTAGRAM_APP_ID?: string;
   INSTAGRAM_APP_SECRET?: string;
@@ -118,7 +120,7 @@ function claveDeGoogle(entorno: Entorno): ClaveGoogle | null {
 
 function claveDeMeta(entorno: Entorno): ClaveMeta | null {
   if (!entorno.META_APP_ID || !entorno.META_APP_SECRET) return null;
-  return { appId: entorno.META_APP_ID, appSecret: entorno.META_APP_SECRET };
+  return { appId: entorno.META_APP_ID.trim(), appSecret: entorno.META_APP_SECRET.trim(), configId: entorno.META_CONFIG_ID?.trim() || undefined };
 }
 
 function claveDeInstagram(entorno: Entorno): ClaveInstagram | null {
