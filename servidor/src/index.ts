@@ -255,8 +255,10 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
       const palabra = entorno.META_VERIFY_TOKEN;
       const manda = url.searchParams.get("hub.verify_token") ?? "";
       if (palabra && url.searchParams.get("hub.mode") === "subscribe" && igualesSeguro(manda, palabra)) {
+        await apuntar(entorno.DB, "meta", "info", "Meta verificó la dirección de avisos");
         return new Response(url.searchParams.get("hub.challenge") ?? "", { status: 200 });
       }
+      await apuntar(entorno.DB, "meta", "error", "Meta quiso verificar la dirección pero la palabra no coincide con META_VERIFY_TOKEN");
       return new Response("no", { status: 403 });
     }
     if (metodo === "POST") {
@@ -268,9 +270,14 @@ async function atender(peticion: Request, entorno: Entorno): Promise<Response> {
       for (const secreto of secretos) {
         if (await firmaValida(crudo, cabecera, secreto)) firmada = true;
       }
-      if (!firmada) return json({ error: "firma incorrecta" }, 403);
+      if (!firmada) {
+        await apuntar(entorno.DB, "meta", "error", "llegó un aviso con firma incorrecta (revisa META_APP_SECRET)");
+        return json({ error: "firma incorrecta" }, 403);
+      }
       try {
-        await guardarDeMeta(entorno.DB, JSON.parse(crudo));
+        const aviso = JSON.parse(crudo);
+        const guardados = await guardarDeMeta(entorno.DB, aviso);
+        await apuntar(entorno.DB, "meta", "info", `llegó un aviso de Meta (${aviso.object ?? "?"}): ${guardados} mensaje(s) guardado(s)`);
       } catch (falla) {
         await apuntar(entorno.DB, "meta", "error", `no se pudo guardar un aviso: ${(falla as Error).message}`);
       }
